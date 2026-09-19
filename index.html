@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💘 Medidor de Enamoramiento 💘</title>
+<meta name="description" content="Descubre (de broma) qué tan enamorados están dos personas con este medidor de amor interactivo.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><text y=%22.9em%22 font-size=%22480%22>❤️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="bgHearts" class="bg-hearts" aria-hidden="true"></div>
+
+<main class="card">
+  <h1 class="title">💘 Medidor de Enamoramiento 💘</h1>
+  <p class="subtitle">Ciencia 100% inventada, resultados 0% garantizados 😏</p>
+
+  <section id="formStep" class="step">
+    <div class="field">
+      <label for="name1">Tu nombre</label>
+      <input id="name1" type="text" maxlength="30" placeholder="Ej: Fernando" autocomplete="off">
+    </div>
+
+    <div class="plus">💞</div>
+
+    <div class="field">
+      <label for="name2">Nombre de tu crush</label>
+      <input id="name2" type="text" maxlength="30" placeholder="Ej: ..." autocomplete="off">
+    </div>
+
+    <button id="calcBtn" class="btn btn-primary">Calcular amor 🔮</button>
+  </section>
+
+  <section id="loadingStep" class="step hidden">
+    <div class="spinner-heart">💓</div>
+    <p id="loadingText" class="loading-text">Consultando las estrellas...</p>
+  </section>
+
+  <section id="resultStep" class="step hidden">
+    <div class="heart-meter">
+      <svg viewBox="0 0 512 512" class="heart-svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="loveGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#ff2e63"/>
+            <stop offset="50%" stop-color="#ff6a88"/>
+            <stop offset="100%" stop-color="#ffb347"/>
+          </linearGradient>
+          <clipPath id="fillClip">
+            <rect id="fillRect" x="0" y="512" width="512" height="0"/>
+          </clipPath>
+        </defs>
+        <path class="heart-bg" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/>
+        <path class="heart-fill" fill="url(#loveGradient)" clip-path="url(#fillClip)" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/>
+      </svg>
+      <div id="percentText" class="percent-text">0%</div>
+    </div>
+
+    <p id="coupleNames" class="couple-names"></p>
+    <p id="resultMessage" class="result-message"></p>
+
+    <div class="actions">
+      <button id="retryBtn" class="btn btn-secondary">Girar la rueda otra vez 🎡</button>
+      <button id="resetBtn" class="btn btn-ghost">Probar otra pareja 🔄</button>
+      <button id="shareBtn" class="btn btn-ghost">Copiar resultado 📋</button>
+    </div>
+  </section>
+
+  <p class="disclaimer">*Este medidor no tiene ningún fundamento científico. Úsalo solo para reír un rato. 😂</p>
+</main>
+
+<div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
