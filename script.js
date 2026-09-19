@@ -1,53 +1,118 @@
 (function () {
   'use strict';
 
-  const formStep = document.getElementById('formStep');
+  const introStep = document.getElementById('introStep');
+  const quizStep = document.getElementById('quizStep');
+  const wordStep = document.getElementById('wordStep');
   const loadingStep = document.getElementById('loadingStep');
   const resultStep = document.getElementById('resultStep');
 
-  const name1Input = document.getElementById('name1');
-  const name2Input = document.getElementById('name2');
-  const calcBtn = document.getElementById('calcBtn');
+  const startBtn = document.getElementById('startBtn');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const questionText = document.getElementById('questionText');
+  const optionsContainer = document.getElementById('optionsContainer');
+
+  const wordInput = document.getElementById('wordInput');
+  const wordBtn = document.getElementById('wordBtn');
   const loadingText = document.getElementById('loadingText');
 
   const fillRect = document.getElementById('fillRect');
   const percentText = document.getElementById('percentText');
-  const coupleNames = document.getElementById('coupleNames');
   const resultMessage = document.getElementById('resultMessage');
+  const wordEcho = document.getElementById('wordEcho');
 
   const retryBtn = document.getElementById('retryBtn');
-  const resetBtn = document.getElementById('resetBtn');
   const shareBtn = document.getElementById('shareBtn');
 
   const bgHearts = document.getElementById('bgHearts');
   const confettiLayer = document.getElementById('confettiLayer');
 
+  const QUESTIONS = [
+    {
+      text: 'Cuando ves un mensaje suyo en tu teléfono, ¿qué haces?',
+      options: [
+        { label: 'Lo abro después, sin prisa', score: 0 },
+        { label: 'Sonrío antes de abrirlo', score: 1 },
+        { label: 'Se me acelera el corazón', score: 2 },
+        { label: 'Grito internamente y lo leo cinco veces', score: 3 }
+      ]
+    },
+    {
+      text: '¿Qué tan seguido piensas en esa persona durante el día?',
+      options: [
+        { label: 'Casi nunca', score: 0 },
+        { label: 'De vez en cuando', score: 1 },
+        { label: 'Bastante seguido', score: 2 },
+        { label: 'Todo el tiempo, no puedo parar', score: 3 }
+      ]
+    },
+    {
+      text: 'Si no te responde en un par de horas...',
+      options: [
+        { label: 'Ni lo noto', score: 0 },
+        { label: 'Reviso el teléfono un par de veces', score: 1 },
+        { label: 'Empiezo a inventar excusas de por qué no contesta', score: 2 },
+        { label: 'Reviso cada cinco minutos como detective', score: 3 }
+      ]
+    },
+    {
+      text: 'Cuando estás con esa persona, el tiempo...',
+      options: [
+        { label: 'Pasa normal', score: 0 },
+        { label: 'Se siente más ligero', score: 1 },
+        { label: 'Vuela sin que me dé cuenta', score: 2 },
+        { label: 'Desearía que se detuviera para siempre', score: 3 }
+      ]
+    },
+    {
+      text: '¿Te imaginas planes futuros con esa persona?',
+      options: [
+        { label: 'No, para nada', score: 0 },
+        { label: 'A veces, sin pensarlo mucho', score: 1 },
+        { label: 'Sí, bastante seguido', score: 2 },
+        { label: 'Constantemente... y ya hasta tengo nombres pensados 👀', score: 3 }
+      ]
+    },
+    {
+      text: 'Cuando alguien más menciona su nombre...',
+      options: [
+        { label: 'No pasa nada', score: 0 },
+        { label: 'Presto un poco más de atención', score: 1 },
+        { label: 'Se me ilumina la cara', score: 2 },
+        { label: 'Se me escapa una sonrisa que no puedo controlar', score: 3 }
+      ]
+    }
+  ];
+
+  const MAX_SCORE = QUESTIONS.reduce((sum, q) => sum + q.options[q.options.length - 1].score, 0);
+
   const LOADING_MESSAGES = [
+    'Analizando tus respuestas... 🔍',
     'Consultando las estrellas... ✨',
     'Preguntando a Cupido... 🏹',
-    'Analizando las vibras... 🔮',
-    'Revisando el horóscopo... ♥️',
+    'Midiendo tus mariposas en el estómago... 🦋',
     'Calculando compatibilidad cuántica... ⚛️',
     'Batiendo la poción de amor... 🧪'
   ];
 
   const RESULT_RANGES = [
-    { max: 10, message: 'Ni con un telescopio se ve algo ahí... 🔭😂' },
-    { max: 25, message: 'Hay más química en un laboratorio que aquí. ⚗️' },
-    { max: 40, message: 'Amistad del bueno, nada más. Pero oye, la amistad también vale. 🤝' },
-    { max: 55, message: 'Mmm, algo se está cocinando por ahí... 👀🍳' },
-    { max: 70, message: '¡Cupido ya está afilando sus flechas! 🏹💘' },
-    { max: 85, message: '¡Esto está que arde! 🔥❤️' },
-    { max: 95, message: '¡Alerta de boda! Alguien avise al DJ. 💍🎉' },
-    { max: 100, message: 'Almas gemelas certificadas ✨💞 (o el algoritmo hoy está de buen humor)' }
+    { max: 15, message: 'Mmm, parece que tu corazón anda tranquilo... o disimulas muy bien. 😏' },
+    { max: 30, message: 'Hay un cosquilleo ahí, aunque tú digas que no. 👀' },
+    { max: 45, message: 'Algo se está encendiendo poco a poco... 🔥' },
+    { max: 60, message: 'Ok, esto ya es oficial: te está gustando bastante. 😳' },
+    { max: 75, message: 'Mariposas en el estómago nivel: colonia completa. 🦋' },
+    { max: 90, message: 'Elvira... estás enamorada y lo sabes. 💘' },
+    { max: 100, message: 'ALERTA ROJA: Cupido ya ganó esta batalla. Estás perdidamente enamorada. 😍💍' }
   ];
 
-  let lastNames = { n1: '', n2: '' };
-  let bgHeartsTimer = null;
+  let currentQuestionIndex = 0;
+  let totalScore = 0;
+  let lastWord = '';
 
   function startBackgroundHearts() {
     const emojis = ['❤️', '💕', '💖', '💘', '💗'];
-    bgHeartsTimer = setInterval(() => {
+    setInterval(() => {
       const heart = document.createElement('span');
       heart.className = 'floating-heart';
       heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -63,7 +128,6 @@
 
   function shakeElement(el) {
     el.classList.remove('shake');
-    // force reflow so the animation can restart
     void el.offsetWidth;
     el.classList.add('shake');
   }
@@ -75,18 +139,38 @@
     return RESULT_RANGES[RESULT_RANGES.length - 1].message;
   }
 
-  function computeLovePercent(n1, n2) {
-    const a = n1.trim().toLowerCase();
-    const b = n2.trim().toLowerCase();
+  function showStep(step) {
+    [introStep, quizStep, wordStep, loadingStep, resultStep].forEach((s) => s.classList.add('hidden'));
+    step.classList.remove('hidden');
+  }
 
-    if (a && a === b) {
-      return { pct: 100, override: 'Te amas a ti mismo/a. Autoestima nivel: leyenda. 💅✨' };
+  function renderQuestion() {
+    const q = QUESTIONS[currentQuestionIndex];
+    questionText.textContent = q.text;
+    progressLabel.textContent = `Pregunta ${currentQuestionIndex + 1} de ${QUESTIONS.length}`;
+    progressFill.style.width = (currentQuestionIndex / QUESTIONS.length) * 100 + '%';
+
+    optionsContainer.innerHTML = '';
+    q.options.forEach((option) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.textContent = option.label;
+      btn.addEventListener('click', () => selectOption(option.score));
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  function selectOption(score) {
+    totalScore += score;
+    currentQuestionIndex++;
+
+    if (currentQuestionIndex < QUESTIONS.length) {
+      renderQuestion();
+    } else {
+      progressFill.style.width = '100%';
+      showStep(wordStep);
+      wordInput.focus();
     }
-
-    // A little bell-curve so results feel less "flat random"
-    const r = (Math.random() + Math.random() + Math.random()) / 3;
-    const pct = Math.round(r * 100);
-    return { pct: Math.min(100, Math.max(0, pct)), override: null };
   }
 
   function spawnConfetti() {
@@ -114,7 +198,6 @@
     function frame(now) {
       const elapsed = now - start;
       const t = Math.min(1, elapsed / duration);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - t, 3);
       const currentPct = eased * targetPct;
 
@@ -138,11 +221,6 @@
     requestAnimationFrame(frame);
   }
 
-  function showStep(step) {
-    [formStep, loadingStep, resultStep].forEach((s) => s.classList.add('hidden'));
-    step.classList.remove('hidden');
-  }
-
   function runLoadingSequence(onDone) {
     showStep(loadingStep);
     let index = 0;
@@ -158,10 +236,10 @@
     }, 2200);
   }
 
-  function reveal(n1, n2) {
-    const { pct, override } = computeLovePercent(n1, n2);
-    coupleNames.textContent = `${n1 || '???'} 💞 ${n2 || '???'}`;
-    resultMessage.textContent = override || getMessageForPercent(pct);
+  function reveal() {
+    const pct = Math.round((totalScore / MAX_SCORE) * 100);
+    resultMessage.textContent = getMessageForPercent(pct);
+    wordEcho.textContent = lastWord ? `Tú misma dijiste que te sientes "${lastWord}"... coincide, ¿no? 😏` : '';
     fillRect.setAttribute('y', 512);
     fillRect.setAttribute('height', 0);
     percentText.textContent = '0%';
@@ -169,43 +247,35 @@
     animateHeartFill(pct);
   }
 
-  function handleCalculate() {
-    const n1 = name1Input.value.trim();
-    const n2 = name2Input.value.trim();
-
-    if (!n1 || !n2) {
-      shakeElement(document.getElementById('formStep'));
-      const missing = !n1 ? name1Input : name2Input;
-      missing.focus();
-      missing.placeholder = '¡Escribe un nombre, no seas tímido/a! 😅';
-      return;
-    }
-
-    lastNames = { n1, n2 };
-    runLoadingSequence(() => reveal(n1, n2));
+  function resetQuiz() {
+    currentQuestionIndex = 0;
+    totalScore = 0;
+    lastWord = '';
+    wordInput.value = '';
+    renderQuestion();
+    showStep(quizStep);
   }
 
-  calcBtn.addEventListener('click', handleCalculate);
-
-  [name1Input, name2Input].forEach((input) => {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleCalculate();
-    });
+  startBtn.addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    totalScore = 0;
+    renderQuestion();
+    showStep(quizStep);
   });
 
-  retryBtn.addEventListener('click', () => {
-    runLoadingSequence(() => reveal(lastNames.n1, lastNames.n2));
+  wordBtn.addEventListener('click', () => {
+    lastWord = wordInput.value.trim();
+    runLoadingSequence(reveal);
   });
 
-  resetBtn.addEventListener('click', () => {
-    name1Input.value = '';
-    name2Input.value = '';
-    showStep(formStep);
-    name1Input.focus();
+  wordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') wordBtn.click();
   });
+
+  retryBtn.addEventListener('click', resetQuiz);
 
   shareBtn.addEventListener('click', async () => {
-    const text = `${coupleNames.textContent} → ${percentText.textContent} de amor según el Medidor de Enamoramiento 💘`;
+    const text = `Elvira está ${percentText.textContent} enamorada según el Medidor de Enamoramiento 💘`;
     try {
       await navigator.clipboard.writeText(text);
       const original = shareBtn.textContent;

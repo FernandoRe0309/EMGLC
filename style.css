@@ -93,6 +93,104 @@ body {
   display: none;
 }
 
+.intro-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.9;
+  margin: 0 0 20px;
+}
+
+.progress-wrap {
+  margin-bottom: 18px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--pink) 0%, var(--orange) 100%);
+  border-radius: 8px;
+  transition: width 0.35s ease;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.question-text {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1.15rem;
+  line-height: 1.4;
+  margin: 0 0 18px;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option-btn {
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.option-btn:hover {
+  border-color: var(--pink-light);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.option-btn:active {
+  transform: scale(0.98);
+}
+
+.word-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  margin-bottom: 14px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.word-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.word-input:focus {
+  border-color: var(--pink-light);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.word-echo {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  font-style: italic;
+  margin: 0 0 8px;
+}
+
 .field {
   text-align: left;
   margin-bottom: 8px;
