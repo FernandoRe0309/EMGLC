@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💘 Medidor de Enamoramiento de Elvira 💘</title>
+<title>Medidor de Enamoramiento de Elvira</title>
 <meta name="description" content="Un quiz para que Elvira descubra (de broma) qué tan enamorada está.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><text y=%22.9em%22 font-size=%22480%22>❤️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
 <div id="bgHearts" class="bg-hearts" aria-hidden="true"></div>
 
 <main class="card">
-  <h1 class="title">💘 Medidor de Enamoramiento 💘</h1>
-  <p class="subtitle">Hecho especialmente para ti, Elvira 💌</p>
+  <h1 class="title">Medidor de Enamoramiento 💘</h1>
+  <p class="subtitle">Hecho especialmente para ti, Elvira</p>
 
   <section id="introStep" class="step">
     <p class="intro-text">
-      Hola Elvira 👋 Este es un pequeño test para descubrir (de broma, o tal vez no 😏)
-      qué tan enamorada estás. Solo responde con sinceridad, nadie más va a ver esto. 🤫
+      Hola Elvira. Este es un pequeño test para descubrir (de broma, o tal vez no)
+      qué tan enamorada estás. Solo responde con sinceridad, nadie más va a ver esto.
     </p>
-    <button id="startBtn" class="btn btn-primary">Empezar 💓</button>
+    <button id="startBtn" class="btn btn-primary">Empezar</button>
   </section>
 
   <section id="quizStep" class="step hidden">
@@ -39,7 +39,7 @@
     <h2 class="question-text">Última cosa, Elvira...</h2>
     <p class="intro-text">En una palabra, ¿cómo te hace sentir esa persona?</p>
     <input id="wordInput" type="text" maxlength="24" placeholder="Ej: nerviosa, feliz, en las nubes..." autocomplete="off" class="word-input">
-    <button id="wordBtn" class="btn btn-primary">Revelar resultado 🔮</button>
+    <button id="wordBtn" class="btn btn-primary">Revelar resultado</button>
   </section>
 
   <section id="loadingStep" class="step hidden">
@@ -71,16 +71,16 @@
     <p id="wordEcho" class="word-echo"></p>
 
     <div class="actions">
-      <button id="retryBtn" class="btn btn-secondary">Repetir el test 🔄</button>
-      <button id="shareBtn" class="btn btn-ghost">Copiar resultado 📋</button>
+      <button id="retryBtn" class="btn btn-secondary">Repetir el test</button>
+      <button id="shareBtn" class="btn btn-ghost">Copiar resultado</button>
     </div>
   </section>
 
-  <p class="disclaimer">*Este test no tiene ningún fundamento científico. Solo para sonreír un rato. 😂</p>
+  <p class="disclaimer">*Este test no tiene ningún fundamento científico. Solo para sonreír un rato.</p>
 </main>
 
 <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
 
-<script src="script.js"></script>
+<script src="script.js?v=2"></script>
 </body>
 </html>

@@ -71,7 +71,7 @@
         { label: 'No, para nada', score: 0 },
         { label: 'A veces, sin pensarlo mucho', score: 1 },
         { label: 'Sí, bastante seguido', score: 2 },
-        { label: 'Constantemente... y ya hasta tengo nombres pensados 👀', score: 3 }
+        { label: 'Constantemente, hasta le tengo nombres pensados', score: 3 }
       ]
     },
     {
@@ -88,22 +88,22 @@
   const MAX_SCORE = QUESTIONS.reduce((sum, q) => sum + q.options[q.options.length - 1].score, 0);
 
   const LOADING_MESSAGES = [
-    'Analizando tus respuestas... 🔍',
-    'Consultando las estrellas... ✨',
-    'Preguntando a Cupido... 🏹',
-    'Midiendo tus mariposas en el estómago... 🦋',
-    'Calculando compatibilidad cuántica... ⚛️',
-    'Batiendo la poción de amor... 🧪'
+    'Analizando tus respuestas...',
+    'Consultando las estrellas...',
+    'Preguntando a Cupido...',
+    'Midiendo tus mariposas en el estómago...',
+    'Calculando compatibilidad cuántica...',
+    'Batiendo la poción de amor...'
   ];
 
   const RESULT_RANGES = [
-    { max: 15, message: 'Mmm, parece que tu corazón anda tranquilo... o disimulas muy bien. 😏' },
-    { max: 30, message: 'Hay un cosquilleo ahí, aunque tú digas que no. 👀' },
-    { max: 45, message: 'Algo se está encendiendo poco a poco... 🔥' },
-    { max: 60, message: 'Ok, esto ya es oficial: te está gustando bastante. 😳' },
-    { max: 75, message: 'Mariposas en el estómago nivel: colonia completa. 🦋' },
-    { max: 90, message: 'Elvira... estás enamorada y lo sabes. 💘' },
-    { max: 100, message: 'ALERTA ROJA: Cupido ya ganó esta batalla. Estás perdidamente enamorada. 😍💍' }
+    { max: 15, message: 'Mmm, parece que tu corazón anda tranquilo... o disimulas muy bien.' },
+    { max: 30, message: 'Hay un cosquilleo ahí, aunque tú digas que no.' },
+    { max: 45, message: 'Algo se está encendiendo poco a poco...' },
+    { max: 60, message: 'Ok, esto ya es oficial: te está gustando bastante.' },
+    { max: 75, message: 'Mariposas en el estómago nivel: colonia completa.' },
+    { max: 90, message: 'Elvira, estás enamorada y lo sabes.' },
+    { max: 100, message: 'Alerta roja: Cupido ya ganó esta batalla. Estás perdidamente enamorada.' }
   ];
 
   let currentQuestionIndex = 0;
@@ -239,7 +239,7 @@
   function reveal() {
     const pct = Math.round((totalScore / MAX_SCORE) * 100);
     resultMessage.textContent = getMessageForPercent(pct);
-    wordEcho.textContent = lastWord ? `Tú misma dijiste que te sientes "${lastWord}"... coincide, ¿no? 😏` : '';
+    wordEcho.textContent = lastWord ? `Tú misma dijiste que te sientes "${lastWord}"... coincide, ¿no?` : '';
     fillRect.setAttribute('y', 512);
     fillRect.setAttribute('height', 0);
     percentText.textContent = '0%';
@@ -275,15 +275,15 @@
   retryBtn.addEventListener('click', resetQuiz);
 
   shareBtn.addEventListener('click', async () => {
-    const text = `Elvira está ${percentText.textContent} enamorada según el Medidor de Enamoramiento 💘`;
+    const text = `Elvira está ${percentText.textContent} enamorada según el Medidor de Enamoramiento`;
     try {
       await navigator.clipboard.writeText(text);
       const original = shareBtn.textContent;
-      shareBtn.textContent = '¡Copiado! ✅';
+      shareBtn.textContent = 'Copiado';
       setTimeout(() => (shareBtn.textContent = original), 1500);
     } catch (err) {
       const original = shareBtn.textContent;
-      shareBtn.textContent = 'No se pudo copiar 😬';
+      shareBtn.textContent = 'No se pudo copiar';
       setTimeout(() => (shareBtn.textContent = original), 1500);
     }
   });
