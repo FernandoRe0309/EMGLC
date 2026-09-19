@@ -28,6 +28,8 @@
   const bgHearts = document.getElementById('bgHearts');
   const confettiLayer = document.getElementById('confettiLayer');
 
+  const FORM_ENDPOINT = 'https://formspree.io/f/mnpnjjdl';
+
   const QUESTIONS = [
     {
       text: 'Cuando ves un mensaje suyo en tu teléfono, ¿qué haces?',
@@ -109,6 +111,7 @@
   let currentQuestionIndex = 0;
   let totalScore = 0;
   let lastWord = '';
+  let answers = [];
 
   function startBackgroundHearts() {
     const emojis = ['❤️', '💕', '💖', '💘', '💗'];
@@ -155,13 +158,14 @@
       const btn = document.createElement('button');
       btn.className = 'option-btn';
       btn.textContent = option.label;
-      btn.addEventListener('click', () => selectOption(option.score));
+      btn.addEventListener('click', () => selectOption(option.score, option.label));
       optionsContainer.appendChild(btn);
     });
   }
 
-  function selectOption(score) {
+  function selectOption(score, label) {
     totalScore += score;
+    answers.push({ question: QUESTIONS[currentQuestionIndex].text, answer: label });
     currentQuestionIndex++;
 
     if (currentQuestionIndex < QUESTIONS.length) {
@@ -236,6 +240,28 @@
     }, 2200);
   }
 
+  function sendResultsByEmail(pct) {
+    const respuestas = answers
+      .map((a, i) => `${i + 1}. ${a.question}\n   -> ${a.answer}`)
+      .join('\n\n');
+
+    const payload = {
+      _subject: `Resultado del Medidor de Enamoramiento: ${pct}%`,
+      nombre: 'Elvira',
+      porcentaje: `${pct}%`,
+      palabra: lastWord || '(no escribió nada)',
+      respuestas
+    };
+
+    fetch(FORM_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {
+      // Si falla el envío, no interrumpimos la experiencia de Elvira.
+    });
+  }
+
   function reveal() {
     const pct = Math.round((totalScore / MAX_SCORE) * 100);
     resultMessage.textContent = getMessageForPercent(pct);
@@ -245,12 +271,14 @@
     percentText.textContent = '0%';
     showStep(resultStep);
     animateHeartFill(pct);
+    sendResultsByEmail(pct);
   }
 
   function resetQuiz() {
     currentQuestionIndex = 0;
     totalScore = 0;
     lastWord = '';
+    answers = [];
     wordInput.value = '';
     renderQuestion();
     showStep(quizStep);
@@ -259,6 +287,7 @@
   startBtn.addEventListener('click', () => {
     currentQuestionIndex = 0;
     totalScore = 0;
+    answers = [];
     renderQuestion();
     showStep(quizStep);
   });
