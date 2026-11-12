@@ -118,7 +118,9 @@ function normalize(raw) {
       }),
     };
   });
-  return { intro: { ...DEFAULT_INTRO, ...(raw.intro || {}) }, formats, updatedAt: raw.updatedAt || null };
+  const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
+  intro.banner = imgSrc(raw.intro && raw.intro.banner);
+  return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 
 function normalizePanel(p) {
@@ -199,16 +201,15 @@ function renderHome() {
   $('#impList').innerHTML = imp.map((x) => `<li>${esc(x)}</li>`).join('');
   $('#impBox').hidden = !imp.length;
 
-  $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => {
-    const spaces = f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
-    const withImg = spaces.filter((s) => s.src).length;
-    const count = spaces.length ? `${spaces.length} ${spaces.length === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
-    return `<a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
+  const homeBanner = $('#homeBanner');
+  homeBanner.hidden = !t.banner;
+  if (t.banner && homeBanner.getAttribute('src') !== t.banner) homeBanner.src = t.banner;
+
+  $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => `
+    <a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
-      <span class="format-count" title="${withImg} con foto">${esc(count)}</span>
-    </a>`;
-  }).join('');
+    </a>`).join('');
   $('#updatedHome').textContent = updatedText();
 }
 

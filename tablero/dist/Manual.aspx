@@ -72,6 +72,16 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- Portada ---------- */
 .home { max-width: 1200px; margin: 0 auto; padding: 36px 20px 24px; display: grid; gap: 22px; }
+.home-banner {
+  display: block;
+  width: 100%;
+  max-width: 1040px;
+  height: clamp(150px, 24vw, 320px);
+  margin: 0 auto;
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
 .note {
   max-width: 1040px;
   width: 100%;
@@ -116,7 +126,7 @@ button, input { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 190px;
+  min-height: 170px;
   padding: 28px 18px;
   border-radius: 16px;
   background: var(--fc, var(--brand));
@@ -460,6 +470,7 @@ a.pill { text-decoration: none; }
 </header>
 
 <main id="home" class="home" hidden>
+  <img id="homeBanner" class="home-banner" alt="" hidden>
   <section class="note note-info">
     <svg class="note-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8l-4 4V5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <div>
@@ -844,7 +855,9 @@ function normalize(raw) {
       }),
     };
   });
-  return { intro: { ...DEFAULT_INTRO, ...(raw.intro || {}) }, formats, updatedAt: raw.updatedAt || null };
+  const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
+  intro.banner = imgSrc(raw.intro && raw.intro.banner);
+  return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 
 function normalizePanel(p) {
@@ -925,16 +938,15 @@ function renderHome() {
   $('#impList').innerHTML = imp.map((x) => `<li>${esc(x)}</li>`).join('');
   $('#impBox').hidden = !imp.length;
 
-  $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => {
-    const spaces = f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
-    const withImg = spaces.filter((s) => s.src).length;
-    const count = spaces.length ? `${spaces.length} ${spaces.length === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
-    return `<a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
+  const homeBanner = $('#homeBanner');
+  homeBanner.hidden = !t.banner;
+  if (t.banner && homeBanner.getAttribute('src') !== t.banner) homeBanner.src = t.banner;
+
+  $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => `
+    <a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
-      <span class="format-count" title="${withImg} con foto">${esc(count)}</span>
-    </a>`;
-  }).join('');
+    </a>`).join('');
   $('#updatedHome').textContent = updatedText();
 }
 

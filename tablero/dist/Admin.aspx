@@ -1034,7 +1034,9 @@ a.btn { text-decoration: none; color: inherit; }
 
 <dialog id="introDlg" class="settings">
   <form method="dialog" class="settings-inner" id="introForm">
-    <h3>Textos de la portada</h3>
+    <h3>Página de inicio</h3>
+    <label>Foto de portada (opcional)<select id="inBanner"></select></label>
+    <div id="inBannerPreview" class="fmt-banner-preview"></div>
     <label>Título<input id="inTitle" maxlength="80" autocomplete="off"></label>
     <label>Subtítulo<input id="inSubtitle" maxlength="120" autocomplete="off"></label>
     <label>Título del aviso azul<input id="inGuideTitle" maxlength="80" autocomplete="off"></label>
@@ -1526,6 +1528,7 @@ function placementCounts() {
   const add = (id) => { if (id) counts.set(id, (counts.get(id) || 0) + 1); };
   allSpaces().forEach((s) => add(s.imageId));
   add(board.banner);
+  add(state.intro && state.intro.banner);
   return counts;
 }
 
@@ -1674,7 +1677,7 @@ function renderFormatTabs() {
     </button>`;
   }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">⚙ Personalizar panel</button>
     <button type="button" class="ftab-tool" data-format-action="add">+ Formato</button>
-    <button type="button" class="ftab-tool" data-format-action="intro" title="Textos de la página de inicio">✎ Textos de portada</button>`;
+    <button type="button" class="ftab-tool" data-format-action="intro" title="Foto y textos de la página de inicio">✎ Página de inicio</button>`;
 }
 
 function renderBanner() {
@@ -2313,6 +2316,9 @@ async function buildPlan() {
     files.set(file, img);
     return { path: img.id, hash: img.hash, file };
   };
+  // Foto de portada de la página de inicio: <carpeta>/Portada inicio.jpg
+  const homeImg = state.intro.banner && images.get(state.intro.banner);
+  const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : null };
   const fmtNames = new Set();
   const formats = [];
   for (const f of state.formats) {
@@ -2349,12 +2355,13 @@ async function buildPlan() {
     }
     formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, zones });
   }
-  return { files, formats };
+  return { files, formats, intro };
 }
 
 // Todas las imágenes referenciadas por un tablero.json publicado (versión 3 o 4).
 function publishedRefs(data) {
   const refs = [];
+  if (data && data.intro && data.intro.banner && data.intro.banner.file) refs.push(data.intro.banner);
   for (const f of (data && data.formats) || []) {
     if (f.banner && f.banner.file) refs.push(f.banner);
     for (const z of f.zones || []) for (const a of z.areas || []) for (const s of a.spaces || []) if (s.image && s.image.file) refs.push(s.image);
@@ -2411,7 +2418,7 @@ async function publish() {
 
     const updatedAt = new Date().toISOString();
     const acc = SP.currentAccount();
-    const data = { app: 'tablero-senalizacion', version: 4, updatedAt, updatedBy: acc ? acc.name || acc.username : null, intro: state.intro, formats: plan.formats };
+    const data = { app: 'tablero-senalizacion', version: 4, updatedAt, updatedBy: acc ? acc.name || acc.username : null, intro: plan.intro, formats: plan.formats };
     setPublishProgress('Guardando tablero.json…');
     await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
 
@@ -2484,7 +2491,9 @@ async function loadPublished(data) {
     }
     return formatFromJson(f);
   };
-  state = { dirty: false, publishedAt: data.updatedAt || null, intro: { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) }, formats: data.formats.map(toLocal) };
+  const intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+  intro.banner = data.intro && data.intro.banner && data.intro.banner.path ? data.intro.banner.path : null;
+  state = { dirty: false, publishedAt: data.updatedAt || null, intro, formats: data.formats.map(toLocal) };
   if (!state.formats.length) state.formats = defaultState().formats;
   setActiveFormat((state.formats.find((f) => f.name === prevActive) || state.formats[0]).id);
   saveBoard({ dirty: false });
@@ -2780,7 +2789,14 @@ function openIntroDialog() {
   $('#inGuide').value = t.guide;
   $('#inImportantTitle').value = t.importantTitle;
   $('#inImportant').value = (t.important || []).join('\n');
+  $('#inBanner').innerHTML = bannerOptions(t.banner || null);
+  renderIntroBannerPreview();
   $('#introDlg').showModal();
+}
+
+function renderIntroBannerPreview() {
+  const img = images.get($('#inBanner').value);
+  $('#inBannerPreview').innerHTML = img ? `<img alt="" src="${urlFor(img)}">` : '';
 }
 
 function setupFormatUI() {
@@ -2822,12 +2838,15 @@ function setupFormatUI() {
       guide: $('#inGuide').value.trim(),
       importantTitle: $('#inImportantTitle').value.trim(),
       important: $('#inImportant').value.split('\n').map((x) => x.trim()).filter(Boolean),
+      banner: $('#inBanner').value || null,
     };
     commit();
-    toast('Textos de portada actualizados. Publica para que se vean.');
+    toast('Página de inicio actualizada. Publica para que se vea.');
   });
+  $('#inBanner').addEventListener('input', renderIntroBannerPreview);
   $('#introReset').addEventListener('click', () => {
-    state.intro = structuredClone(DEFAULT_INTRO);
+    // Restablece los textos; la foto de portada se conserva.
+    state.intro = { ...structuredClone(DEFAULT_INTRO), banner: state.intro.banner || null };
     $('#introDlg').close();
     commit();
   });

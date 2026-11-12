@@ -35,6 +35,7 @@ Manual señalización/
 ├── Manual.aspx
 ├── Admin.aspx
 ├── tablero.json                      ← distribución, textos y títulos (no lo edites a mano)
+├── Portada inicio.jpg                ← foto de portada de la página de inicio (opcional)
 └── W2/
     ├── Portada.jpg                   ← foto de portada del formato (opcional)
     ├── Frente de Tienda/
@@ -76,7 +77,7 @@ Más cosas:
   - **Secciones**: mostrar u ocultar la foto de portada, el texto azul de cada área y los espacios sin foto.
   - **Zonas y áreas**: agregar, quitar, renombrar, reordenar y ocultar sin borrar.
 - Botones **Visible / Oculta** en cada zona y área, y 👁 en cada espacio, para ocultarlos del manual sin borrarlos. Lo oculto se ve atenuado en el administrador.
-- **+ Formato** agrega uno. **✎ Textos de portada** edita los avisos de la página de inicio.
+- **+ Formato** agrega uno. **✎ Página de inicio**: foto de portada de la página de inicio (opcional) y los textos de los avisos.
 - **Más → Colocar por carpeta**: coloca las fotos sin usar en el área cuyo nombre coincide con su carpeta; si el área ya tiene un espacio vacío con el mismo nombre que la foto, la pone ahí.
 - Al abrir el administrador, si no tienes cambios pendientes, se carga la última versión publicada (por ejemplo, la que publicó otra persona). **Más → Cargar lo publicado** la trae a mano.
 - **Exportar catálogo** descarga un HTML del formato actual con las fotos incrustadas. **Guardar / Abrir tablero** hace un respaldo `.json` sin fotos.
