@@ -648,6 +648,184 @@ a.btn { text-decoration: none; color: inherit; }
 .conn-row { display: grid; grid-template-columns: 70px 1fr; gap: 10px; font-size: 13px; align-items: baseline; }
 .settings code { font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
 
+/* ---------- Foto de portada del formato ---------- */
+.banner-box {
+  position: relative;
+  margin: 12px 0 0;
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.banner-box.has-img { border-style: solid; }
+.banner-box img { width: 100%; height: 170px; object-fit: cover; display: block; }
+.banner-box.drop-hover { border-color: var(--accent); background: var(--drop); }
+.banner-clear {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 17px; cursor: pointer;
+}
+.fmt-banner-preview img { width: 100%; max-height: 90px; object-fit: cover; border-radius: 8px; }
+
+/* ---------- Zonas ---------- */
+.zone-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 12px 0; }
+.zone-btn {
+  display: grid;
+  gap: 2px;
+  padding: 12px 10px;
+  border: 1.5px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+.zone-btn small { color: var(--muted); font-weight: 400; font-size: 11px; }
+.zone-btn:hover { background: var(--accent-soft); }
+.zone-btn.active { background: var(--accent); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 35%, transparent); }
+.zone-btn.active small { color: rgba(255, 255, 255, .85); }
+.zone-add, .area-add {
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 12px;
+}
+.zone-add:hover, .area-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- Panel de zona ---------- */
+.zone-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 18px 20px 22px;
+  margin-bottom: 40px;
+}
+.panel-head, .area-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.panel-head .tools, .area-head .tools { display: flex; align-items: center; gap: 4px; }
+.zone-title, .area-title {
+  margin: 0;
+  color: #1e3a9a;
+  font-size: 19px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  outline: none;
+}
+.area-title { font-size: 18px; }
+.zone-title:hover, .area-title:hover { background: var(--surface-2); }
+.zone-title:focus, .area-title:focus { background: var(--surface-2); box-shadow: 0 0 0 2px var(--accent); }
+.panel-head p { margin: 2px 0 0; font-size: 13px; }
+.move-zone { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-right: 6px; }
+.move-zone select { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.empty-panel, .pick-hint { color: var(--muted); padding: 18px 4px 4px; margin: 0; }
+
+.area-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 16px; }
+.area-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+}
+.area-btn small { color: var(--muted); font-weight: 400; font-size: 11px; white-space: nowrap; }
+.area-btn:hover { border-color: #9dbbf3; }
+.area-btn.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.area-btn.drop-hover { background: var(--drop); border-color: var(--accent); }
+
+.divider { border: 0; border-top: 1px solid var(--border); margin: 22px 0 16px; }
+.area-note {
+  margin: 10px 0 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #eef3ff;
+  color: #1e3a9a;
+  font-weight: 600;
+  outline: none;
+  min-height: 1.4em;
+}
+.area-note:empty::before { content: attr(data-placeholder); color: #1e3a9a; opacity: .75; }
+.area-note:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ---------- Espacios ---------- */
+.zone-panel .dropzone {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 0;
+  min-height: 0;
+  border-radius: 12px;
+}
+.zone-panel .dropzone.drop-hover { background: var(--drop); outline: 6px solid var(--drop); }
+.card.space { padding: 12px 12px 14px; border-radius: 12px; gap: 8px; cursor: grab; }
+.space-head { display: flex; align-items: flex-start; gap: 4px; }
+.space-title {
+  flex: 1;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.3;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: 6px;
+  outline: none;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.space-title:focus { background: var(--surface-2); box-shadow: 0 0 0 2px var(--accent); }
+.space-head .icon-btn { width: 26px; height: 26px; font-size: 13px; opacity: .55; }
+.card.space:hover .space-head .icon-btn { opacity: 1; }
+.slot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 2px dashed #cfd6e2;
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+  overflow: hidden;
+}
+.slot img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
+.slot-hint { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.slot .missing { color: var(--danger); font-size: 11px; word-break: break-word; }
+.slot.drop-hover { border-color: var(--accent); background: var(--drop); }
+.slot-clear {
+  position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 15px; cursor: pointer; opacity: 0; transition: opacity .12s;
+}
+.card.space:hover .slot-clear, .slot-clear:focus { opacity: 1; }
+@media (hover: none) { .slot-clear, .space-head .icon-btn { opacity: 1; } }
+.space-add {
+  min-height: 200px;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: none;
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+.space-add small { font-weight: 400; font-size: 12px; }
+.space-add:hover { border-color: var(--accent); color: var(--accent); }
+.zone-panel .placeholder { min-height: 240px; border-radius: 12px; }
+
 </style>
 </head>
 <body>
@@ -681,12 +859,11 @@ a.btn { text-decoration: none; color: inherit; }
         <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
         <hr>
-        <button type="button" data-action="auto-place">Colocar por carpeta (nombre exacto)</button>
-        <button type="button" data-action="sections-from-folders">Crear secciones desde carpetas</button>
-        <button type="button" data-action="add-section">Agregar sección</button>
+        <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
+        <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
         <hr>
-        <button type="button" data-action="clear-board">Vaciar este formato</button>
-        <button type="button" data-action="reset-sections">Restablecer secciones de este formato</button>
+        <button type="button" data-action="clear-board">Quitar todas las fotos de este formato</button>
+        <button type="button" data-action="reset-structure">Restablecer zonas y áreas de este formato</button>
         <button type="button" data-action="clear-library" class="danger">Borrar biblioteca de imágenes</button>
       </div>
     </details>
@@ -701,14 +878,14 @@ a.btn { text-decoration: none; color: inherit; }
       <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar en este formato</label>
     </div>
     <div id="libraryList" class="library-list"></div>
-    <p class="library-foot">Arrastra una imagen a una sección. Suelta una tarjeta aquí para quitarla del tablero.</p>
+    <p class="library-foot">Arrastra una foto a un espacio, a la lista de espacios o al botón de un área. Suelta aquí un espacio para quitarle la foto.</p>
   </aside>
 
   <main class="board-wrap">
     <div id="formatTabs" class="format-tabs" role="tablist" aria-label="Formatos"></div>
-    <nav id="sectionNav" class="section-nav" aria-label="Secciones"></nav>
-    <div id="board" class="board"></div>
-    <button id="addSectionBtn" class="btn add-section" type="button">+ Agregar sección</button>
+    <div id="bannerBox" class="banner-box" title="Foto de portada del formato"></div>
+    <div id="zoneBar" class="zone-bar" aria-label="Zonas"></div>
+    <section id="zonePanel" class="zone-panel"></section>
   </main>
 </div>
 
@@ -720,9 +897,9 @@ a.btn { text-decoration: none; color: inherit; }
       <h3 id="viewerTitle"></h3>
       <p id="viewerPath" class="muted mono"></p>
       <div class="viewer-actions">
-        <select id="viewerSection" aria-label="Sección"></select>
+        <select id="viewerSection" aria-label="Área"></select>
         <button id="viewerPrimary" class="btn btn-primary" type="button">Agregar</button>
-        <button id="viewerRemove" class="btn danger" type="button">Quitar del tablero</button>
+        <button id="viewerRemove" class="btn danger" type="button">Quitar foto del espacio</button>
       </div>
     </div>
   </form>
@@ -734,7 +911,7 @@ a.btn { text-decoration: none; color: inherit; }
     <p class="muted">Las fotos y la distribución se guardan en la misma carpeta de SharePoint donde está este archivo.</p>
     <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
     <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
-    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
+    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Zona/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
     <p id="connResult" class="cfg-result" role="status"></p>
     <div class="settings-actions">
       <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
@@ -753,6 +930,8 @@ a.btn { text-decoration: none; color: inherit; }
         <label>Nombre<input id="fmtName" required maxlength="40" autocomplete="off" placeholder="W2"></label>
         <label>Subtítulo<input id="fmtSubtitle" maxlength="80" autocomplete="off" placeholder="Señalización Walmart"></label>
         <label>Color de la tarjeta<input id="fmtColor" type="color" value="#1f4fd6"></label>
+        <label>Foto de portada (opcional)<select id="fmtBanner"></select></label>
+        <div id="fmtBannerPreview" class="fmt-banner-preview"></div>
       </div>
       <div>
         <p class="muted small">Así se verá en la portada:</p>
@@ -998,7 +1177,7 @@ const SP = (() => {
     silentToken: async () => true,
     signIn: async () => account,
     signOut: async () => {},
-    resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
   };
 })();
 
@@ -1007,32 +1186,76 @@ const SP = (() => {
 'use strict';
 
 /* =========================================================================
-   Tablero de Señalización
-   - Las imágenes se cargan desde el equipo del usuario y se guardan en
-     IndexedDB del navegador. Nunca se suben a ningún servidor.
-   - El identificador de cada imagen es su ruta relativa literal dentro de
-     la carpeta cargada (se conservan acentos, espacios y erratas).
+   Panel de administrador del Manual de Señalización.
+   Estructura: Formato → Zona → Área → Espacios (cada espacio: título + foto).
+   - Las fotos se cargan desde la computadora y se guardan en IndexedDB.
+   - El identificador de cada foto es su ruta relativa literal dentro de la
+     carpeta cargada (se conservan acentos, espacios y erratas).
+   - Publicar sube todo a la misma carpeta de SharePoint donde está este archivo.
    ========================================================================= */
 
-const DEFAULT_SECTIONS = [
-  'Autocobro SCO', 'Cajeros', 'Carnes', 'Cocina', 'Comedor', 'Compactadora',
-  'Consultorio Médico', 'Deli', 'Entrada de Personal', 'Entrada y Salida de Cliente',
-  'Frutas y Verduras', 'Kiosco', 'Línea de Cajas', 'Lockers Clientes', 'On Demand',
-  'Panadería', 'Pescados', 'Recibo', 'Refrigeradores', 'Sala de Descanso',
-  'Salchichonería', 'Servicios al Cliente', 'Tortillería', 'Trastienda',
-  'W.C. Asociados', 'W.C. Clientes',
-  // Áreas nuevas detectadas en las carpetas
-  'Carritos Autoservicio', 'Electrónica', 'Farmacia', 'Patio de maniobras',
+const DEFAULT_ZONES = [
+  {
+    name: 'Frente de Tienda',
+    areas: ['Entrada y Salida de Clientes', 'Autocobro SCO', 'Carritos Autoservicio', 'Kiosco', 'Línea de Cajas',
+      'Servicios al Cliente', 'Lockers de Clientes', 'W.C. Clientes', 'Cajeros'],
+  },
+  {
+    name: 'Piso de Venta',
+    areas: ['Frutas y Verduras', 'Carnes', 'Pescados', 'Salchichonería', 'Deli', 'Cocina', 'Panadería', 'Tortillería',
+      'Refrigeradores', 'On Demand', 'Electrónica', 'Farmacia', 'Consultorio Médico'],
+  },
+  {
+    name: 'Trastienda',
+    areas: ['Recibo', 'Trastienda', 'Compactadora', 'Patio de maniobras', 'Entrada de Personal', 'Comedor',
+      'Sala de Descanso', 'W.C. Asociados'],
+  },
+  { name: 'Protección Civil', areas: [] },
 ];
+
+// Espacios que ya se conocen por área (se pueden editar, agregar o quitar).
+const DEFAULT_SPACES = {
+  'Entrada y Salida de Clientes': [
+    'Pizarron de Competencia', 'Horario de operación', 'Letrero “No discriminación”', 'Letrero de Pago de Remesas',
+    'Medios de pago', 'Prohibida la venta de bebidas alcoholicas y cigarros a menores de edad',
+    'Letrero de QFB (Responsable Sanitario)', 'Aviso de Privacidad', 'Tabaco',
+    'Plano lay out de equipos de seguridad señalizado',
+  ],
+};
+
+// Nombres de carpeta/sección anteriores que corresponden a un área.
+const AREA_ALIASES = {
+  'entrada y salida de cliente': 'Entrada y Salida de Clientes',
+  'lockers clientes': 'Lockers de Clientes',
+  'f&v': 'Frutas y Verduras',
+  'electronica': 'Electrónica',
+  'consultorio medico': 'Consultorio Médico',
+};
+
+const DEFAULT_FORMATS = [
+  { name: 'W2', subtitle: 'Señalización Walmart', color: '#1f4fd6' },
+  { name: 'B2', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+  { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+];
+
+const DEFAULT_INTRO = {
+  title: 'Señalización en tu tienda',
+  subtitle: 'Selecciona tu formato para continuar',
+  guideTitle: 'Guía de señalización',
+  guide: 'En este manual encontrarás la señalización autorizada que debe permanecer en tu tienda. Úsalo como guía para validar cada espacio.',
+  importantTitle: 'Importante',
+  important: [
+    'Retira cualquier señalización que no esté indicada en este manual.',
+    'Mantén únicamente la señalización autorizada en tienda.',
+    'Coloca máximo una señalización por departamento.',
+  ],
+};
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
 const DB_NAME = 'tablero-senalizacion';
 const DB_VERSION = 1;
-
-// Publicación en SharePoint: <carpeta>/<Formato>/<Área>/<foto>.jpg + tablero.json
 const MAX_SIDE = 2000;      // px del lado mayor tras optimizar
 const JPEG_QUALITY = 0.85;
-const SCOPES = [];
 
 /* ---------- Utilidades ---------- */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -1040,6 +1263,8 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const titleFromName = (name) => name.replace(IMAGE_EXT, '').trim();
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+const defaultNote = (area) => `En ${area} solo deberás contar con la siguiente señalización`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 async function sha1(blob) {
   if (!crypto.subtle) return null;
@@ -1070,7 +1295,7 @@ function download(filename, blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-/* ---------- Almacenamiento (IndexedDB con respaldo en memoria) ---------- */
+/* ---------- Almacenamiento local (IndexedDB) ---------- */
 let db = null;
 
 function openDB() {
@@ -1101,43 +1326,22 @@ function idb(store, mode, fn) {
   });
 }
 
-/* ---------- Estado ---------- */
-const images = new Map(); // id -> { id, path, folder, name, blob, url }
+/* ---------- Modelo ---------- */
+const images = new Map(); // id (ruta) -> { id, path, folder, name, blob, hash, url }
+let state = null;          // { dirty, publishedAt, intro, formats, activeId }
+let board = null;          // formato activo
+const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
-const DEFAULT_FORMATS = [
-  { name: 'W2', subtitle: 'Señalización Walmart', color: '#1f4fd6' },
-  { name: 'B2', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
-  { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
-];
+const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId });
+const newArea = (name, spaces) => ({ id: uid(), name, note: '', spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
+const newZone = (name, areas = []) => ({ id: uid(), name, areas });
+const newZones = () => DEFAULT_ZONES.map((z) => newZone(z.name, z.areas.map((a) => newArea(a))));
 
-const DEFAULT_INTRO = {
-  title: 'Señalización en tu tienda',
-  subtitle: 'Selecciona tu formato para continuar',
-  guideTitle: 'Guía de señalización',
-  guide: 'En este manual encontrarás la señalización autorizada que debe permanecer en tu tienda. Úsalo como guía para validar cada espacio.',
-  importantTitle: 'Importante',
-  important: [
-    'Retira cualquier señalización que no esté indicada en este manual.',
-    'Mantén únicamente la señalización autorizada en tienda.',
-    'Coloca máximo una señalización por departamento.',
-  ],
-};
-
-// state: todo lo que se guarda y publica. board: el formato que se está editando.
-let state = null;
-let board = null;
-const ui = {
-  query: '',
-  onlyUnplaced: false,
-  collapsedFolders: new Set(),
-};
-
-function newSections() {
-  return DEFAULT_SECTIONS.map((name) => ({ id: uid(), name, collapsed: false, cards: [] }));
-}
-
-function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', sections } = {}) {
-  return { id: uid(), name, subtitle, color, sections: sections || newSections() };
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, zones } = {}) {
+  const f = { id: uid(), name, subtitle, color, banner, zones: zones || newZones() };
+  f.activeZoneId = f.zones[0]?.id || null;
+  f.activeAreaId = null;
+  return f;
 }
 
 function defaultState() {
@@ -1145,30 +1349,78 @@ function defaultState() {
   return { dirty: false, publishedAt: null, intro: structuredClone(DEFAULT_INTRO), formats, activeId: formats[0].id };
 }
 
-// Acepta el estado guardado actual o el de versiones anteriores (un solo tablero).
+// Formatos de versiones anteriores (secciones con tarjetas) → zonas/áreas/espacios.
+function migrateSections(sections, cardImage) {
+  const zones = newZones();
+  const byName = new Map();
+  zones.forEach((z) => z.areas.forEach((a) => byName.set(norm(a.name), a)));
+  let other = null;
+  for (const s of sections || []) {
+    const key = norm(AREA_ALIASES[norm(s.name)] || s.name);
+    let area = byName.get(key);
+    if (!area) {
+      if (!other) { other = newZone('Otras áreas'); zones.push(other); }
+      area = newArea(String(s.name || 'Área'), []);
+      other.areas.push(area);
+      byName.set(key, area);
+    }
+    for (const c of s.cards || []) {
+      const imageId = cardImage(c);
+      const empty = area.spaces.find((sp) => !sp.imageId && norm(sp.title) === norm(c.title || ''));
+      if (empty) empty.imageId = imageId;
+      else area.spaces.push(newSpace(String(c.title || 'Señalización'), imageId));
+    }
+  }
+  return zones;
+}
+
 function normalizeState(saved) {
-  if (!saved) return null;
-  if (Array.isArray(saved.formats) && saved.formats.length) {
-    saved.intro = { ...structuredClone(DEFAULT_INTRO), ...(saved.intro || {}) };
-    return saved;
-  }
-  if (Array.isArray(saved.sections)) {
-    const st = defaultState();
-    st.formats[0].sections = saved.sections;
-    st.dirty = !!saved.dirty;
-    st.publishedAt = saved.publishedAt || null;
-    return st;
-  }
-  return null;
+  if (!saved || !Array.isArray(saved.formats) || !saved.formats.length) return null;
+  saved.intro = { ...structuredClone(DEFAULT_INTRO), ...(saved.intro || {}) };
+  saved.formats = saved.formats.map((f) => {
+    if (Array.isArray(f.zones)) return f;
+    const nf = newFormat({ name: f.name, subtitle: f.subtitle, color: f.color, zones: migrateSections(f.sections, (c) => c.imageId) });
+    nf.id = f.id || nf.id;
+    return nf;
+  });
+  return saved;
 }
 
 function setActiveFormat(id) {
   board = state.formats.find((f) => f.id === id) || state.formats[0];
   state.activeId = board.id;
+  if (!board.zones.some((z) => z.id === board.activeZoneId)) board.activeZoneId = board.zones[0]?.id || null;
 }
 
-function allCards() {
-  return state.formats.flatMap((f) => f.sections.flatMap((s) => s.cards));
+const activeZone = () => board.zones.find((z) => z.id === board.activeZoneId) || null;
+const activeArea = () => { const z = activeZone(); return (z && z.areas.find((a) => a.id === board.activeAreaId)) || null; };
+const allAreas = (f = board) => f.zones.flatMap((z) => z.areas.map((area) => ({ zone: z, area })));
+const allSpaces = (f = board) => f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
+
+function findArea(areaId, f = board) {
+  for (const zone of f.zones) {
+    const index = zone.areas.findIndex((a) => a.id === areaId);
+    if (index !== -1) return { zone, area: zone.areas[index], index };
+  }
+  return null;
+}
+
+function findSpace(spaceId, f = board) {
+  for (const zone of f.zones) {
+    for (const area of zone.areas) {
+      const index = area.spaces.findIndex((s) => s.id === spaceId);
+      if (index !== -1) return { zone, area, index, space: area.spaces[index] };
+    }
+  }
+  return null;
+}
+
+function placementCounts() {
+  const counts = new Map();
+  const add = (id) => { if (id) counts.set(id, (counts.get(id) || 0) + 1); };
+  allSpaces().forEach((s) => add(s.imageId));
+  add(board.banner);
+  return counts;
 }
 
 let saveTimer;
@@ -1181,11 +1433,7 @@ function saveBoard({ dirty = true } = {}) {
   }, 250);
 }
 
-function placementCounts() {
-  const counts = new Map();
-  for (const sec of board.sections) for (const c of sec.cards) counts.set(c.imageId, (counts.get(c.imageId) || 0) + 1);
-  return counts;
-}
+function commit() { saveBoard(); render(); }
 
 function urlFor(img) {
   if (!img) return null;
@@ -1193,17 +1441,8 @@ function urlFor(img) {
   return img.url;
 }
 
-function findCard(cardId) {
-  for (const sec of board.sections) {
-    const i = sec.cards.findIndex((c) => c.id === cardId);
-    if (i !== -1) return { sec, index: i, card: sec.cards[i] };
-  }
-  return null;
-}
-
-/* ---------- Carga de archivos ---------- */
+/* ---------- Carga de fotos ---------- */
 async function addFiles(entries) {
-  // entries: [{ file, path }]
   const list = entries.filter((e) => IMAGE_EXT.test(e.file.name) || /^image\//.test(e.file.type));
   if (!list.length) { toast('No se encontraron imágenes en lo que elegiste.'); return; }
   toast(`Procesando ${list.length} imágenes…`, 60000);
@@ -1244,7 +1483,7 @@ async function addFiles(entries) {
   }
 
   render();
-  toast(`${added} imágenes nuevas${updated ? `, ${updated} actualizadas` : ''}.`);
+  toast(`${plural(added, 'imagen nueva', 'imágenes nuevas')}${updated ? `, ${updated} actualizadas` : ''}.`);
 }
 
 async function filesFromDataTransfer(dt) {
@@ -1275,7 +1514,7 @@ function renderLibrary(counts) {
   const list = $('#libraryList');
   if (!images.size) {
     list.innerHTML = `<div class="empty-lib"><strong>Aún no hay imágenes</strong>
-      Usa <em>Cargar carpeta</em> y elige la carpeta <em>Señalización</em>, o arrastra la carpeta aquí.</div>`;
+      Usa <em>Cargar carpeta</em> y elige tu carpeta de fotos, o arrastra la carpeta aquí.</div>`;
     return;
   }
 
@@ -1284,16 +1523,13 @@ function renderLibrary(counts) {
   for (const img of images.values()) {
     if (q && !norm(img.path).includes(q)) continue;
     if (ui.onlyUnplaced && counts.get(img.id)) continue;
-    const key = img.folder;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(img);
+    if (!groups.has(img.folder)) groups.set(img.folder, []);
+    groups.get(img.folder).push(img);
   }
-
   if (!groups.size) { list.innerHTML = '<div class="empty-lib">Nada coincide con el filtro.</div>'; return; }
 
-  const folders = [...groups.keys()].sort((a, b) => collator.compare(a, b));
   const frag = document.createDocumentFragment();
-  for (const folder of folders) {
+  for (const folder of [...groups.keys()].sort(collator.compare)) {
     const imgs = groups.get(folder).sort((a, b) => collator.compare(a.name, b.name));
     const wrap = document.createElement('div');
     wrap.className = 'folder' + (ui.collapsedFolders.has(folder) && !q ? ' collapsed' : '');
@@ -1313,7 +1549,7 @@ function renderLibrary(counts) {
       el.title = img.path;
       el.innerHTML = `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
         <span class="name">${escapeHtml(titleFromName(img.name))}</span>
-        ${n ? `<span class="badge" title="Colocada ${n} ${n === 1 ? 'vez' : 'veces'}">${n}</span>` : ''}`;
+        ${n ? `<span class="badge" title="Colocada ${plural(n, 'vez', 'veces')}">${n}</span>` : ''}`;
       items.appendChild(el);
     }
     frag.appendChild(wrap);
@@ -1321,129 +1557,181 @@ function renderLibrary(counts) {
   list.replaceChildren(frag);
 }
 
-/* ---------- Render: tablero ---------- */
-function renderBoard() {
-  const boardEl = $('#board');
-  const nav = $('#sectionNav');
-  const frag = document.createDocumentFragment();
-  const navFrag = document.createDocumentFragment();
-
-  board.sections.forEach((sec, si) => {
-    const el = document.createElement('section');
-    el.className = 'sec' + (sec.collapsed ? ' collapsed' : '');
-    el.id = 'sec-' + sec.id;
-    el.dataset.secId = sec.id;
-    el.innerHTML = `<div class="sec-head" data-drop-sec="${sec.id}">
-        <button type="button" class="icon-btn" data-sec-action="collapse" title="${sec.collapsed ? 'Expandir' : 'Contraer'}">${sec.collapsed ? '▸' : '▾'}</button>
-        <h2 class="sec-title" contenteditable="true" spellcheck="false" data-sec-title>${escapeHtml(sec.name)}</h2>
-        <span class="sec-count">${sec.cards.length} ${sec.cards.length === 1 ? 'imagen' : 'imágenes'}</span>
-        <div class="sec-tools">
-          <button type="button" class="icon-btn" data-sec-action="up" title="Subir sección" ${si === 0 ? 'disabled' : ''}>↑</button>
-          <button type="button" class="icon-btn" data-sec-action="down" title="Bajar sección" ${si === board.sections.length - 1 ? 'disabled' : ''}>↓</button>
-          <button type="button" class="icon-btn danger" data-sec-action="delete" title="Eliminar sección">🗑</button>
-        </div>
-      </div>
-      <div class="dropzone" data-sec-id="${sec.id}"></div>`;
-    const zone = el.querySelector('.dropzone');
-    if (!sec.cards.length) zone.innerHTML = '<div class="hint">Arrastra imágenes aquí</div>';
-    for (const card of sec.cards) zone.appendChild(cardEl(card));
-    frag.appendChild(el);
-
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip' + (sec.cards.length ? '' : ' empty');
-    chip.dataset.dropSec = sec.id;
-    chip.dataset.jump = sec.id;
-    chip.innerHTML = `${escapeHtml(sec.name)}<span class="n">${sec.cards.length}</span>`;
-    navFrag.appendChild(chip);
-  });
-
-  boardEl.replaceChildren(frag);
-  nav.replaceChildren(navFrag);
+/* ---------- Render: formatos, zonas, áreas y espacios ---------- */
+function renderFormatTabs() {
+  $('#formatTabs').innerHTML = state.formats.map((f) => {
+    const spaces = allSpaces(f);
+    const filled = spaces.filter((s) => s.imageId).length;
+    return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
+      <span class="ftab-mark">${escapeHtml(f.name.slice(0, 3))}</span>
+      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${filled}/${spaces.length} con foto</small></span>
+    </button>`;
+  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Nombre, subtítulo, color y foto de portada de ${escapeHtml(board.name)}">⚙ Editar formato</button>
+    <button type="button" class="ftab-tool" data-format-action="add">+ Formato</button>
+    <button type="button" class="ftab-tool" data-format-action="intro" title="Textos de la página de inicio">✎ Textos de portada</button>`;
 }
 
-function cardEl(card) {
-  const img = images.get(card.imageId);
+function renderBanner() {
+  const el = $('#bannerBox');
+  const img = board.banner && images.get(board.banner);
+  el.innerHTML = img
+    ? `<img alt="" src="${urlFor(img)}"><button type="button" class="banner-clear" data-banner-clear title="Quitar foto de portada">×</button>`
+    : `<span>Foto de portada de ${escapeHtml(board.name)} (opcional): arrastra aquí una imagen</span>`;
+  el.classList.toggle('has-img', !!img);
+}
+
+function renderZoneBar() {
+  $('#zoneBar').innerHTML = board.zones.map((z) => {
+    const n = z.areas.reduce((k, a) => k + a.spaces.length, 0);
+    return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
+      ${escapeHtml(z.name)}<small>${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}</small></button>`;
+  }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>';
+}
+
+function renderZonePanel() {
+  const panel = $('#zonePanel');
+  const zone = activeZone();
+  if (!zone) {
+    panel.innerHTML = '<div class="empty-panel">Este formato no tiene zonas. Usa <strong>+ Zona</strong> para crear una.</div>';
+    return;
+  }
+  const zi = board.zones.indexOf(zone);
+  const area = activeArea();
+  panel.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2 class="zone-title" contenteditable="true" spellcheck="false" data-zone-title>${escapeHtml(zone.name)}</h2>
+        <p class="muted">Selecciona un área para acomodar su señalización.</p>
+      </div>
+      <div class="tools">
+        <button type="button" class="icon-btn" data-zone-action="left" title="Mover zona a la izquierda" ${zi === 0 ? 'disabled' : ''}>←</button>
+        <button type="button" class="icon-btn" data-zone-action="right" title="Mover zona a la derecha" ${zi === board.zones.length - 1 ? 'disabled' : ''}>→</button>
+        <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">🗑</button>
+      </div>
+    </div>
+    <div class="area-grid">
+      ${zone.areas.map((a) => {
+        const filled = a.spaces.filter((s) => s.imageId).length;
+        return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
+          <span>${escapeHtml(a.name)}</span><small>${filled}/${a.spaces.length}</small></button>`;
+      }).join('')}
+      <button type="button" class="area-add" data-area-action="add">+ Área</button>
+    </div>
+    ${area ? areaDetailHtml(zone, area) : `<p class="pick-hint">${zone.areas.length ? 'Elige un área para ver y acomodar sus espacios.' : 'Esta zona aún no tiene áreas. Usa <strong>+ Área</strong>.'}</p>`}`;
+
+  if (area) {
+    const dz = panel.querySelector('.dropzone');
+    for (const sp of area.spaces) dz.insertBefore(spaceEl(sp), dz.lastElementChild);
+  }
+}
+
+function areaDetailHtml(zone, area) {
+  const ai = zone.areas.indexOf(area);
+  return `
+    <hr class="divider">
+    <div class="area-head">
+      <h3 class="area-title" contenteditable="true" spellcheck="false" data-area-title>${escapeHtml(area.name)}</h3>
+      <div class="tools">
+        <label class="move-zone">Zona
+          <select data-area-zone>${board.zones.map((z) => `<option value="${z.id}" ${z.id === zone.id ? 'selected' : ''}>${escapeHtml(z.name)}</option>`).join('')}</select>
+        </label>
+        <button type="button" class="icon-btn" data-area-action="left" title="Mover área antes" ${ai === 0 ? 'disabled' : ''}>←</button>
+        <button type="button" class="icon-btn" data-area-action="right" title="Mover área después" ${ai === zone.areas.length - 1 ? 'disabled' : ''}>→</button>
+        <button type="button" class="icon-btn danger" data-area-action="delete" title="Eliminar área">🗑</button>
+      </div>
+    </div>
+    <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
+    <div class="dropzone" data-area-id="${area.id}">
+      <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
+    </div>`;
+}
+
+function spaceEl(sp) {
+  const img = sp.imageId && images.get(sp.imageId);
   const el = document.createElement('article');
-  el.className = 'card';
-  el.dataset.cardId = card.id;
-  el.title = card.imageId;
-  el.innerHTML = `<div class="thumb">${img
-      ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">`
-      : `<div class="missing">Falta la imagen:<br>${escapeHtml(card.imageId)}</div>`}</div>
-    <div class="card-title" contenteditable="true" spellcheck="false" data-card-title>${escapeHtml(card.title)}</div>
-    <button type="button" class="remove" data-card-remove title="Quitar del tablero" aria-label="Quitar del tablero">×</button>`;
+  el.className = 'card space';
+  el.dataset.cardId = sp.id;
+  el.innerHTML = `
+    <div class="space-head">
+      <div class="space-title" contenteditable="true" spellcheck="false" data-space-title>${escapeHtml(sp.title)}</div>
+      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">🗑</button>
+    </div>
+    <div class="slot${img ? ' filled' : ''}" data-slot="${sp.id}">
+      ${img ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
+        <button type="button" class="slot-clear" data-space-action="clear" title="Quitar foto">×</button>`
+        : sp.imageId ? `<span class="missing">Falta la foto en la biblioteca:<br>${escapeHtml(sp.imageId)}</span>`
+          : `<span class="slot-hint">Coloca aquí la imagen de ${escapeHtml(sp.title)}</span>`}
+    </div>`;
   return el;
 }
 
 function renderStats(counts) {
-  const total = images.size;
+  const spaces = allSpaces();
+  const filled = spaces.filter((s) => s.imageId).length;
   const placed = [...images.keys()].filter((id) => counts.get(id)).length;
-  const cards = board.sections.reduce((n, s) => n + s.cards.length, 0);
-  $('#stats').textContent = total
-    ? `${board.name}: ${cards} tarjetas en ${board.sections.length} secciones · Biblioteca: ${total} imágenes, ${placed} colocadas en ${board.name}`
-    : `${board.name}: ${board.sections.length} secciones · Sin imágenes cargadas`;
-}
-
-function renderFormatTabs() {
-  const el = $('#formatTabs');
-  el.innerHTML = state.formats.map((f) => {
-    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
-    return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
-      <span class="ftab-mark">${escapeHtml(f.name.slice(0, 3))}</span>
-      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${n} ${n === 1 ? 'tarjeta' : 'tarjetas'}</small></span>
-    </button>`;
-  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Editar nombre, subtítulo y color de ${escapeHtml(board.name)}">⚙ Editar formato</button>
-    <button type="button" class="ftab-tool" data-format-action="add" title="Agregar un formato">+ Formato</button>
-    <button type="button" class="ftab-tool" data-format-action="intro" title="Editar los textos de la portada">✎ Textos de portada</button>`;
+  $('#stats').textContent = `${board.name}: ${filled} de ${plural(spaces.length, 'espacio', 'espacios')} con foto · Biblioteca: ${plural(images.size, 'imagen', 'imágenes')}, ${placed} usadas en ${board.name}`;
 }
 
 function render() {
   const counts = placementCounts();
   renderFormatTabs();
+  renderBanner();
+  renderZoneBar();
+  renderZonePanel();
   renderLibrary(counts);
-  renderBoard();
   renderStats(counts);
 }
 
-/* ---------- Operaciones del tablero ---------- */
-function addCard(secId, imageId, index) {
-  const sec = board.sections.find((s) => s.id === secId);
-  const img = images.get(imageId);
-  if (!sec || !img) return;
-  const card = { id: uid(), imageId, title: titleFromName(img.name) };
-  const i = index == null ? sec.cards.length : Math.max(0, Math.min(index, sec.cards.length));
-  sec.cards.splice(i, 0, card);
-  if (sec.collapsed) sec.collapsed = false;
+/* ---------- Operaciones ---------- */
+function assignImage(spaceId, imageId) {
+  const f = findSpace(spaceId);
+  if (!f || !images.has(imageId)) return;
+  f.space.imageId = imageId;
   commit();
 }
 
-function moveCard(cardId, secId, index) {
-  const found = findCard(cardId);
-  const dest = board.sections.find((s) => s.id === secId);
-  if (!found || !dest) return;
-  found.sec.cards.splice(found.index, 1);
-  const i = index == null ? dest.cards.length : Math.max(0, Math.min(index, dest.cards.length));
-  dest.cards.splice(i, 0, found.card);
+function clearImage(spaceId) {
+  const f = findSpace(spaceId);
+  if (!f || !f.space.imageId) return;
+  f.space.imageId = null;
   commit();
 }
 
-function removeCard(cardId) {
-  const found = findCard(cardId);
-  if (!found) return;
-  found.sec.cards.splice(found.index, 1);
+function addSpace(areaId, { title, imageId = null }, index = null) {
+  const f = findArea(areaId);
+  if (!f) return null;
+  const sp = newSpace(title || 'Nuevo espacio', imageId);
+  const i = index == null ? f.area.spaces.length : Math.max(0, Math.min(index, f.area.spaces.length));
+  f.area.spaces.splice(i, 0, sp);
+  commit();
+  return sp;
+}
+
+function moveSpace(spaceId, areaId, index = null) {
+  const from = findSpace(spaceId);
+  const to = findArea(areaId);
+  if (!from || !to) return;
+  from.area.spaces.splice(from.index, 1);
+  const i = index == null ? to.area.spaces.length : Math.max(0, Math.min(index, to.area.spaces.length));
+  to.area.spaces.splice(i, 0, from.space);
   commit();
 }
 
-function commit() { saveBoard(); render(); }
+function selectArea(areaId) {
+  const f = findArea(areaId);
+  if (!f) return;
+  board.activeZoneId = f.zone.id;
+  board.activeAreaId = areaId;
+  saveBoard({ dirty: false });
+  render();
+}
 
-function addSection(name) {
-  const sec = { id: uid(), name: name || 'Nueva sección', collapsed: false, cards: [] };
-  board.sections.push(sec);
-  commit();
-  const title = $(`#sec-${CSS.escape(sec.id)} [data-sec-title]`);
-  title.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  if (!name) { title.focus(); document.getSelection().selectAllChildren(title); }
+function focusEditable(selector) {
+  const el = $(selector);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.focus();
+  document.getSelection().selectAllChildren(el);
 }
 
 /* ---------- Arrastrar y soltar (pointer events: mouse y táctil) ---------- */
@@ -1451,7 +1739,7 @@ let drag = null;
 
 function onPointerDown(e) {
   if (e.button !== 0 && e.pointerType === 'mouse') return;
-  if (e.target.closest('button, input, select, [contenteditable="true"]')) return;
+  if (e.target.closest('button, input, select, label, [contenteditable="true"]')) return;
   const src = e.target.closest('.lib-item, .card');
   if (!src) return;
 
@@ -1461,13 +1749,7 @@ function onPointerDown(e) {
     id: src.dataset.cardId || src.dataset.imageId,
     x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
     touch: e.pointerType !== 'mouse',
-    active: false,
-    timer: null,
-    target: null,
-    hoverEl: null,
-    placeholder: null,
-    ghost: null,
-    raf: 0,
+    active: false, timer: null, target: null, hoverEl: null, placeholder: null, ghost: null, raf: 0,
   };
   if (drag.touch) drag.timer = setTimeout(() => { if (drag && !drag.active) startDrag(); }, 280);
 
@@ -1500,17 +1782,23 @@ function startDrag() {
   document.body.classList.add('dragging');
   document.activeElement?.blur?.();
 
-  const imgId = drag.kind === 'card' ? findCard(drag.id)?.card.imageId : drag.id;
-  const img = images.get(imgId);
+  let img, label;
+  if (drag.kind === 'card') {
+    const f = findSpace(drag.id);
+    img = f && f.space.imageId && images.get(f.space.imageId);
+    label = f ? f.space.title : '';
+  } else {
+    img = images.get(drag.id);
+    label = img ? titleFromName(img.name) : '';
+  }
   const ghost = document.createElement('div');
   ghost.className = 'ghost';
-  ghost.innerHTML = `${img ? `<img alt="" src="${urlFor(img)}">` : ''}<span>${escapeHtml(img ? titleFromName(img.name) : imgId || '')}</span>`;
+  ghost.innerHTML = `${img ? `<img alt="" src="${urlFor(img)}">` : ''}<span>${escapeHtml(label)}</span>`;
   document.body.appendChild(ghost);
   drag.ghost = ghost;
 
   drag.placeholder = document.createElement('div');
   drag.placeholder.className = 'placeholder';
-
   if (drag.kind === 'card') {
     drag.src.parentNode.insertBefore(drag.placeholder, drag.src);
     drag.src.classList.add('drag-source');
@@ -1536,10 +1824,34 @@ function setHover(el, cls = 'drop-hover') {
 
 function updateTarget() {
   const el = document.elementFromPoint(drag.x, drag.y);
+  // Una foto de la biblioteca sobre cualquier parte de un espacio se asigna a ese espacio.
+  const overCard = drag.kind === 'lib' && el && el.closest('.dropzone .card');
+  const slot = overCard && overCard.querySelector('.slot');
+  const banner = drag.kind === 'lib' && el && el.closest('#bannerBox');
   const zone = el && el.closest('.dropzone');
-  const secDrop = el && el.closest('[data-drop-sec]');
+  const areaBtn = el && el.closest('[data-drop-area]');
   const lib = el && el.closest('#library');
 
+  if (slot) {
+    drag.placeholder.remove();
+    setHover(slot);
+    drag.target = { assign: slot.dataset.slot };
+    return;
+  }
+  if (banner) {
+    drag.placeholder.remove();
+    setHover(banner);
+    drag.target = { banner: true };
+    return;
+  }
+  if (zone && drag.kind === 'lib') {
+    // Foto suelta entre espacios: crea un espacio nuevo al final del área.
+    setHover(zone);
+    const anchor = zone.querySelector('.space-add');
+    if (drag.placeholder.nextSibling !== anchor) zone.insertBefore(drag.placeholder, anchor);
+    drag.target = { areaId: zone.dataset.areaId, append: true };
+    return;
+  }
   if (zone) {
     setHover(zone);
     const cards = [...zone.querySelectorAll('.card:not(.drag-source)')];
@@ -1548,19 +1860,19 @@ function updateTarget() {
       const r = c.getBoundingClientRect();
       if (drag.y < r.top || (drag.y <= r.bottom && drag.x < r.left + r.width / 2)) { before = c; break; }
     }
-    if (before) { if (drag.placeholder.nextSibling !== before) zone.insertBefore(drag.placeholder, before); }
-    else if (zone.lastElementChild !== drag.placeholder) zone.appendChild(drag.placeholder);
-    drag.target = { secId: zone.dataset.secId, zone };
+    const anchor = before || zone.querySelector('.space-add');
+    if (drag.placeholder.nextSibling !== anchor) zone.insertBefore(drag.placeholder, anchor);
+    drag.target = { areaId: zone.dataset.areaId, zone };
     return;
   }
 
   drag.placeholder.remove();
-  if (secDrop) {
-    setHover(secDrop);
-    drag.target = { secId: secDrop.dataset.dropSec, append: true };
+  if (areaBtn) {
+    setHover(areaBtn);
+    drag.target = { areaId: areaBtn.dataset.dropArea, append: true };
   } else if (lib && drag.kind === 'card') {
     setHover(lib, 'drop-remove');
-    drag.target = { remove: true };
+    drag.target = { clearImage: true };
   } else {
     setHover(null);
     drag.target = null;
@@ -1573,28 +1885,14 @@ function autoScroll() {
   const speed = (d) => Math.ceil(((edge - d) / edge) * 18);
   if (drag.y < edge) window.scrollBy(0, -speed(drag.y));
   else if (window.innerHeight - drag.y < edge) window.scrollBy(0, speed(window.innerHeight - drag.y));
-
-  // Desplazamiento de la lista de la biblioteca y de la barra de secciones.
   const list = $('#libraryList');
   const lr = list.getBoundingClientRect();
   if (drag.x >= lr.left && drag.x <= lr.right) {
     if (drag.y > lr.top && drag.y < lr.top + 40) list.scrollTop -= 10;
     else if (drag.y < lr.bottom && drag.y > lr.bottom - 40) list.scrollTop += 10;
   }
-  const nav = $('#sectionNav');
-  const nr = nav.getBoundingClientRect();
-  if (drag.y >= nr.top && drag.y <= nr.bottom) {
-    if (drag.x < nr.left + 40) nav.scrollLeft -= 10;
-    else if (drag.x > nr.right - 40) nav.scrollLeft += 10;
-  }
   updateTarget();
   drag.raf = requestAnimationFrame(autoScroll);
-}
-
-function endDragListeners() {
-  window.removeEventListener('pointermove', onPointerMove);
-  window.removeEventListener('pointerup', onPointerUp);
-  window.removeEventListener('pointercancel', cancelDrag);
 }
 
 function cleanupDrag() {
@@ -1606,7 +1904,9 @@ function cleanupDrag() {
   drag.placeholder?.remove();
   drag.src.classList.remove('drag-source');
   document.body.classList.remove('dragging');
-  endDragListeners();
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+  window.removeEventListener('pointercancel', cancelDrag);
   drag = null;
 }
 
@@ -1616,9 +1916,10 @@ function onPointerUp(e) {
   if (!drag) return;
   const d = drag;
   if (!d.active) {
-    // Fue un clic / toque: abrir el visor.
     cleanupDrag();
-    if (e.target.closest('.lib-item, .card') === d.src) openViewer(d.kind, d.id);
+    if (e.target.closest('.lib-item, .card') !== d.src) return;
+    if (d.kind === 'lib') openViewer('lib', d.id);
+    else if (findSpace(d.id)?.space.imageId) openViewer('card', d.id);
     return;
   }
 
@@ -1634,9 +1935,16 @@ function onPointerUp(e) {
   cleanupDrag();
   if (!t) return;
 
-  if (t.remove) { removeCard(d.id); toast('Imagen quitada del tablero.'); return; }
-  if (d.kind === 'lib') addCard(t.secId, d.id, t.append ? null : index);
-  else moveCard(d.id, t.secId, t.append ? null : index);
+  if (t.assign) { assignImage(t.assign, d.id); return; }
+  if (t.banner) { board.banner = d.id; commit(); toast('Foto de portada asignada.'); return; }
+  if (t.clearImage) { clearImage(d.id); toast('Foto quitada del espacio.'); return; }
+  if (d.kind === 'lib') {
+    const img = images.get(d.id);
+    addSpace(t.areaId, { title: titleFromName(img.name), imageId: d.id }, t.append ? null : index);
+    if (t.append) toast(`Espacio agregado en ${findArea(t.areaId).area.name}.`);
+  } else {
+    moveSpace(d.id, t.areaId, t.append ? null : index);
+  }
 }
 
 /* ---------- Arrastrar archivos desde el escritorio ---------- */
@@ -1653,60 +1961,66 @@ function setupFileDrop() {
     depth = 0;
     lib.classList.remove('drop-files');
     toast('Leyendo archivos…');
-    const entries = await filesFromDataTransfer(e.dataTransfer);
-    await addFiles(entries);
+    await addFiles(await filesFromDataTransfer(e.dataTransfer));
   });
 }
 
-/* ---------- Visor ---------- */
+/* ---------- Visor (clic en una foto) ---------- */
 const viewer = { kind: null, id: null };
 
+function areaOptions(selectedId) {
+  return board.zones.map((z) => `<optgroup label="${escapeHtml(z.name)}">${z.areas.map((a) =>
+    `<option value="${a.id}" ${a.id === selectedId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}</optgroup>`).join('');
+}
+
 function openViewer(kind, id) {
-  const dlg = $('#viewer');
-  let img, title;
+  let img, title, path, areaId;
   if (kind === 'card') {
-    const f = findCard(id);
+    const f = findSpace(id);
     if (!f) return;
-    img = images.get(f.card.imageId);
-    title = f.card.title;
-    $('#viewerPath').textContent = f.card.imageId;
+    img = images.get(f.space.imageId);
+    title = f.space.title;
+    path = f.space.imageId;
+    areaId = f.area.id;
   } else {
     img = images.get(id);
     if (!img) return;
     title = titleFromName(img.name);
-    $('#viewerPath').textContent = img.path;
+    path = img.path;
+    const match = allAreas().find(({ area }) => norm(area.name) === norm(AREA_ALIASES[norm(img.folder)] || img.folder));
+    areaId = (match && match.area.id) || board.activeAreaId;
   }
   viewer.kind = kind; viewer.id = id;
   $('#viewerImg').src = img ? urlFor(img) : '';
   $('#viewerImg').alt = title;
   $('#viewerTitle').textContent = title;
-
-  const sel = $('#viewerSection');
-  const currentSec = kind === 'card' ? findCard(id).sec.id : null;
-  sel.innerHTML = board.sections.map((s) => `<option value="${s.id}" ${s.id === currentSec ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
-  if (kind === 'lib' && img) {
-    const match = board.sections.find((s) => norm(s.name) === norm(img.folder));
-    if (match) sel.value = match.id;
-  }
-  $('#viewerPrimary').textContent = kind === 'card' ? 'Mover a esta sección' : 'Agregar a esta sección';
+  $('#viewerPath').textContent = path || '';
+  $('#viewerSection').innerHTML = areaOptions(areaId);
+  $('#viewerPrimary').textContent = kind === 'card' ? 'Mover a esta área' : 'Agregar como espacio en esta área';
   $('#viewerRemove').hidden = kind !== 'card';
-  dlg.showModal();
+  $('#viewer').showModal();
 }
 
 function setupViewer() {
   const dlg = $('#viewer');
   $('#viewerPrimary').addEventListener('click', () => {
-    const secId = $('#viewerSection').value;
-    if (!secId) return;
-    if (viewer.kind === 'lib') { addCard(secId, viewer.id); toast('Imagen agregada.'); }
-    else { moveCard(viewer.id, secId); toast('Imagen movida.'); }
+    const areaId = $('#viewerSection').value;
+    if (!areaId) return;
+    if (viewer.kind === 'lib') {
+      const img = images.get(viewer.id);
+      addSpace(areaId, { title: titleFromName(img.name), imageId: viewer.id });
+      toast('Espacio agregado.');
+    } else {
+      moveSpace(viewer.id, areaId);
+      toast('Espacio movido.');
+    }
     dlg.close();
   });
-  $('#viewerRemove').addEventListener('click', () => { removeCard(viewer.id); dlg.close(); });
+  $('#viewerRemove').addEventListener('click', () => { clearImage(viewer.id); dlg.close(); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
-/* ---------- Exportar / importar ---------- */
+/* ---------- Exportar / respaldar ---------- */
 function blobToDataURL(blob) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -1717,152 +2031,109 @@ function blobToDataURL(blob) {
 }
 
 async function exportCatalog() {
-  const sections = board.sections.filter((s) => s.cards.length);
-  if (!sections.length) { toast('El tablero está vacío: no hay nada que exportar.'); return; }
+  if (!allSpaces().length) { toast('Este formato no tiene espacios.'); return; }
   toast('Generando catálogo…', 10000);
-
   const cache = new Map();
-  const parts = [];
-  let missing = 0;
-  for (const sec of sections) {
-    const cards = [];
-    for (const c of sec.cards) {
-      const img = images.get(c.imageId);
-      if (!img) { missing++; continue; }
-      if (!cache.has(img.id)) cache.set(img.id, await blobToDataURL(img.blob));
-      cards.push(`<figure class="c" data-t="${escapeHtml(norm(c.title))}"><img loading="lazy" alt="${escapeHtml(c.title)}" src="${cache.get(img.id)}"><figcaption>${escapeHtml(c.title)}</figcaption></figure>`);
+  const dataUrl = async (id) => {
+    const img = id && images.get(id);
+    if (!img) return null;
+    if (!cache.has(id)) cache.set(id, await blobToDataURL(img.blob));
+    return cache.get(id);
+  };
+  let body = '';
+  for (const z of board.zones) {
+    if (!z.areas.length) continue;
+    body += `<h2>${escapeHtml(z.name)}</h2>`;
+    for (const a of z.areas) {
+      body += `<section><h3>${escapeHtml(a.name)}</h3><p class="note">${escapeHtml(a.note || defaultNote(a.name))}</p><div class="g">`;
+      for (const s of a.spaces) {
+        const src = await dataUrl(s.imageId);
+        body += `<figure><figcaption>${escapeHtml(s.title)}</figcaption><div class="f">${src ? `<img alt="" src="${src}">` : '<span>Imagen pendiente</span>'}</div></figure>`;
+      }
+      body += '</div></section>';
     }
-    parts.push({ sec, html: cards.join('\n') });
   }
-
   const date = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-  const slug = (s, i) => 's' + i + '-' + norm(s).replace(/[^a-z0-9]+/g, '-');
-  const html = `<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catálogo de Señalización ${escapeHtml(board.name)}</title>
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(state.intro.title)} · ${escapeHtml(board.name)}</title>
 <style>
-:root{--bg:#f4f6f9;--s:#fff;--b:#d8dde5;--t:#1b2330;--m:#5d6878;--a:#2563eb}
-@media (prefers-color-scheme:dark){:root{--bg:#11151c;--s:#1a2029;--b:#2f3846;--t:#e6eaf0;--m:#9aa5b5;--a:#5b8dff}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--s);border-bottom:1px solid var(--b);padding:12px 16px}
-h1{margin:0 0 2px;font-size:20px}header p{margin:0 0 8px;color:var(--m);font-size:12px}
-input{width:100%;max-width:420px;padding:8px 10px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:inherit;font:inherit}
-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}nav a{flex:none;padding:4px 10px;border:1px solid var(--b);border-radius:999px;color:inherit;text-decoration:none;font-size:12px;background:var(--s)}
-main{padding:16px;display:grid;gap:16px;max-width:1400px;margin:0 auto}
-section{background:var(--s);border:1px solid var(--b);border-radius:10px;scroll-margin-top:140px}
-h2{margin:0;padding:12px 14px;border-bottom:1px solid var(--b);font-size:17px}h2 small{color:var(--m);font-weight:400;font-size:12px;margin-left:6px}
-.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:12px}
-.c{margin:0;border:1px solid var(--b);border-radius:8px;overflow:hidden;cursor:zoom-in}
-.c img{display:block;width:100%;aspect-ratio:3/4;object-fit:contain;background:var(--bg)}
-.c figcaption{padding:6px 8px;font-size:12px;border-top:1px solid var(--b)}
-.hide{display:none!important}
-#lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:10;cursor:zoom-out;padding:16px}
-#lb.on{display:flex}#lb img{max-width:100%;max-height:100%;object-fit:contain}
-</style></head><body>
-<header><h1>Catálogo de Señalización ${escapeHtml(board.name)}</h1><p>Generado el ${escapeHtml(date)}</p>
-<input id="q" type="search" placeholder="Buscar señalización…">
-<nav>${parts.map((p, i) => `<a href="#${slug(p.sec.name, i)}">${escapeHtml(p.sec.name)}</a>`).join('')}</nav></header>
-<main>
-${parts.map((p, i) => `<section id="${slug(p.sec.name, i)}"><h2>${escapeHtml(p.sec.name)}<small>${p.sec.cards.length}</small></h2><div class="g">
-${p.html}
-</div></section>`).join('\n')}
-</main>
-<div id="lb"><img alt=""></div>
-<script>
-var q=document.getElementById('q'),lb=document.getElementById('lb');
-function n(s){return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().trim()}
-q.addEventListener('input',function(){var v=n(q.value);document.querySelectorAll('section').forEach(function(s){var any=false;s.querySelectorAll('.c').forEach(function(c){var ok=!v||c.dataset.t.indexOf(v)>-1;c.classList.toggle('hide',!ok);any=any||ok});s.classList.toggle('hide',!any)})});
-document.addEventListener('click',function(e){var c=e.target.closest('.c');if(c){lb.firstChild.src=c.querySelector('img').src;lb.classList.add('on')}else if(e.target.closest('#lb')){lb.classList.remove('on')}});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on')});
-<\/script></body></html>`;
-
-  download(`catalogo-senalizacion-${norm(board.name).replace(/[^a-z0-9]+/g, '-')}.html`, new Blob([html], { type: 'text/html' }));
-  toast(missing ? `Catálogo exportado. ${missing} tarjetas sin imagen se omitieron.` : 'Catálogo exportado.', 4000);
+body{margin:0;background:#f5f6f8;color:#1b2330;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:#1f4fd6;color:#fff;border-bottom:4px solid #ffc220;padding:18px;text-align:center}
+header h1{margin:0;font-size:22px}header p{margin:4px 0 0;font-size:12px;opacity:.9}
+main{max-width:1300px;margin:0 auto;padding:18px}
+h2{color:#1e3a9a;margin:26px 0 10px}section{background:#fff;border:1px solid #dde2ea;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+h3{margin:0 0 8px;color:#1e3a9a}.note{margin:0 0 12px;padding:10px 14px;background:#eef3ff;border-radius:8px;color:#1e3a9a;font-weight:600}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcaption{font-weight:600;margin-bottom:8px}
+.f{border:2px dashed #cfd6e2;border-radius:8px;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;color:#7a8596;text-align:center}
+.f img{max-width:100%;max-height:100%;object-fit:contain}
+</style></head><body><header><h1>${escapeHtml(state.intro.title)} · ${escapeHtml(board.name)}</h1><p>Generado el ${escapeHtml(date)}</p></header><main>${body}</main></body></html>`;
+  download(`Señalización ${SP.safeName(board.name)}.html`, new Blob([html], { type: 'text/html' }));
+  toast('Catálogo exportado.', 4000);
 }
 
-function sectionsToJson(sections) {
-  return sections.map((s) => ({ name: s.name, cards: s.cards.map((c) => ({ path: c.imageId, title: c.title })) }));
+function formatToJson(f) {
+  return {
+    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner,
+    zones: f.zones.map((z) => ({ name: z.name, areas: z.areas.map((a) => ({ name: a.name, note: a.note, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId })) })) })),
+  };
 }
 
-function sectionsFromJson(sections) {
-  return (Array.isArray(sections) ? sections : []).map((s) => ({
-    id: uid(),
-    name: String(s.name || 'Sección'),
-    collapsed: false,
-    cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.path).map((c) => ({
-      id: uid(), imageId: String(c.path), title: String(c.title ?? titleFromName(String(c.path).split('/').pop())),
-    })),
-  }));
+function formatFromJson(f) {
+  if (!Array.isArray(f.zones)) {
+    return newFormat({ name: String(f.name || 'Formato'), subtitle: String(f.subtitle || ''), color: String(f.color || '#1f4fd6'), zones: migrateSections(f.sections, (c) => c.path || c.imageId || null) });
+  }
+  return newFormat({
+    name: String(f.name || 'Formato'),
+    subtitle: String(f.subtitle || ''),
+    color: String(f.color || '#1f4fd6'),
+    banner: f.banner ? String(f.banner) : null,
+    zones: f.zones.map((z) => newZone(String(z.name || 'Zona'), (z.areas || []).map((a) => {
+      const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null)));
+      area.note = String(a.note || '');
+      return area;
+    }))),
+  });
 }
 
 function saveJson() {
-  const data = {
-    app: 'tablero-senalizacion',
-    version: 2,
-    savedAt: new Date().toISOString(),
-    intro: state.intro,
-    formats: state.formats.map((f) => ({ name: f.name, subtitle: f.subtitle, color: f.color, sections: sectionsToJson(f.sections) })),
-  };
+  const data = { app: 'tablero-senalizacion', version: 4, savedAt: new Date().toISOString(), intro: state.intro, formats: state.formats.map(formatToJson) };
   const stamp = new Date().toISOString().slice(0, 10);
   download(`tablero-senalizacion-${stamp}.json`, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  toast('Tablero guardado. Las imágenes no van en el archivo: vuelve a cargar la carpeta para verlas.', 4500);
+  toast('Respaldo guardado. Las fotos no van en el archivo: vuelve a cargar la carpeta para verlas.', 4500);
 }
 
 async function openJson(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch { toast('El archivo no es un JSON válido.'); return; }
-  if (data && Array.isArray(data.formats)) {
-    if (!confirm('Esto reemplaza todos los formatos y la portada por los del archivo. ¿Continuar?')) return;
-    state.intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
-    state.formats = data.formats.map((f) => newFormat({
-      name: String(f.name || 'Formato'), subtitle: String(f.subtitle || ''), color: String(f.color || '#1f4fd6'),
-      sections: sectionsFromJson(f.sections),
-    }));
-    if (!state.formats.length) state.formats = defaultState().formats;
-    setActiveFormat(state.formats[0].id);
-  } else if (data && Array.isArray(data.sections)) {
-    if (!confirm(`Esto reemplaza las secciones del formato ${board.name} por las del archivo. ¿Continuar?`)) return;
-    board.sections = sectionsFromJson(data.sections);
-  } else {
-    toast('El archivo no parece un tablero guardado.');
-    return;
-  }
+  if (!data || (!Array.isArray(data.formats) && !Array.isArray(data.sections))) { toast('El archivo no parece un respaldo del tablero.'); return; }
+  if (!confirm('Esto reemplaza todos los formatos por los del archivo. ¿Continuar?')) return;
+  const formats = Array.isArray(data.formats) ? data.formats : [{ ...DEFAULT_FORMATS[0], sections: data.sections }];
+  state.intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+  state.formats = formats.map((f) => formatFromJson(f));
+  if (!state.formats.length) state.formats = defaultState().formats;
+  setActiveFormat(state.formats[0].id);
   commit();
-  const missing = allCards().filter((c) => !images.has(c.imageId)).length;
-  toast(missing ? `Tablero abierto. ${missing} imágenes faltan en la biblioteca: carga la carpeta para verlas.` : 'Tablero abierto.', 4500);
+  const missing = state.formats.flatMap((f) => allSpaces(f)).filter((s) => s.imageId && !images.has(s.imageId)).length;
+  toast(missing ? `Respaldo abierto. Faltan ${plural(missing, 'foto', 'fotos')} en la biblioteca: carga la carpeta para verlas.` : 'Respaldo abierto.', 4500);
 }
 
 /* ---------- Publicación en SharePoint ---------- */
-let spReady = false;   // SP.init terminó
+let spReady = false;
 let publishing = false;
-
-function configProblem() {
-  const m = SP.missingConfig();
-  return m.length ? `Falta configurar: ${m.join(', ')}.` : null;
-}
 
 function renderAccount() {
   const btn = $('#authBtn');
   const acc = spReady ? SP.currentAccount() : null;
   btn.textContent = acc ? (acc.name || acc.username) : 'Sin conexión';
-  btn.title = acc ? `Conectado a SharePoint como ${acc.name || acc.username}. Clic para ver la carpeta.` : 'Conectar con SharePoint';
+  btn.title = acc ? `Conectado a SharePoint como ${acc.name || acc.username}. Clic para ver la carpeta.` : 'No hay conexión con SharePoint';
   btn.classList.toggle('signed', !!acc);
 }
 
-async function signInFromClick() {
-  const problem = configProblem();
-  if (problem) { openConnection(); return false; }
-  if (!spReady) { toast('No hay conexión con SharePoint. Abre este archivo desde su carpeta en SharePoint.', 6000); return false; }
-  if (SP.currentAccount()) return true;
-  try {
-    await SP.signIn();
-    renderAccount();
-    return true;
-  } catch (e) {
-    console.error(e);
-    toast(SP.errorText(e), 7000);
-    return false;
-  }
+function ensureConnected() {
+  if (spReady) return true;
+  toast('No hay conexión con SharePoint. Abre este archivo desde su carpeta en SharePoint.', 6000);
+  return false;
 }
 
 async function optimizeImage(blob) {
@@ -1886,10 +2157,7 @@ async function optimizeImage(blob) {
   return { blob: out, ext: 'jpg' };
 }
 
-function expectedExt(img) {
-  if (img.published) return img.ext || 'jpg';
-  return /svg/.test(img.blob.type || '') ? 'svg' : 'jpg';
-}
+const expectedExt = (img) => (img.published ? img.ext || 'jpg' : /svg/.test(img.blob.type || '') ? 'svg' : 'jpg');
 
 function setPublishProgress(text) {
   const el = $('#publishState');
@@ -1913,53 +2181,77 @@ function renderPublishState() {
   }
 }
 
-// Arma la estructura de carpetas: <Formato>/<Área>/<foto>.<ext>, solo donde hay fotos colocadas.
+// Carpetas en SharePoint: <Formato>/<Zona>/<Área>/<Espacio>.jpg y <Formato>/Portada.jpg
 async function buildPlan() {
-  const files = new Map();   // ruta -> img
-  const folders = new Set(); // rutas de carpeta de área usadas
+  const files = new Map(); // ruta -> img
+  const uniq = (set, name) => { let n = name, k = 2; while (set.has(n.toLowerCase())) n = `${name} (${k++})`; set.add(n.toLowerCase()); return n; };
+  const ref = async (img, file) => {
+    if (!img.hash) img.hash = await sha1(img.blob);
+    files.set(file, img);
+    return { path: img.id, hash: img.hash, file };
+  };
   const fmtNames = new Set();
   const formats = [];
   for (const f of state.formats) {
-    let fname = SP.safeName(f.name) || 'Formato';
-    while (fmtNames.has(fname.toLowerCase())) fname += ' (2)';
-    fmtNames.add(fname.toLowerCase());
-    const secNames = new Set();
-    const sections = [];
-    for (const s of f.sections) {
-      let sname = SP.safeName(s.name) || 'Área';
-      while (secNames.has(sname.toLowerCase())) sname += ' (2)';
-      secNames.add(sname.toLowerCase());
-      const folder = `${fname}/${sname}`;
-      const used = new Set();
-      const cards = [];
-      for (const c of s.cards) {
-        const img = images.get(c.imageId);
-        if (!img) continue;
-        if (!img.hash) img.hash = await sha1(img.blob);
-        const base = SP.safeName(titleFromName(img.name)) || 'foto';
-        const ext = expectedExt(img);
-        let name = `${base}.${ext}`;
-        for (let k = 2; used.has(name.toLowerCase()); k++) name = `${base} (${k}).${ext}`;
-        used.add(name.toLowerCase());
-        const file = `${folder}/${name}`;
-        files.set(file, img);
-        cards.push({ title: c.title, path: c.imageId, hash: img.hash, file });
+    const fname = uniq(fmtNames, SP.safeName(f.name) || 'Formato');
+    const bannerImg = f.banner && images.get(f.banner);
+    const banner = bannerImg ? await ref(bannerImg, `${fname}/Portada.${expectedExt(bannerImg)}`) : null;
+    const zoneNames = new Set(['portada.jpg', 'portada.png', 'portada.svg']);
+    const zones = [];
+    for (const z of f.zones) {
+      const zname = uniq(zoneNames, SP.safeName(z.name) || 'Zona');
+      const areaNames = new Set();
+      const areas = [];
+      for (const a of z.areas) {
+        const aname = uniq(areaNames, SP.safeName(a.name) || 'Área');
+        const folder = `${fname}/${zname}/${aname}`;
+        const used = new Set();
+        const spaces = [];
+        for (const s of a.spaces) {
+          const img = s.imageId && images.get(s.imageId);
+          let image = null;
+          if (img) {
+            const ext = expectedExt(img);
+            const base = SP.safeName(s.title) || 'Señalización';
+            let name = `${base}.${ext}`;
+            for (let k = 2; used.has(name.toLowerCase()); k++) name = `${base} (${k}).${ext}`;
+            used.add(name.toLowerCase());
+            image = await ref(img, `${folder}/${name}`);
+          }
+          spaces.push({ title: s.title, image });
+        }
+        areas.push({ name: a.name, note: a.note || '', spaces });
       }
-      if (cards.length) folders.add(folder);
-      sections.push({ name: s.name, folder: cards.length ? folder : null, cards });
+      zones.push({ name: z.name, areas });
     }
-    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, folder: fname, sections });
+    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, banner, zones });
   }
-  return { files, folders, formats };
+  return { files, formats };
 }
 
-async function publish() {
-  if (publishing) return;
-  if (!(await signInFromClick())) return;
+// Todas las imágenes referenciadas por un tablero.json publicado (versión 3 o 4).
+function publishedRefs(data) {
+  const refs = [];
+  for (const f of (data && data.formats) || []) {
+    if (f.banner && f.banner.file) refs.push(f.banner);
+    for (const z of f.zones || []) for (const a of z.areas || []) for (const s of a.spaces || []) if (s.image && s.image.file) refs.push(s.image);
+    for (const s of f.sections || []) for (const c of s.cards || []) if (c.file) refs.push({ path: c.path, hash: c.hash, file: c.file });
+  }
+  return refs;
+}
 
-  const missing = allCards().filter((c) => !images.has(c.imageId)).length;
-  if (missing && !confirm(`${missing} tarjetas no tienen su imagen en la biblioteca y no se publicarán. ¿Continuar?`)) return;
-  if (!confirm(`Se publicarán los ${state.formats.length} formatos en la carpeta de SharePoint. Todos los que abran el panel de lectura verán estos cambios. ¿Publicar?`)) return;
+const parentDirs = (file) => {
+  const parts = file.split('/');
+  const out = [];
+  for (let i = parts.length - 1; i > 0; i--) out.push(parts.slice(0, i).join('/'));
+  return out;
+};
+
+async function publish() {
+  if (publishing || !ensureConnected()) return;
+  const missing = state.formats.flatMap((f) => allSpaces(f)).filter((s) => s.imageId && !images.has(s.imageId)).length;
+  if (missing && !confirm(`${plural(missing, 'espacio tiene', 'espacios tienen')} una foto que no está en la biblioteca y se publicará sin foto. ¿Continuar?`)) return;
+  if (!confirm(`Se publicarán los ${state.formats.length} formatos en esta carpeta de SharePoint. Todos los que abran el manual verán estos cambios. ¿Publicar?`)) return;
 
   publishing = true;
   const btn = $('#publishBtn');
@@ -1968,79 +2260,51 @@ async function publish() {
     setPublishProgress('Conectando con SharePoint…');
     await SP.resolveRoot();
     const prev = await SP.readJson();
-    const prevFiles = new Map();
-    const prevFolders = new Set();
-    const prevFormatFolders = new Set();
-    for (const f of (prev && prev.formats) || []) {
-      if (f.folder) prevFormatFolders.add(f.folder);
-      for (const s of f.sections || []) {
-        if (s.folder) prevFolders.add(s.folder);
-        for (const c of s.cards || []) if (c.file) prevFiles.set(c.file, c.hash);
-      }
-    }
+    const prevFiles = new Map(publishedRefs(prev).map((r) => [r.file, r.hash]));
 
     setPublishProgress('Preparando…');
     const plan = await buildPlan();
     const uploads = [...plan.files].filter(([file, img]) => prevFiles.get(file) !== img.hash);
 
-    // Subir fotos nuevas o cambiadas (3 a la vez).
     let done = 0;
     const queue = uploads.slice();
     const worker = async () => {
       while (queue.length) {
         const [file, img] = queue.shift();
         const { blob } = img.published ? { blob: img.blob } : await optimizeImage(img.blob);
-        await SP.upload(file, blob, blob.type || 'image/jpeg');
+        await SP.upload(file, blob);
         setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
       }
     };
     await Promise.all([worker(), worker(), worker()]);
 
-    // Borrar fotos que ya no están en el tablero (solo las que publicó esta app).
-    let removed = 0;
+    // Mandar a la papelera las fotos que ya no se usan (solo las que publicó esta app).
     const stale = [...prevFiles.keys()].filter((f) => !plan.files.has(f));
+    let k = 0;
     for (const file of stale) {
-      setPublishProgress(`Retirando fotos ${++removed} de ${stale.length}…`);
+      setPublishProgress(`Retirando fotos ${++k} de ${stale.length}…`);
       await SP.remove(file);
     }
 
-    // Guardar la distribución.
     const updatedAt = new Date().toISOString();
     const acc = SP.currentAccount();
-    const data = {
-      app: 'tablero-senalizacion',
-      version: 3,
-      updatedAt,
-      updatedBy: acc ? (acc.name || acc.username) : null,
-      intro: state.intro,
-      formats: plan.formats,
-    };
+    const data = { app: 'tablero-senalizacion', version: 4, updatedAt, updatedBy: acc ? acc.name || acc.username : null, intro: state.intro, formats: plan.formats };
     setPublishProgress('Guardando tablero.json…');
-    await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'application/json');
+    await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
 
-    // Quitar carpetas que quedaron vacías.
-    const usedFormatFolders = new Set(plan.formats.filter((f) => f.sections.some((s) => s.folder)).map((f) => f.folder));
-    for (const folder of prevFolders) {
-      if (plan.folders.has(folder)) continue;
-      const children = await SP.list(folder);
-      if (!children.size) await SP.remove(folder);
-    }
-    for (const folder of prevFormatFolders) {
-      if (usedFormatFolders.has(folder)) continue;
-      const children = await SP.list(folder);
-      if (!children.size) await SP.remove(folder);
+    // Quitar carpetas que quedaron vacías (de la más profunda a la más alta).
+    const keepDirs = new Set([...plan.files.keys()].flatMap(parentDirs));
+    const staleDirs = [...new Set(stale.flatMap(parentDirs))].filter((d) => !keepDirs.has(d)).sort((a, b) => b.split('/').length - a.split('/').length);
+    for (const dir of staleDirs) {
+      const children = await SP.list(dir);
+      if (!children.size) await SP.remove(dir);
     }
 
-    for (const [, img] of plan.files) {
-      if (img.published) continue;
-      img.publishedHash = img.hash;
-    }
     state.dirty = false;
     state.publishedAt = updatedAt;
     publishing = false;
     saveBoard({ dirty: false });
-    const fotos = (n) => `${n} ${n === 1 ? 'foto' : 'fotos'}`;
-    toast(`Publicado: ${fotos(uploads.length)} ${uploads.length === 1 ? 'subida' : 'subidas'}${stale.length ? `, ${fotos(stale.length)} ${stale.length === 1 ? 'retirada' : 'retiradas'}` : ''}.`, 6000);
+    toast(`Publicado: ${plural(uploads.length, 'foto subida', 'fotos subidas')}${stale.length ? `, ${plural(stale.length, 'foto retirada', 'fotos retiradas')}` : ''}.`, 6000);
   } catch (e) {
     console.error(e);
     publishing = false;
@@ -2059,60 +2323,45 @@ async function fetchPublished() {
 }
 
 async function loadPublished(data) {
-  const cards = data.formats.flatMap((f) => (f.sections || []).flatMap((s) => s.cards || [])).filter((c) => c && c.path && c.file);
-  const need = cards.filter((c) => { const local = images.get(c.path); return !local || local.hash !== c.hash; });
-
-  // Agrupar por carpeta para pedir los enlaces de descarga de una sola vez.
-  const byFolder = new Map();
-  for (const c of need) {
-    const folder = c.file.slice(0, c.file.lastIndexOf('/'));
-    if (!byFolder.has(folder)) byFolder.set(folder, []);
-    byFolder.get(folder).push(c);
-  }
-  let done = 0;
+  const refs = publishedRefs(data).filter((r) => r.path && r.file);
+  const need = [...new Map(refs.filter((r) => images.get(r.path)?.hash !== r.hash).map((r) => [r.path, r])).values()];
   const fetched = [];
-  for (const [folder, list] of byFolder) {
-    let entries;
-    try { entries = await SP.list(folder); } catch (e) { console.warn(e); continue; }
-    for (const c of list) {
-      toast(`Descargando fotos publicadas… ${++done}/${need.length}`, 60000);
-      const name = c.file.slice(c.file.lastIndexOf('/') + 1);
-      const entry = entries.get(name);
-      if (!entry || !entry.downloadUrl || images.get(c.path)?.hash === c.hash) continue;
-      try {
-        const r = await fetch(entry.downloadUrl);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const blob = await r.blob();
-        const cut = c.path.lastIndexOf('/');
-        const prevImg = images.get(c.path);
-        if (prevImg?.url) URL.revokeObjectURL(prevImg.url);
-        const rec = {
-          id: c.path, path: c.path,
-          folder: cut === -1 ? '' : c.path.slice(0, cut),
-          name: cut === -1 ? c.path : c.path.slice(cut + 1),
-          blob, hash: c.hash, published: true, ext: name.split('.').pop(),
-        };
-        images.set(c.path, { ...rec, url: null });
-        fetched.push(rec);
-      } catch (e) {
-        console.warn('No se pudo descargar', c.file, e);
-      }
+  let done = 0;
+  for (const r of need) {
+    toast(`Descargando fotos publicadas… ${++done}/${need.length}`, 60000);
+    try {
+      const res = await fetch(`${SP.fileUrl(r.file)}?v=${encodeURIComponent(r.hash || '')}`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const cut = r.path.lastIndexOf('/');
+      const prevImg = images.get(r.path);
+      if (prevImg?.url) URL.revokeObjectURL(prevImg.url);
+      const rec = {
+        id: r.path, path: r.path,
+        folder: cut === -1 ? '' : r.path.slice(0, cut),
+        name: cut === -1 ? r.path : r.path.slice(cut + 1),
+        blob, hash: r.hash, published: true, ext: r.file.split('.').pop(),
+      };
+      images.set(r.path, { ...rec, url: null });
+      fetched.push(rec);
+    } catch (e) {
+      console.warn('No se pudo descargar', r.file, e);
     }
   }
-  if (fetched.length) await idb('images', 'readwrite', (s) => { fetched.forEach((r) => s.put(r)); }).catch(console.error);
+  if (fetched.length) await idb('images', 'readwrite', (s) => { fetched.forEach((x) => s.put(x)); }).catch(console.error);
 
   const prevActive = board && board.name;
-  state = {
-    dirty: false,
-    publishedAt: data.updatedAt || null,
-    intro: { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) },
-    formats: data.formats.map((f) => newFormat({
-      name: String(f.name || 'Formato'),
-      subtitle: String(f.subtitle || ''),
-      color: String(f.color || '#1f4fd6'),
-      sections: sectionsFromJson(f.sections),
-    })),
+  const toLocal = (f) => {
+    if (Array.isArray(f.zones)) {
+      return formatFromJson({
+        ...f,
+        banner: f.banner ? f.banner.path : null,
+        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, image: s.image ? s.image.path : null })) })) })),
+      });
+    }
+    return formatFromJson(f);
   };
+  state = { dirty: false, publishedAt: data.updatedAt || null, intro: { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) }, formats: data.formats.map(toLocal) };
   if (!state.formats.length) state.formats = defaultState().formats;
   setActiveFormat((state.formats.find((f) => f.name === prevActive) || state.formats[0]).id);
   saveBoard({ dirty: false });
@@ -2121,7 +2370,7 @@ async function loadPublished(data) {
 }
 
 async function loadPublishedAction() {
-  if (!(await signInFromClick())) return;
+  if (!ensureConnected()) return;
   if (state.dirty && !confirm('Tienes cambios sin publicar. Se descartarán y se cargará la versión publicada. ¿Continuar?')) return;
   try {
     const data = await fetchPublished();
@@ -2133,7 +2382,6 @@ async function loadPublishedAction() {
   }
 }
 
-// Al iniciar o al iniciar sesión: traer lo publicado si no hay cambios locales pendientes.
 async function syncWithPublished() {
   let published = null;
   try { published = await fetchPublished(); } catch (e) { console.warn(e); toast(SP.errorText(e), 7000); return; }
@@ -2144,17 +2392,14 @@ async function syncWithPublished() {
   }
 }
 
-/* ---------- Conexión ---------- */
+/* ---------- Carpeta de SharePoint ---------- */
 function openConnection() {
-  const problem = configProblem();
-  $('#connFolder').textContent = (spReady && SP.folderPath()) || decodeURIComponent(location.pathname.slice(0, location.pathname.lastIndexOf('/'))) || '';
   const acc = spReady ? SP.currentAccount() : null;
-  $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : 'Sin iniciar sesión';
-  const res = $('#connResult');
-  res.className = 'cfg-result' + (problem ? ' err' : '');
-  res.textContent = problem || '';
-  $('#connTest').disabled = !!problem;
-  $('#connSignOut').hidden = !acc || !SP.canSignOut;
+  $('#connFolder').textContent = (spReady && SP.folderPath()) || decodeURIComponent(location.pathname.slice(0, location.pathname.lastIndexOf('/')));
+  $('#connAccount').textContent = acc ? `${acc.name || ''}${acc.username ? ` (${acc.username})` : ''}` : 'Sin conexión';
+  $('#connResult').className = 'cfg-result';
+  $('#connResult').textContent = '';
+  $('#connSignOut').hidden = true;
   $('#connection').showModal();
 }
 
@@ -2162,42 +2407,40 @@ function setupConnection() {
   const dlg = $('#connection');
   const res = $('#connResult');
   $('#connTest').addEventListener('click', async () => {
-    if (!(await signInFromClick())) return;
+    if (!ensureConnected()) return;
     res.className = 'cfg-result'; res.textContent = 'Probando…';
     try {
       const r = await SP.resolveRoot();
       res.className = 'cfg-result ok';
       res.textContent = `Conexión correcta con la carpeta "${r.name}".`;
-      const acc = SP.currentAccount();
-      $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : '';
-      $('#connSignOut').hidden = !acc || !SP.canSignOut;
     } catch (e) {
       console.error(e);
       res.className = 'cfg-result err';
       res.textContent = SP.errorText(e);
     }
   });
-  $('#connSignOut').addEventListener('click', async () => {
-    await SP.signOut();
-    renderAccount();
-    dlg.close();
-    toast('Sesión cerrada.');
-  });
-  $('#authBtn').addEventListener('click', async () => {
-    if (spReady && SP.currentAccount()) { openConnection(); return; }
-    if (await signInFromClick()) await syncWithPublished();
-  });
+  $('#authBtn').addEventListener('click', openConnection);
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
-/* ---------- Formatos y portada ---------- */
-let editingFormatId = null; // id del formato en edición, o null si es nuevo
+/* ---------- Formatos y textos de portada ---------- */
+let editingFormatId = null;
+
+function bannerOptions(selected) {
+  const list = [...images.values()].sort((a, b) => {
+    const pa = /portada|fachada|banner|tienda/i.test(a.path) ? 0 : 1, pb = /portada|fachada|banner|tienda/i.test(b.path) ? 0 : 1;
+    return pa - pb || collator.compare(a.path, b.path);
+  });
+  return '<option value="">(Sin foto de portada)</option>' +
+    list.map((i) => `<option value="${escapeHtml(i.id)}" ${i.id === selected ? 'selected' : ''}>${escapeHtml(i.path)}</option>`).join('');
+}
 
 function renderFormatPreview() {
-  const name = $('#fmtName').value.trim() || 'Formato';
   const prev = $('#fmtPreview');
   prev.style.setProperty('--fc', $('#fmtColor').value);
-  prev.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
+  prev.innerHTML = `<strong>${escapeHtml($('#fmtName').value.trim() || 'Formato')}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
+  const img = images.get($('#fmtBanner').value);
+  $('#fmtBannerPreview').innerHTML = img ? `<img alt="" src="${urlFor(img)}">` : '';
 }
 
 function openFormatDialog(formatId) {
@@ -2207,6 +2450,7 @@ function openFormatDialog(formatId) {
   $('#fmtName').value = f ? f.name : '';
   $('#fmtSubtitle').value = f ? f.subtitle : '';
   $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(f?.color || '') ? f.color : '#1f4fd6';
+  $('#fmtBanner').innerHTML = bannerOptions(f ? f.banner : null);
   $('#fmtDelete').hidden = !f || state.formats.length < 2;
   renderFormatPreview();
   $('#formatDlg').showModal();
@@ -2227,12 +2471,7 @@ function openIntroDialog() {
 function setupFormatUI() {
   $('#formatTabs').addEventListener('click', (e) => {
     const tab = e.target.closest('[data-format]');
-    if (tab) {
-      setActiveFormat(tab.dataset.format);
-      saveBoard({ dirty: false });
-      render();
-      return;
-    }
+    if (tab) { setActiveFormat(tab.dataset.format); saveBoard({ dirty: false }); render(); return; }
     const act = e.target.closest('[data-format-action]');
     if (!act) return;
     if (act.dataset.formatAction === 'edit') openFormatDialog(board.id);
@@ -2240,15 +2479,11 @@ function setupFormatUI() {
     else if (act.dataset.formatAction === 'intro') openIntroDialog();
   });
 
-  ['#fmtName', '#fmtSubtitle', '#fmtColor'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
+  ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtBanner'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
 
   $('#formatForm').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'cancel') return;
-    const values = {
-      name: $('#fmtName').value.trim() || 'Formato',
-      subtitle: $('#fmtSubtitle').value.trim(),
-      color: $('#fmtColor').value,
-    };
+    const values = { name: $('#fmtName').value.trim() || 'Formato', subtitle: $('#fmtSubtitle').value.trim(), color: $('#fmtColor').value, banner: $('#fmtBanner').value || null };
     if (editingFormatId) {
       Object.assign(state.formats.find((f) => f.id === editingFormatId), values);
     } else {
@@ -2262,8 +2497,8 @@ function setupFormatUI() {
   $('#fmtDelete').addEventListener('click', () => {
     const f = state.formats.find((x) => x.id === editingFormatId);
     if (!f || state.formats.length < 2) return;
-    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
-    if (!confirm(`¿Eliminar el formato ${f.name}${n ? ` y sus ${n} tarjetas` : ''}? Esto no se puede deshacer.`)) return;
+    const n = allSpaces(f).length;
+    if (!confirm(`¿Eliminar el formato ${f.name}${n ? ` y sus ${plural(n, 'espacio', 'espacios')}` : ''}? Esto no se puede deshacer.`)) return;
     state.formats = state.formats.filter((x) => x.id !== f.id);
     setActiveFormat(state.formats[0].id);
     $('#formatDlg').close();
@@ -2295,31 +2530,174 @@ function setupFormatUI() {
   });
 }
 
-/* ---------- Acciones del menú ---------- */
+/* ---------- Zonas, áreas y espacios: clics y edición ---------- */
+function setupBoardUI() {
+  $('#bannerBox').addEventListener('click', (e) => {
+    if (e.target.closest('[data-banner-clear]')) { board.banner = null; commit(); }
+  });
+
+  $('#zoneBar').addEventListener('click', (e) => {
+    const z = e.target.closest('[data-zone]');
+    if (z) { board.activeZoneId = z.dataset.zone; board.activeAreaId = null; saveBoard({ dirty: false }); render(); return; }
+    if (e.target.closest('[data-zone-action="add"]')) {
+      const zone = newZone('Nueva zona');
+      board.zones.push(zone);
+      board.activeZoneId = zone.id;
+      board.activeAreaId = null;
+      commit();
+      focusEditable('[data-zone-title]');
+    }
+  });
+
+  const panel = $('#zonePanel');
+  panel.addEventListener('click', (e) => {
+    const zone = activeZone();
+    const areaBtn = e.target.closest('[data-area]');
+    if (areaBtn) { selectArea(areaBtn.dataset.area); return; }
+
+    const za = e.target.closest('[data-zone-action]');
+    if (za && zone) {
+      const i = board.zones.indexOf(zone);
+      if (za.dataset.zoneAction === 'left' && i > 0) [board.zones[i - 1], board.zones[i]] = [board.zones[i], board.zones[i - 1]];
+      else if (za.dataset.zoneAction === 'right' && i < board.zones.length - 1) [board.zones[i + 1], board.zones[i]] = [board.zones[i], board.zones[i + 1]];
+      else if (za.dataset.zoneAction === 'delete') {
+        const n = zone.areas.reduce((k, a) => k + a.spaces.length, 0);
+        if (!confirm(`¿Eliminar la zona "${zone.name}" con ${plural(zone.areas.length, 'área', 'áreas')} y ${plural(n, 'espacio', 'espacios')}?`)) return;
+        board.zones.splice(i, 1);
+        board.activeZoneId = board.zones[Math.max(0, i - 1)]?.id || null;
+        board.activeAreaId = null;
+      } else return;
+      commit();
+      return;
+    }
+
+    const aa = e.target.closest('[data-area-action]');
+    if (aa && zone) {
+      const area = activeArea();
+      if (aa.dataset.areaAction === 'add') {
+        const a = newArea('Nueva área', []);
+        zone.areas.push(a);
+        board.activeAreaId = a.id;
+        commit();
+        focusEditable('[data-area-title]');
+        return;
+      }
+      if (!area) return;
+      const i = zone.areas.indexOf(area);
+      if (aa.dataset.areaAction === 'left' && i > 0) [zone.areas[i - 1], zone.areas[i]] = [zone.areas[i], zone.areas[i - 1]];
+      else if (aa.dataset.areaAction === 'right' && i < zone.areas.length - 1) [zone.areas[i + 1], zone.areas[i]] = [zone.areas[i], zone.areas[i + 1]];
+      else if (aa.dataset.areaAction === 'delete') {
+        if (!confirm(`¿Eliminar el área "${area.name}"${area.spaces.length ? ` y sus ${plural(area.spaces.length, 'espacio', 'espacios')}` : ''}?`)) return;
+        zone.areas.splice(i, 1);
+        board.activeAreaId = null;
+      } else return;
+      commit();
+      return;
+    }
+
+    const sa = e.target.closest('[data-space-action]');
+    if (sa) {
+      const area = activeArea();
+      if (sa.dataset.spaceAction === 'add' && area) {
+        addSpace(area.id, { title: 'Nuevo espacio' });
+        const cards = panel.querySelectorAll('.space [data-space-title]');
+        const last = cards[cards.length - 1];
+        if (last) { last.focus(); document.getSelection().selectAllChildren(last); }
+        return;
+      }
+      const spaceId = sa.closest('.card')?.dataset.cardId;
+      if (!spaceId) return;
+      if (sa.dataset.spaceAction === 'clear') clearImage(spaceId);
+      else if (sa.dataset.spaceAction === 'delete') {
+        const f = findSpace(spaceId);
+        if (f && confirm(`¿Eliminar el espacio "${f.space.title}"?`)) { f.area.spaces.splice(f.index, 1); commit(); }
+      }
+    }
+  });
+
+  panel.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-area-zone]')) return;
+    const area = activeArea();
+    const from = activeZone();
+    const to = board.zones.find((z) => z.id === e.target.value);
+    if (!area || !from || !to || to === from) return;
+    from.areas.splice(from.areas.indexOf(area), 1);
+    to.areas.push(area);
+    board.activeZoneId = to.id;
+    commit();
+    toast(`"${area.name}" ahora está en ${to.name}.`);
+  });
+
+  // Edición en línea de títulos y notas.
+  panel.addEventListener('keydown', (e) => {
+    if (!e.target.matches('[contenteditable="true"]')) return;
+    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    if (e.key === 'Escape') { e.target.dataset.cancel = '1'; e.target.blur(); }
+  });
+  panel.addEventListener('focusout', (e) => {
+    const t = e.target;
+    if (!t.matches || !t.matches('[contenteditable="true"]')) return;
+    const value = t.textContent.replace(/\s+/g, ' ').trim();
+    const cancel = t.dataset.cancel; delete t.dataset.cancel;
+    const zone = activeZone();
+    const area = activeArea();
+    if (t.matches('[data-zone-title]') && zone) {
+      if (cancel || !value) { t.textContent = zone.name; return; }
+      if (value !== zone.name) { zone.name = value; commit(); }
+    } else if (t.matches('[data-area-title]') && area) {
+      if (cancel || !value) { t.textContent = area.name; return; }
+      if (value !== area.name) { area.name = value; commit(); }
+    } else if (t.matches('[data-area-note]') && area) {
+      if (cancel) { t.textContent = area.note; return; }
+      const note = value === defaultNote(area.name) ? '' : value;
+      if (note !== area.note) { area.note = note; saveBoard(); }
+      if (!note) t.textContent = '';
+    } else if (t.matches('[data-space-title]')) {
+      const f = findSpace(t.closest('.card').dataset.cardId);
+      if (!f) return;
+      if (cancel || !value) { t.textContent = f.space.title; return; }
+      if (value !== f.space.title) { f.space.title = value; commit(); }
+    }
+  });
+  panel.addEventListener('paste', (e) => {
+    if (!e.target.closest('[contenteditable="true"]')) return;
+    e.preventDefault();
+    document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain'));
+  });
+}
+
+/* ---------- Menú ---------- */
 function autoPlace() {
   const counts = placementCounts();
-  const bySec = new Map(board.sections.map((s) => [norm(s.name), s]));
+  const areaByName = new Map(allAreas().map(({ area }) => [norm(area.name), area]));
   const plan = [];
   for (const img of images.values()) {
     if (counts.get(img.id) || !img.folder) continue;
-    const sec = bySec.get(norm(img.folder));
-    if (sec) plan.push([sec, img]);
+    const area = areaByName.get(norm(AREA_ALIASES[norm(img.folder)] || img.folder));
+    if (area) plan.push([area, img]);
   }
-  if (!plan.length) { toast('No hay imágenes sin colocar cuya carpeta coincida con el nombre de una sección.', 4000); return; }
-  if (!confirm(`Se colocarán ${plan.length} imágenes sin colocar en la sección cuyo nombre coincide con su carpeta (ignorando acentos y mayúsculas). ¿Continuar?`)) return;
+  if (!plan.length) { toast('No hay fotos sin colocar cuya carpeta coincida con el nombre de un área.', 4000); return; }
+  if (!confirm(`Se colocarán ${plural(plan.length, 'foto', 'fotos')} en el área cuyo nombre coincide con su carpeta, en el formato ${board.name}. Si el área ya tiene un espacio vacío con el mismo nombre que la foto, se usa ese espacio. ¿Continuar?`)) return;
   plan.sort((a, b) => collator.compare(a[1].name, b[1].name));
-  for (const [sec, img] of plan) sec.cards.push({ id: uid(), imageId: img.id, title: titleFromName(img.name) });
+  for (const [area, img] of plan) {
+    const title = titleFromName(img.name);
+    const empty = area.spaces.find((s) => !s.imageId && norm(s.title) === norm(title));
+    if (empty) empty.imageId = img.id;
+    else area.spaces.push(newSpace(title, img.id));
+  }
   commit();
-  toast(`${plan.length} imágenes colocadas.`);
+  toast(`${plural(plan.length, 'foto colocada', 'fotos colocadas')}.`);
 }
 
-function sectionsFromFolders() {
-  const existing = new Set(board.sections.map((s) => norm(s.name)));
+function areasFromFolders() {
+  const zone = activeZone();
+  if (!zone) { toast('Primero crea o elige una zona.'); return; }
+  const existing = new Set(allAreas().map(({ area }) => norm(area.name)));
   const folders = [...new Set([...images.values()].map((i) => i.folder.split('/')[0].trim()).filter(Boolean))];
-  const missing = folders.filter((f) => !existing.has(norm(f))).sort(collator.compare);
-  if (!missing.length) { toast('Todas las carpetas ya tienen una sección con el mismo nombre.'); return; }
-  if (!confirm(`Se crearán ${missing.length} secciones:\n\n${missing.join('\n')}`)) return;
-  for (const name of missing) board.sections.push({ id: uid(), name, collapsed: false, cards: [] });
+  const missing = folders.filter((f) => !existing.has(norm(AREA_ALIASES[norm(f)] || f))).sort(collator.compare);
+  if (!missing.length) { toast('Todas las carpetas ya tienen un área con el mismo nombre.'); return; }
+  if (!confirm(`Se crearán ${plural(missing.length, 'área', 'áreas')} en la zona ${zone.name}:\n\n${missing.join('\n')}`)) return;
+  for (const name of missing) zone.areas.push(newArea(name, []));
   commit();
 }
 
@@ -2337,17 +2715,18 @@ function handleMenu(action) {
     case 'connection': return openConnection();
     case 'load-published': return loadPublishedAction();
     case 'auto-place': return autoPlace();
-    case 'sections-from-folders': return sectionsFromFolders();
-    case 'add-section': return addSection();
+    case 'areas-from-folders': return areasFromFolders();
     case 'clear-board':
-      if (confirm(`Se quitarán todas las imágenes del formato ${board.name} (las secciones se conservan). ¿Continuar?`)) {
-        board.sections.forEach((s) => { s.cards = []; });
+      if (confirm(`Se quitarán todas las fotos de los espacios del formato ${board.name} (los espacios se conservan). ¿Continuar?`)) {
+        allSpaces().forEach((s) => { s.imageId = null; });
         commit();
       }
       return;
-    case 'reset-sections':
-      if (confirm(`Se reemplazarán las secciones del formato ${board.name} por las originales y se vaciará. ¿Continuar?`)) {
-        board.sections = newSections();
+    case 'reset-structure':
+      if (confirm(`Se reemplazarán las zonas, áreas y espacios del formato ${board.name} por los originales, sin fotos. ¿Continuar?`)) {
+        board.zones = newZones();
+        board.activeZoneId = board.zones[0].id;
+        board.activeAreaId = null;
         commit();
       }
       return;
@@ -2355,7 +2734,7 @@ function handleMenu(action) {
   }
 }
 
-/* ---------- Eventos ---------- */
+/* ---------- Eventos generales ---------- */
 function setupEvents() {
   document.addEventListener('pointerdown', onPointerDown);
 
@@ -2378,7 +2757,6 @@ function setupEvents() {
   $('#saveJsonBtn').addEventListener('click', saveJson);
   $('#publishBtn').addEventListener('click', publish);
   window.addEventListener('beforeunload', (e) => { if (publishing) { e.preventDefault(); e.returnValue = ''; } });
-  $('#addSectionBtn').addEventListener('click', () => addSection());
 
   const menu = $('.menu');
   menu.addEventListener('click', (e) => {
@@ -2404,66 +2782,11 @@ function setupEvents() {
     if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openViewer('lib', item.dataset.imageId); }
   });
 
-  $('#sectionNav').addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-jump]');
-    if (chip) document.getElementById('sec-' + chip.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  const boardEl = $('#board');
-  boardEl.addEventListener('click', (e) => {
-    const rm = e.target.closest('[data-card-remove]');
-    if (rm) { removeCard(rm.closest('.card').dataset.cardId); return; }
-    const act = e.target.closest('[data-sec-action]');
-    if (!act) return;
-    const secId = act.closest('.sec').dataset.secId;
-    const i = board.sections.findIndex((s) => s.id === secId);
-    const sec = board.sections[i];
-    switch (act.dataset.secAction) {
-      case 'collapse': sec.collapsed = !sec.collapsed; saveBoard({ dirty: false }); render(); return;
-      case 'up': if (i > 0) [board.sections[i - 1], board.sections[i]] = [board.sections[i], board.sections[i - 1]]; break;
-      case 'down': if (i < board.sections.length - 1) [board.sections[i + 1], board.sections[i]] = [board.sections[i], board.sections[i + 1]]; break;
-      case 'delete':
-        if (!confirm(`¿Eliminar la sección "${sec.name}"${sec.cards.length ? ` y sus ${sec.cards.length} imágenes colocadas` : ''}?`)) return;
-        board.sections.splice(i, 1);
-        break;
-    }
-    commit();
-  });
-
-  // Edición en línea de títulos (secciones y tarjetas)
-  boardEl.addEventListener('keydown', (e) => {
-    if (e.target.matches('[contenteditable="true"]')) {
-      if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
-      if (e.key === 'Escape') { e.target.dataset.cancel = '1'; e.target.blur(); }
-    }
-  });
-  boardEl.addEventListener('focusout', (e) => {
-    const t = e.target;
-    if (!t.matches || !t.matches('[contenteditable="true"]')) return;
-    const value = t.textContent.replace(/\s+/g, ' ').trim();
-    const cancel = t.dataset.cancel; delete t.dataset.cancel;
-    if (t.matches('[data-sec-title]')) {
-      const sec = board.sections.find((s) => s.id === t.closest('.sec').dataset.secId);
-      if (!sec) return;
-      if (cancel || !value) { t.textContent = sec.name; return; }
-      if (value !== sec.name) { sec.name = value; commit(); }
-    } else if (t.matches('[data-card-title]')) {
-      const f = findCard(t.closest('.card').dataset.cardId);
-      if (!f) return;
-      if (cancel || !value) { t.textContent = f.card.title; return; }
-      if (value !== f.card.title) { f.card.title = value; saveBoard(); }
-    }
-  });
-  boardEl.addEventListener('paste', (e) => {
-    if (!e.target.closest('[contenteditable="true"]')) return;
-    e.preventDefault();
-    document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain'));
-  });
-
   setupFileDrop();
   setupViewer();
   setupConnection();
   setupFormatUI();
+  setupBoardUI();
 }
 
 /* ---------- Inicio ---------- */
@@ -2500,23 +2823,15 @@ async function init() {
   render();
   renderPublishState();
 
-  const problem = configProblem();
-  if (problem) {
-    renderAccount();
-    toast(problem, 9000);
-    return;
-  }
   try {
-    await SP.init(SCOPES);
+    await SP.init();
     spReady = true;
   } catch (e) {
     console.error(e);
     toast(SP.errorText(e) + ' Puedes acomodar el tablero, pero no publicar.', 9000);
   }
   renderAccount();
-  if (spReady && SP.currentAccount()) {
-    try { await SP.silentToken(); await syncWithPublished(); } catch { /* hará falta iniciar sesión con clic */ }
-  }
+  if (spReady) await syncWithPublished();
 }
 
 init();

@@ -12,7 +12,6 @@
 
 <header id="hero" class="hero">
   <div class="hero-inner">
-    <button type="button" id="backBtn" class="back" hidden>‹ Formatos</button>
     <div class="hero-text">
       <h1 id="heroTitle">Señalización en tu tienda</h1>
       <p id="heroSub"></p>
@@ -41,14 +40,14 @@
   <p id="updatedHome" class="updated"></p>
 </main>
 
-<div id="catalog" hidden>
-  <div class="toolbar">
-    <div class="toolbar-inner">
-      <input id="search" type="search" placeholder="Buscar señalización…" autocomplete="off" aria-label="Buscar señalización">
-      <nav id="nav" class="nav" aria-label="Áreas de tienda"></nav>
-    </div>
+<div id="catalog" class="catalog" hidden>
+  <div class="cat-toolbar">
+    <button type="button" id="backBtn" class="pill">← Cambiar formato</button>
+    <button type="button" id="checklistBtn" class="pill">⤓ Descarga Checklist</button>
   </div>
-  <main id="content" class="content" aria-live="polite"></main>
+  <img id="banner" class="banner" alt="" hidden>
+  <nav id="zones" class="zones" aria-label="Zonas de la tienda"></nav>
+  <section id="zoneBox" class="zone-box" aria-live="polite"></section>
 </div>
 
 <div id="status" class="status" hidden></div>

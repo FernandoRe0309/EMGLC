@@ -40,12 +40,11 @@
         <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
         <hr>
-        <button type="button" data-action="auto-place">Colocar por carpeta (nombre exacto)</button>
-        <button type="button" data-action="sections-from-folders">Crear secciones desde carpetas</button>
-        <button type="button" data-action="add-section">Agregar sección</button>
+        <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
+        <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
         <hr>
-        <button type="button" data-action="clear-board">Vaciar este formato</button>
-        <button type="button" data-action="reset-sections">Restablecer secciones de este formato</button>
+        <button type="button" data-action="clear-board">Quitar todas las fotos de este formato</button>
+        <button type="button" data-action="reset-structure">Restablecer zonas y áreas de este formato</button>
         <button type="button" data-action="clear-library" class="danger">Borrar biblioteca de imágenes</button>
       </div>
     </details>
@@ -60,14 +59,14 @@
       <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar en este formato</label>
     </div>
     <div id="libraryList" class="library-list"></div>
-    <p class="library-foot">Arrastra una imagen a una sección. Suelta una tarjeta aquí para quitarla del tablero.</p>
+    <p class="library-foot">Arrastra una foto a un espacio, a la lista de espacios o al botón de un área. Suelta aquí un espacio para quitarle la foto.</p>
   </aside>
 
   <main class="board-wrap">
     <div id="formatTabs" class="format-tabs" role="tablist" aria-label="Formatos"></div>
-    <nav id="sectionNav" class="section-nav" aria-label="Secciones"></nav>
-    <div id="board" class="board"></div>
-    <button id="addSectionBtn" class="btn add-section" type="button">+ Agregar sección</button>
+    <div id="bannerBox" class="banner-box" title="Foto de portada del formato"></div>
+    <div id="zoneBar" class="zone-bar" aria-label="Zonas"></div>
+    <section id="zonePanel" class="zone-panel"></section>
   </main>
 </div>
 
@@ -79,9 +78,9 @@
       <h3 id="viewerTitle"></h3>
       <p id="viewerPath" class="muted mono"></p>
       <div class="viewer-actions">
-        <select id="viewerSection" aria-label="Sección"></select>
+        <select id="viewerSection" aria-label="Área"></select>
         <button id="viewerPrimary" class="btn btn-primary" type="button">Agregar</button>
-        <button id="viewerRemove" class="btn danger" type="button">Quitar del tablero</button>
+        <button id="viewerRemove" class="btn danger" type="button">Quitar foto del espacio</button>
       </div>
     </div>
   </form>
@@ -93,7 +92,7 @@
     <p class="muted">Las fotos y la distribución se guardan en la misma carpeta de SharePoint donde está este archivo.</p>
     <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
     <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
-    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
+    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Zona/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
     <p id="connResult" class="cfg-result" role="status"></p>
     <div class="settings-actions">
       <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
@@ -112,6 +111,8 @@
         <label>Nombre<input id="fmtName" required maxlength="40" autocomplete="off" placeholder="W2"></label>
         <label>Subtítulo<input id="fmtSubtitle" maxlength="80" autocomplete="off" placeholder="Señalización Walmart"></label>
         <label>Color de la tarjeta<input id="fmtColor" type="color" value="#1f4fd6"></label>
+        <label>Foto de portada (opcional)<select id="fmtBanner"></select></label>
+        <div id="fmtBannerPreview" class="fmt-banner-preview"></div>
       </div>
       <div>
         <p class="muted small">Así se verá en la portada:</p>

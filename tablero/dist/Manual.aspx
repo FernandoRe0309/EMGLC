@@ -233,6 +233,115 @@ button, input { font: inherit; color: inherit; }
 .card.missing img { visibility: hidden; }
 .card img:not([src]) { background: linear-gradient(90deg, var(--surface-2), #f7f8fa, var(--surface-2)); }
 
+/* ---------- Vista de formato: zonas, áreas y espacios ---------- */
+.catalog { max-width: 1400px; margin: 0 auto; padding: 14px 20px 30px; }
+.cat-toolbar { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid #9dbbf3;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pill:hover { background: #eef3ff; border-color: var(--brand); }
+.pill:focus-visible, .zone:focus-visible, .area:focus-visible, .frame-btn:focus-visible { outline: 3px solid var(--brand-yellow); outline-offset: 2px; }
+.banner {
+  display: block;
+  width: 100%;
+  height: clamp(140px, 22vw, 300px);
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.zones { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 14px 0 18px; }
+.zone {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  padding: 10px;
+  border: 1.5px solid var(--brand);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  transition: background .12s, color .12s;
+}
+.zone:hover { background: #eef3ff; }
+.zone.active { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(31, 79, 214, .3); }
+
+.zone-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 26px 28px;
+}
+.zone-title, .area-title { margin: 0; color: #1e3a9a; font-size: 22px; font-weight: 800; }
+.area-title { font-size: 20px; }
+.zone-sub { margin: 4px 0 0; color: var(--muted); }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 18px; }
+.area {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 22px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .05);
+  transition: border-color .12s, box-shadow .12s;
+}
+.area:hover { border-color: #9dbbf3; }
+.area.active { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(31, 79, 214, .25); }
+.area-detail { scroll-margin-top: 12px; }
+.area-detail hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0 22px; }
+.area-note {
+  margin: 14px 0 22px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #eef3ff;
+  color: #1e3a9a;
+  font-weight: 600;
+}
+.spaces { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+.space {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .05);
+}
+.space h4 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.frame {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border: 2px dashed #cfd6e2;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.frame-btn { all: unset; display: grid; place-items: center; width: 100%; height: 100%; cursor: zoom-in; border-radius: 6px; }
+.frame-btn img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .15s; }
+.frame-btn:hover img { transform: scale(1.03); }
+.pending { color: #8a94a6; font-size: 14px; text-align: center; }
+
 /* ---------- Lightbox ---------- */
 .lightbox {
   width: 100vw;
@@ -317,6 +426,15 @@ button, input { font: inherit; color: inherit; }
   .note-info { gap: 12px; }
   .note-warn { grid-template-columns: 1fr; }
   .formats { gap: 14px; grid-template-columns: 1fr; }
+  .catalog { padding: 10px 12px 24px; }
+  .zones { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .zone-box { padding: 16px 14px 20px; }
+  .areas { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .area { min-height: 52px; padding: 10px 12px; font-size: 14px; }
+  .spaces { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .space { padding: 10px; }
+  .space h4 { font-size: 13px; }
+  .hero h1 { font-size: 20px; }
   .format { min-height: 170px; }
   .toolbar-inner { padding: 10px 16px 0; }
   .content { padding: 12px 16px 24px; }
@@ -331,7 +449,6 @@ button, input { font: inherit; color: inherit; }
 
 <header id="hero" class="hero">
   <div class="hero-inner">
-    <button type="button" id="backBtn" class="back" hidden>‹ Formatos</button>
     <div class="hero-text">
       <h1 id="heroTitle">Señalización en tu tienda</h1>
       <p id="heroSub"></p>
@@ -360,14 +477,14 @@ button, input { font: inherit; color: inherit; }
   <p id="updatedHome" class="updated"></p>
 </main>
 
-<div id="catalog" hidden>
-  <div class="toolbar">
-    <div class="toolbar-inner">
-      <input id="search" type="search" placeholder="Buscar señalización…" autocomplete="off" aria-label="Buscar señalización">
-      <nav id="nav" class="nav" aria-label="Áreas de tienda"></nav>
-    </div>
+<div id="catalog" class="catalog" hidden>
+  <div class="cat-toolbar">
+    <button type="button" id="backBtn" class="pill">← Cambiar formato</button>
+    <button type="button" id="checklistBtn" class="pill">⤓ Descarga Checklist</button>
   </div>
-  <main id="content" class="content" aria-live="polite"></main>
+  <img id="banner" class="banner" alt="" hidden>
+  <nav id="zones" class="zones" aria-label="Zonas de la tienda"></nav>
+  <section id="zoneBox" class="zone-box" aria-live="polite"></section>
 </div>
 
 <div id="status" class="status" hidden></div>
@@ -601,7 +718,7 @@ const SP = (() => {
     silentToken: async () => true,
     signIn: async () => account,
     signOut: async () => {},
-    resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
   };
 })();
 
@@ -609,14 +726,16 @@ const SP = (() => {
 <script>
 'use strict';
 
-/* Panel de solo lectura: portada con formatos y catálogo por formato.
+/* Panel de solo lectura del Manual de Señalización.
+   Portada → Formato → Zona → Área → Espacios (título + foto).
    Lee tablero.json y las fotos de la misma carpeta de SharePoint donde está este archivo. */
 
 const $ = (s) => document.querySelector(s);
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#1f4fd6');
-const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'formato';
+const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
+const defaultNote = (area) => `En ${area} solo deberás contar con la siguiente señalización`;
 
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
@@ -632,50 +751,30 @@ const DEFAULT_INTRO = {
 };
 
 let data = null;     // { intro, formats, updatedAt }
-let items = [];      // tarjetas del formato abierto: { title, section, src, el, secEl, key }
-let visible = [];    // las que pasan el filtro de búsqueda
+let items = [];      // fotos del área abierta, para el visor: { title, section, src }
+let visible = [];
 let current = -1;
-let observer = null;
-let renderToken = 0;
+let lastFormatId = null;
 
-/* ---------- Inicio y sesión ---------- */
+/* ---------- Inicio ---------- */
 async function start() {
   setHero({ title: DEFAULT_INTRO.title, sub: '' });
   try {
-    await SP.init(['Files.Read.All']);
+    await SP.init();
   } catch (e) {
     console.error(e);
     showStatus('No se pudo iniciar', SP.errorText(e));
     return;
   }
-  if (SP.currentAccount()) {
-    try { await SP.silentToken(); await load(); return; } catch { /* pedir inicio de sesión */ }
-  }
-  showLogin();
-}
-
-function showLogin(message) {
-  showStatus('Inicia sesión para ver el manual', message || 'Usa tu cuenta de la empresa (la misma de Outlook y Teams).', true);
-}
-
-async function doLogin() {
-  try {
-    await SP.signIn();
-    await load();
-  } catch (e) {
-    console.error(e);
-    showLogin(SP.errorText(e));
-  }
+  await load();
 }
 
 async function load() {
   showStatus('Cargando manual…', '');
   try {
-    const raw = await SP.readJson();
-    data = normalize(raw || {});
+    data = normalize((await SP.readJson()) || {});
   } catch (e) {
     console.error(e);
-    if (e && e.status === 401) { showLogin(SP.errorText(e)); return; }
     showStatus('No se pudo cargar el manual', SP.errorText(e));
     return;
   }
@@ -690,28 +789,54 @@ function renderAccount() {
   $('#signOutWrap').hidden = !SP.canSignOut;
 }
 
+const imgSrc = (ref) => (ref && ref.file ? `${SP.fileUrl(ref.file)}?v=${encodeURIComponent(ref.hash || '')}` : null);
+
+function uniqueId(set, name) {
+  let id = slug(name);
+  while (set.has(id)) id += '-2';
+  set.add(id);
+  return id;
+}
+
+// Acepta tablero.json versión 4 (zonas) y versiones anteriores (secciones).
 function normalize(raw) {
-  const usedIds = new Set();
-  const formats = (Array.isArray(raw.formats) && raw.formats.length ? raw.formats : [
+  const fmtIds = new Set();
+  const list = Array.isArray(raw.formats) && raw.formats.length ? raw.formats : [
     { name: 'W2', subtitle: 'Señalización Walmart', color: '#1f4fd6' },
     { name: 'B2', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
     { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
-  ]).map((f) => {
-    let id = slug(f.name);
-    while (usedIds.has(id)) id += '-2';
-    usedIds.add(id);
+  ];
+  const formats = list.map((f) => {
+    let zones = f.zones;
+    if (!Array.isArray(zones)) {
+      zones = Array.isArray(f.sections) && f.sections.length ? [{
+        name: 'Áreas',
+        areas: f.sections.map((s) => ({ name: s.name, note: '', spaces: (s.cards || []).map((c) => ({ title: c.title, image: c.file ? { file: c.file, hash: c.hash } : null })) })),
+      }] : [];
+    }
+    const zoneIds = new Set();
     return {
-      id,
+      id: uniqueId(fmtIds, f.name || 'formato'),
       name: String(f.name || 'Formato'),
       subtitle: String(f.subtitle || ''),
       color: safeColor(f.color),
-      sections: (Array.isArray(f.sections) ? f.sections : [])
-        .map((s) => ({ name: String(s.name || ''), folder: s.folder || null, cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.file) }))
-        .filter((s) => s.cards.length),
+      banner: imgSrc(f.banner),
+      zones: zones.map((z) => {
+        const areaIds = new Set();
+        return {
+          id: uniqueId(zoneIds, z.name || 'zona'),
+          name: String(z.name || 'Zona'),
+          areas: (z.areas || []).map((a) => ({
+            id: uniqueId(areaIds, a.name || 'area'),
+            name: String(a.name || 'Área'),
+            note: String(a.note || '') || defaultNote(String(a.name || 'esta área')),
+            spaces: (a.spaces || []).map((sp) => ({ title: String(sp.title || ''), src: imgSrc(sp.image) })),
+          })),
+        };
+      }),
     };
   });
-  const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
-  return { intro, formats, updatedAt: raw.updatedAt || null };
+  return { intro: { ...DEFAULT_INTRO, ...(raw.intro || {}) }, formats, updatedAt: raw.updatedAt || null };
 }
 
 function updatedText() {
@@ -720,42 +845,39 @@ function updatedText() {
     : '';
 }
 
-function showStatus(title, text, withLogin = false) {
+function showStatus(title, text) {
   $('#home').hidden = true;
   $('#catalog').hidden = true;
   const st = $('#status');
   st.hidden = false;
-  st.innerHTML = `<strong>${esc(title)}</strong>${esc(text)}${withLogin ? '<button type="button" id="loginBtn" class="login-btn">Iniciar sesión</button>' : ''}`;
-  if (withLogin) $('#loginBtn').addEventListener('click', doLogin);
+  st.innerHTML = `<strong>${esc(title)}</strong>${esc(text)}`;
 }
 
-$('#signOut').addEventListener('click', async () => {
-  await SP.signOut();
-  renderAccount();
-  data = null;
-  location.hash = '';
-  setHero({ title: DEFAULT_INTRO.title, sub: '' });
-  showLogin();
-});
-
-/* ---------- Rutas: #/ (portada) y #/<formato> ---------- */
+/* ---------- Rutas: #/ · #/formato · #/formato/zona · #/formato/zona/area ---------- */
 function route() {
   if (!data) return;
-  const id = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
-  const fmt = id && data.formats.find((f) => f.id === id);
-  if (fmt) renderFormat(fmt); else renderHome();
-  window.scrollTo(0, 0);
+  const [fid, zid, aid] = location.hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
+  const fmt = fid && data.formats.find((f) => f.id === fid);
+  if (!fmt) { lastFormatId = null; renderHome(); window.scrollTo(0, 0); return; }
+  const zone = fmt.zones.find((z) => z.id === zid) || fmt.zones[0] || null;
+  const area = zone && zone.areas.find((a) => a.id === aid) || null;
+  const firstOpen = lastFormatId !== fmt.id;
+  lastFormatId = fmt.id;
+  renderFormat(fmt, zone, area);
+  if (firstOpen) window.scrollTo(0, 0);
+  else if (area) $('#areaDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 window.addEventListener('hashchange', route);
 $('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
 
-function setHero({ title, sub, color, back }) {
+const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
+
+function setHero({ title, sub, color }) {
   const hero = $('#hero');
   hero.style.setProperty('--hero', color || '');
-  hero.classList.toggle('compact', !!back);
   $('#heroTitle').textContent = title;
   $('#heroSub').textContent = sub || '';
-  $('#backBtn').hidden = !back;
+  $('#heroSub').hidden = !sub;
 }
 
 function renderHome() {
@@ -775,124 +897,123 @@ function renderHome() {
   $('#impBox').hidden = !imp.length;
 
   $('#formats').innerHTML = data.formats.map((f) => {
-    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
-    const count = n ? `${f.sections.length} ${f.sections.length === 1 ? 'área' : 'áreas'} · ${n} ${n === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
-    return `<a class="format" href="#/${encodeURIComponent(f.id)}" style="--fc:${esc(f.color)}">
+    const spaces = f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
+    const withImg = spaces.filter((s) => s.src).length;
+    const count = spaces.length ? `${spaces.length} ${spaces.length === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
+    return `<a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
-      <span class="format-count">${esc(count)}</span>
+      <span class="format-count" title="${withImg} con foto">${esc(count)}</span>
     </a>`;
   }).join('');
   $('#updatedHome').textContent = updatedText();
 }
 
-async function renderFormat(f) {
-  const myToken = ++renderToken;
-  document.title = `${f.name} · ${data.intro.title}`;
-  setHero({ title: f.name, sub: [f.subtitle, updatedText()].filter(Boolean).join(' · '), color: f.color, back: true });
+function renderFormat(f, zone, area) {
+  document.title = `${data.intro.title} · ${f.name}`;
+  setHero({ title: `${data.intro.title} · ${f.name}`, sub: '', color: f.color });
   $('#home').hidden = true;
   $('#status').hidden = true;
   $('#catalog').hidden = false;
-  $('#search').value = '';
+  $('#checklistBtn').onclick = () => openChecklist(f);
 
-  const content = $('#content');
-  const nav = $('#nav');
+  const banner = $('#banner');
+  banner.hidden = !f.banner;
+  if (f.banner && banner.getAttribute('src') !== f.banner) banner.src = f.banner;
+
+  $('#zones').innerHTML = f.zones.map((z) =>
+    `<a class="zone${zone && z.id === zone.id ? ' active' : ''}" href="${link(f.id, z.id)}">${esc(z.name)}</a>`).join('');
+  $('#zones').hidden = !f.zones.length;
+
+  const box = $('#zoneBox');
   items = [];
   visible = [];
-  content.innerHTML = '';
-  nav.innerHTML = '';
-
-  if (!f.sections.length) {
-    content.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong>Vuelve más tarde.</div>';
+  if (!zone) {
+    box.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong>Vuelve más tarde.</div>';
     return;
   }
+  box.innerHTML = `
+    <h2 class="zone-title">${esc(zone.name)}</h2>
+    <p class="zone-sub">${zone.areas.length ? 'Selecciona un área para consultar su señalización.' : 'Aún no hay áreas en esta sección.'}</p>
+    <div class="areas">${zone.areas.map((a) =>
+      `<a class="area${area && a.id === area.id ? ' active' : ''}" href="${link(f.id, zone.id, a.id)}">${esc(a.name)}</a>`).join('')}</div>
+    ${area ? `<div id="areaDetail" class="area-detail">
+      <hr>
+      <h3 class="area-title">${esc(area.name)}</h3>
+      <p class="area-note">${esc(area.note)}</p>
+      <div class="spaces"></div>
+    </div>` : ''}`;
 
-  const imgEls = new Map(); // carpeta -> [{ file, img, item }]
-  f.sections.forEach((s, si) => {
-    const id = 'area-' + si;
-    const sec = document.createElement('section');
-    sec.className = 'sec';
-    sec.id = id;
-    sec.innerHTML = `<h2>${esc(s.name)}<small>${s.cards.length}</small></h2><div class="grid"></div>`;
-    const grid = sec.querySelector('.grid');
-    for (const c of s.cards) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'card';
-      btn.innerHTML = `<img loading="lazy" alt=""><span>${esc(c.title || '')}</span>`;
-      const item = { title: String(c.title || ''), section: s.name, src: '', file: c.file, el: btn, secEl: sec, key: norm(`${c.title} ${s.name}`) };
-      btn.addEventListener('click', () => { if (item.src) open(visible.indexOf(item)); });
+  if (!area) return;
+  const grid = box.querySelector('.spaces');
+  if (!area.spaces.length) {
+    grid.outerHTML = '<p class="zone-sub">Esta área aún no tiene señalización registrada.</p>';
+    return;
+  }
+  for (const sp of area.spaces) {
+    const card = document.createElement('article');
+    card.className = 'space';
+    card.innerHTML = `<h4>${esc(sp.title)}</h4><div class="frame">${sp.src
+      ? `<button type="button" class="frame-btn" aria-label="Ver ${esc(sp.title)} en grande"><img loading="lazy" alt="${esc(sp.title)}" src="${esc(sp.src)}"></button>`
+      : '<span class="pending">Imagen pendiente</span>'}</div>`;
+    if (sp.src) {
+      const item = { title: sp.title, section: area.name, src: sp.src };
       items.push(item);
-      grid.appendChild(btn);
-      const folder = c.file.slice(0, c.file.lastIndexOf('/'));
-      if (!imgEls.has(folder)) imgEls.set(folder, []);
-      imgEls.get(folder).push({ name: c.file.slice(c.file.lastIndexOf('/') + 1), img: btn.querySelector('img'), item });
+      card.querySelector('.frame-btn').addEventListener('click', () => openLightbox(visible.indexOf(item)));
     }
-    content.appendChild(sec);
-
-    const a = document.createElement('a');
-    a.href = '#' + id;
-    a.dataset.target = id;
-    a.innerHTML = `${esc(s.name)}<span class="n">${s.cards.length}</span>`;
-    a.addEventListener('click', (e) => { e.preventDefault(); sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-    nav.appendChild(a);
-  });
-
+    grid.appendChild(card);
+  }
   visible = items.slice();
-  applySearch();
-  watchActiveSection();
-
-  // Pedir los enlaces de descarga por carpeta (son temporales y no requieren sesión).
-  for (const [folder, list] of imgEls) {
-    if (myToken !== renderToken) return;
-    await fillFolder(folder, list);
-  }
 }
 
-async function fillFolder(folder, list, retry = true) {
-  let entries;
-  try { entries = await SP.list(folder); } catch (e) { console.warn(e); entries = new Map(); }
-  for (const { name, img, item } of list) {
-    const entry = entries.get(name);
-    if (!entry || !entry.downloadUrl) { item.el.classList.add('missing'); continue; }
-    item.src = entry.downloadUrl;
-    img.onerror = retry ? () => { img.onerror = null; fillFolder(folder, [{ name, img, item }], false); } : null;
-    img.src = entry.downloadUrl;
+/* ---------- Checklist para imprimir o guardar como PDF ---------- */
+function openChecklist(f) {
+  const rows = f.zones.filter((z) => z.areas.length).map((z) => `
+    <h2>${esc(z.name)}</h2>
+    ${z.areas.map((a) => `
+      <table>
+        <thead><tr><th colspan="5">${esc(a.name)}</th></tr>
+          <tr><th class="n">#</th><th class="ph">Referencia</th><th>Señalización</th><th class="c">Cumple</th><th class="c">No cumple</th></tr></thead>
+        <tbody>${a.spaces.length ? a.spaces.map((s, i) => `<tr>
+          <td class="n">${i + 1}</td>
+          <td class="ph">${s.src ? `<img alt="" src="${esc(s.src)}">` : '<span>—</span>'}</td>
+          <td>${esc(s.title)}</td><td class="c"><span class="box"></span></td><td class="c"><span class="box"></span></td></tr>`).join('')
+        : '<tr><td colspan="5" class="empty">Sin señalización registrada</td></tr>'}</tbody>
+      </table>`).join('')}`).join('');
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Checklist de señalización ${esc(f.name)}</title>
+<style>
+body{font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1b2330;margin:24px}
+header{border-bottom:4px solid #ffc220;padding-bottom:10px;margin-bottom:12px}
+h1{margin:0;font-size:20px;color:#1f4fd6}h2{font-size:16px;color:#1e3a9a;margin:20px 0 6px;break-after:avoid}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 24px;margin:10px 0 4px}
+.fields div{border-bottom:1px solid #8a94a6;padding-top:16px;font-size:12px;color:#5d6878}
+table{width:100%;border-collapse:collapse;margin:6px 0 12px;break-inside:auto}
+th,td{border:1px solid #c9d1de;padding:5px 8px;text-align:left;vertical-align:middle}
+thead tr:first-child th{background:#eef3ff;color:#1e3a9a;font-size:14px}
+tr{break-inside:avoid}.n{width:26px;text-align:center}.c{width:70px;text-align:center}.ph{width:64px}
+.ph img{width:56px;height:56px;object-fit:contain;display:block}.box{display:inline-block;width:14px;height:14px;border:1.5px solid #1b2330;border-radius:2px}
+.empty{color:#7a8596;text-align:center}.obs{margin-top:16px}.obs div{border-bottom:1px solid #8a94a6;height:26px}
+.actions{margin:14px 0}.actions button{padding:8px 16px;border:0;border-radius:8px;background:#1f4fd6;color:#fff;font-weight:700;cursor:pointer}
+@media print{.actions{display:none}body{margin:0}}
+</style></head><body>
+<header><h1>Checklist de señalización · ${esc(f.name)}</h1><div>${esc(f.subtitle)}${data.updatedAt ? ' · Manual ' + esc(updatedText().toLowerCase()) : ''}</div>
+<div class="fields"><div>Tienda:</div><div>Fecha:</div><div>Responsable:</div></div></header>
+<div class="actions"><button onclick="window.print()">Imprimir o guardar como PDF</button></div>
+${rows || '<p>Este formato aún no tiene señalización publicada.</p>'}
+<div class="obs"><strong>Observaciones</strong><div></div><div></div><div></div></div>
+</body></html>`;
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  const w = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Checklist señalización ${f.name}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
-}
-
-function applySearch() {
-  const q = norm($('#search').value);
-  visible = [];
-  const secVisible = new Map();
-  for (const it of items) {
-    const ok = !q || it.key.includes(q);
-    it.el.classList.toggle('hidden', !ok);
-    if (ok) visible.push(it);
-    secVisible.set(it.secEl, (secVisible.get(it.secEl) || false) || ok);
-  }
-  for (const [sec, ok] of secVisible) {
-    sec.classList.toggle('hidden', !ok);
-    const link = document.querySelector(`.nav a[data-target="${sec.id}"]`);
-    if (link) link.classList.toggle('hidden', !ok);
-  }
-  $('#noResults')?.remove();
-  if (q && !visible.length) $('#content').insertAdjacentHTML('beforeend', '<div id="noResults" class="status-inline"><strong>Sin resultados</strong>Prueba con otra palabra.</div>');
-}
-
-function watchActiveSection() {
-  if (!('IntersectionObserver' in window)) return;
-  observer?.disconnect();
-  const links = new Map([...document.querySelectorAll('.nav a')].map((a) => [a.dataset.target, a]));
-  observer = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      links.forEach((a) => a.classList.remove('active'));
-      const a = links.get(e.target.id);
-      if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-    }
-  }, { rootMargin: '-120px 0px -60% 0px' });
-  document.querySelectorAll('.sec').forEach((s) => observer.observe(s));
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /* ---------- Imagen en grande ---------- */
@@ -900,7 +1021,7 @@ const lb = $('#lightbox');
 const stage = $('#lbStage');
 const lbImg = $('#lbImg');
 
-function open(i) {
+function openLightbox(i) {
   if (i < 0 || i >= visible.length) return;
   if (!visible[i].src) return;
   current = i;
@@ -919,7 +1040,7 @@ function open(i) {
   [visible[i - 1], visible[i + 1]].forEach((n) => { if (n) new Image().src = n.src; });
 }
 
-function step(d) { open(current + d); }
+function step(d) { openLightbox(current + d); }
 
 // Rectángulo que ocupa realmente la imagen dentro de su caja (object-fit: contain).
 function fittedRect() {
@@ -984,8 +1105,6 @@ stage.addEventListener('touchend', (e) => {
   touchStart = null;
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
 });
-
-$('#search').addEventListener('input', applySearch);
 
 start();
 

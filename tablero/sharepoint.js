@@ -207,6 +207,6 @@ const SP = (() => {
     silentToken: async () => true,
     signIn: async () => account,
     signOut: async () => {},
-    resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
   };
 })();
