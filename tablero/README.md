@@ -4,15 +4,25 @@ App web estática (HTML, CSS y JavaScript puro, sin dependencias) para GitHub Pa
 
 | Página | Para quién | Qué hace |
 |---|---|---|
-| `index.html` | Todos (solo lectura) | Muestra el catálogo publicado por área de tienda, con buscador. Al hacer clic en una imagen se abre en grande: flechas o deslizar para pasar a la siguiente, botón ⤢ o clic sobre la imagen para acercar, Esc para cerrar. |
-| `admin.html` | Administradores | Tablero para arrastrar las imágenes a cada sección, editar títulos y **publicar** los cambios. |
+| `index.html` | Todos (solo lectura) | Portada "Señalización en tu tienda" con la guía, los avisos importantes y una tarjeta por formato (W2, B2, BAE…). Al elegir un formato se ve su catálogo por área de tienda, con buscador. Al hacer clic en una imagen se abre en grande: flechas o deslizar para pasar a la siguiente, botón ⤢ o clic sobre la imagen para acercar, Esc para cerrar. |
+| `admin.html` | Administradores | Tablero para arrastrar las imágenes a cada sección de cada formato, editar títulos, formatos y textos de portada, y **publicar** los cambios. |
+
+## Formatos
+
+Cada formato (W2, B2, BAE, o los que agregues) tiene sus propias secciones y tarjetas; la biblioteca de imágenes es compartida.
+
+- Cambia de formato con las pestañas de arriba del tablero.
+- **⚙ Editar formato**: nombre, subtítulo, color de la tarjeta y logo. El logo se elige de la biblioteca (por ejemplo `logo-w2.png`); usa un PNG con fondo transparente. Desde ahí también se elimina un formato.
+- **+ Formato**: agrega uno nuevo con las secciones originales.
+- **✎ Textos de portada**: título, subtítulo, aviso azul ("Guía de señalización") y puntos del aviso amarillo ("Importante").
+- En la portada solo aparecen los formatos que tienen al menos una imagen publicada.
 
 ## Cómo funciona la publicación
 
 GitHub Pages solo sirve archivos; no tiene base de datos. Por eso el botón **Publicar** del panel de administrador guarda los cambios **en el propio repositorio**, en un solo commit:
 
-- `data/tablero.json`: secciones, títulos y rutas de las imágenes.
-- `data/img/<huella>.jpg`: cada imagen optimizada (máximo 2000 px de lado, JPEG). El nombre es la huella SHA-1 del archivo original, así que una imagen que no cambió no se vuelve a subir; las que ya no se usan se borran.
+- `data/tablero.json`: textos de portada, formatos, secciones, títulos y rutas de las imágenes.
+- `data/img/<huella>.jpg`: cada imagen optimizada (máximo 2000 px de lado, JPEG; los logos se conservan en PNG con transparencia). El nombre es la huella SHA-1 del archivo original, así que una imagen que no cambió no se vuelve a subir; las que ya no se usan se borran.
 
 Ese commit vuelve a desplegar GitHub Pages y en 1–2 minutos el panel de lectura muestra los cambios.
 
@@ -31,7 +41,7 @@ El token se guarda solo en ese navegador (**Olvidar token** lo borra).
 ## Uso del panel de administrador
 
 1. **Cargar carpeta** → elige la carpeta `Señalización` (o arrástrala a la página). Se conservan subcarpetas y nombres tal cual.
-2. Arrastra cada imagen de la **Biblioteca** a su sección, a la pestaña de la sección o a su encabezado. En celular/tablet, mantén presionado un momento y luego arrastra.
+2. Elige el formato en las pestañas y arrastra cada imagen de la **Biblioteca** a su sección, a la pestaña de la sección o a su encabezado. En celular/tablet, mantén presionado un momento y luego arrastra.
 3. Arrastra tarjetas para reordenarlas o moverlas; suéltalas sobre la biblioteca para quitarlas. Clic en un título para editarlo.
 4. **Publicar**. Arriba se indica si hay *cambios sin publicar*.
 

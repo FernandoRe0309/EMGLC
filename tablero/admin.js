@@ -99,24 +99,81 @@ function idb(store, mode, fn) {
 
 /* ---------- Estado ---------- */
 const images = new Map(); // id -> { id, path, folder, name, blob, url }
-let board = { sections: [] };
+
+const DEFAULT_FORMATS = [
+  { name: 'W2', subtitle: 'Señalización Walmart', color: '#1f4fd6' },
+  { name: 'B2', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+  { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+];
+
+const DEFAULT_INTRO = {
+  title: 'Señalización en tu tienda',
+  subtitle: 'Selecciona tu formato para continuar',
+  guideTitle: 'Guía de señalización',
+  guide: 'En este manual encontrarás la señalización autorizada que debe permanecer en tu tienda. Úsalo como guía para validar cada espacio.',
+  importantTitle: 'Importante',
+  important: [
+    'Retira cualquier señalización que no esté indicada en este manual.',
+    'Mantén únicamente la señalización autorizada en tienda.',
+    'Coloca máximo una señalización por departamento.',
+  ],
+};
+
+// state: todo lo que se guarda y publica. board: el formato que se está editando.
+let state = null;
+let board = null;
 const ui = {
   query: '',
   onlyUnplaced: false,
   collapsedFolders: new Set(),
 };
 
-function defaultBoard() {
-  return { sections: DEFAULT_SECTIONS.map((name) => ({ id: uid(), name, collapsed: false, cards: [] })) };
+function newSections() {
+  return DEFAULT_SECTIONS.map((name) => ({ id: uid(), name, collapsed: false, cards: [] }));
+}
+
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', logo = null, sections } = {}) {
+  return { id: uid(), name, subtitle, color, logo, sections: sections || newSections() };
+}
+
+function defaultState() {
+  const formats = DEFAULT_FORMATS.map((f) => newFormat(f));
+  return { dirty: false, publishedAt: null, intro: structuredClone(DEFAULT_INTRO), formats, activeId: formats[0].id };
+}
+
+// Acepta el estado guardado actual o el de versiones anteriores (un solo tablero).
+function normalizeState(saved) {
+  if (!saved) return null;
+  if (Array.isArray(saved.formats) && saved.formats.length) {
+    saved.intro = { ...structuredClone(DEFAULT_INTRO), ...(saved.intro || {}) };
+    return saved;
+  }
+  if (Array.isArray(saved.sections)) {
+    const st = defaultState();
+    st.formats[0].sections = saved.sections;
+    st.dirty = !!saved.dirty;
+    st.publishedAt = saved.publishedAt || null;
+    return st;
+  }
+  return null;
+}
+
+function setActiveFormat(id) {
+  board = state.formats.find((f) => f.id === id) || state.formats[0];
+  state.activeId = board.id;
+}
+
+function allCards() {
+  return state.formats.flatMap((f) => f.sections.flatMap((s) => s.cards));
 }
 
 let saveTimer;
 function saveBoard({ dirty = true } = {}) {
-  if (dirty) board.dirty = true;
+  if (dirty) state.dirty = true;
   renderPublishState();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    idb('state', 'readwrite', (s) => s.put(board, 'board')).catch((e) => console.error(e));
+    idb('state', 'readwrite', (s) => s.put(state, 'board')).catch((e) => console.error(e));
   }, 250);
 }
 
@@ -320,12 +377,27 @@ function renderStats(counts) {
   const placed = [...images.keys()].filter((id) => counts.get(id)).length;
   const cards = board.sections.reduce((n, s) => n + s.cards.length, 0);
   $('#stats').textContent = total
-    ? `${total} imágenes en biblioteca · ${placed} colocadas · ${total - placed} sin colocar · ${cards} tarjetas en ${board.sections.length} secciones`
-    : `Sin imágenes cargadas · ${board.sections.length} secciones`;
+    ? `${board.name}: ${cards} tarjetas en ${board.sections.length} secciones · Biblioteca: ${total} imágenes, ${placed} colocadas en ${board.name}`
+    : `${board.name}: ${board.sections.length} secciones · Sin imágenes cargadas`;
+}
+
+function renderFormatTabs() {
+  const el = $('#formatTabs');
+  el.innerHTML = state.formats.map((f) => {
+    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
+    const logo = f.logo && images.get(f.logo);
+    return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
+      <span class="ftab-mark">${logo ? `<img alt="" src="${urlFor(logo)}">` : escapeHtml(f.name.slice(0, 3))}</span>
+      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${n} ${n === 1 ? 'tarjeta' : 'tarjetas'}</small></span>
+    </button>`;
+  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Editar nombre, color y logo de ${escapeHtml(board.name)}">⚙ Editar formato</button>
+    <button type="button" class="ftab-tool" data-format-action="add" title="Agregar un formato">+ Formato</button>
+    <button type="button" class="ftab-tool" data-format-action="intro" title="Editar los textos de la portada">✎ Textos de portada</button>`;
 }
 
 function render() {
   const counts = placementCounts();
+  renderFormatTabs();
   renderLibrary(counts);
   renderBoard();
   renderStats(counts);
@@ -664,7 +736,7 @@ async function exportCatalog() {
   const slug = (s, i) => 's' + i + '-' + norm(s).replace(/[^a-z0-9]+/g, '-');
   const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catálogo de Señalización</title>
+<title>Catálogo de Señalización ${escapeHtml(board.name)}</title>
 <style>
 :root{--bg:#f4f6f9;--s:#fff;--b:#d8dde5;--t:#1b2330;--m:#5d6878;--a:#2563eb}
 @media (prefers-color-scheme:dark){:root{--bg:#11151c;--s:#1a2029;--b:#2f3846;--t:#e6eaf0;--m:#9aa5b5;--a:#5b8dff}}
@@ -684,7 +756,7 @@ h2{margin:0;padding:12px 14px;border-bottom:1px solid var(--b);font-size:17px}h2
 #lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:10;cursor:zoom-out;padding:16px}
 #lb.on{display:flex}#lb img{max-width:100%;max-height:100%;object-fit:contain}
 </style></head><body>
-<header><h1>Catálogo de Señalización</h1><p>Generado el ${escapeHtml(date)}</p>
+<header><h1>Catálogo de Señalización ${escapeHtml(board.name)}</h1><p>Generado el ${escapeHtml(date)}</p>
 <input id="q" type="search" placeholder="Buscar señalización…">
 <nav>${parts.map((p, i) => `<a href="#${slug(p.sec.name, i)}">${escapeHtml(p.sec.name)}</a>`).join('')}</nav></header>
 <main>
@@ -701,16 +773,32 @@ document.addEventListener('click',function(e){var c=e.target.closest('.c');if(c)
 document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on')});
 <\/script></body></html>`;
 
-  download('catalogo-senalizacion.html', new Blob([html], { type: 'text/html' }));
+  download(`catalogo-senalizacion-${norm(board.name).replace(/[^a-z0-9]+/g, '-')}.html`, new Blob([html], { type: 'text/html' }));
   toast(missing ? `Catálogo exportado. ${missing} tarjetas sin imagen se omitieron.` : 'Catálogo exportado.', 4000);
+}
+
+function sectionsToJson(sections) {
+  return sections.map((s) => ({ name: s.name, cards: s.cards.map((c) => ({ path: c.imageId, title: c.title })) }));
+}
+
+function sectionsFromJson(sections) {
+  return (Array.isArray(sections) ? sections : []).map((s) => ({
+    id: uid(),
+    name: String(s.name || 'Sección'),
+    collapsed: false,
+    cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.path).map((c) => ({
+      id: uid(), imageId: String(c.path), title: String(c.title ?? titleFromName(String(c.path).split('/').pop())),
+    })),
+  }));
 }
 
 function saveJson() {
   const data = {
     app: 'tablero-senalizacion',
-    version: 1,
+    version: 2,
     savedAt: new Date().toISOString(),
-    sections: board.sections.map((s) => ({ name: s.name, cards: s.cards.map((c) => ({ path: c.imageId, title: c.title })) })),
+    intro: state.intro,
+    formats: state.formats.map((f) => ({ name: f.name, subtitle: f.subtitle, color: f.color, logoPath: f.logo, sections: sectionsToJson(f.sections) })),
   };
   const stamp = new Date().toISOString().slice(0, 10);
   download(`tablero-senalizacion-${stamp}.json`, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -720,20 +808,24 @@ function saveJson() {
 async function openJson(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch { toast('El archivo no es un JSON válido.'); return; }
-  if (!data || !Array.isArray(data.sections)) { toast('El archivo no parece un tablero guardado.'); return; }
-  if (!confirm('Esto reemplaza el tablero actual por el del archivo. ¿Continuar?')) return;
-  board = {
-    sections: data.sections.map((s) => ({
-      id: uid(),
-      name: String(s.name || 'Sección'),
-      collapsed: false,
-      cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.path).map((c) => ({
-        id: uid(), imageId: String(c.path), title: String(c.title ?? titleFromName(String(c.path).split('/').pop())),
-      })),
-    })),
-  };
+  if (data && Array.isArray(data.formats)) {
+    if (!confirm('Esto reemplaza todos los formatos y la portada por los del archivo. ¿Continuar?')) return;
+    state.intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+    state.formats = data.formats.map((f) => newFormat({
+      name: String(f.name || 'Formato'), subtitle: String(f.subtitle || ''), color: String(f.color || '#1f4fd6'),
+      logo: f.logoPath ? String(f.logoPath) : null, sections: sectionsFromJson(f.sections),
+    }));
+    if (!state.formats.length) state.formats = defaultState().formats;
+    setActiveFormat(state.formats[0].id);
+  } else if (data && Array.isArray(data.sections)) {
+    if (!confirm(`Esto reemplaza las secciones del formato ${board.name} por las del archivo. ¿Continuar?`)) return;
+    board.sections = sectionsFromJson(data.sections);
+  } else {
+    toast('El archivo no parece un tablero guardado.');
+    return;
+  }
   commit();
-  const missing = board.sections.reduce((n, s) => n + s.cards.filter((c) => !images.has(c.imageId)).length, 0);
+  const missing = allCards().filter((c) => !images.has(c.imageId)).length;
   toast(missing ? `Tablero abierto. ${missing} imágenes faltan en la biblioteca: carga la carpeta para verlas.` : 'Tablero abierto.', 4500);
 }
 
@@ -810,13 +902,24 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 function repoPath(cfg) { return `/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`; }
 function refPath(cfg) { return cfg.branch.split('/').map(encodeURIComponent).join('/'); }
 
-async function optimizeImage(blob) {
+async function optimizeImage(blob, { keepAlpha = false } = {}) {
   let bmp;
   try { bmp = await createImageBitmap(blob); } catch { bmp = null; }
   if (!bmp) {
     // Formato que el navegador no puede redibujar (p. ej. SVG): se publica tal cual.
     const ext = (blob.type.split('/')[1] || 'bin').replace('jpeg', 'jpg').replace('svg+xml', 'svg');
     return { blob, ext };
+  }
+  if (keepAlpha && blob.type !== 'image/jpeg') {
+    // Logos: conservar la transparencia (PNG) y limitar a 600 px.
+    const k = Math.min(1, 600 / Math.max(bmp.width, bmp.height));
+    if (k === 1 && blob.type === 'image/png') { bmp.close?.(); return { blob, ext: 'png' }; }
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close?.();
+    const png = await new Promise((res) => c.toBlob(res, 'image/png'));
+    return { blob: png || blob, ext: 'png' };
   }
   const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
   if (scale === 1 && blob.type === 'image/jpeg' && blob.size < 700 * 1024) { bmp.close?.(); return { blob, ext: 'jpg' }; }
@@ -852,12 +955,12 @@ function renderPublishState() {
   if (publishing) return;
   const el = $('#publishState');
   if (!el) return;
-  if (board.dirty) {
+  if (state.dirty) {
     el.className = 'publish-state dirty';
     el.textContent = 'Cambios sin publicar';
-  } else if (board.publishedAt) {
+  } else if (state.publishedAt) {
     el.className = 'publish-state';
-    el.textContent = 'Publicado ' + new Date(board.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    el.textContent = 'Publicado ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
   } else {
     el.className = 'publish-state';
     el.textContent = '';
@@ -869,11 +972,12 @@ async function publish() {
   const cfg = getConfig();
   if (!cfg.owner || !cfg.repo || !cfg.branch || !cfg.token) { openSettings('Configura el repositorio y el token antes de publicar.'); return; }
 
-  const usedIds = [...new Set(board.sections.flatMap((s) => s.cards.map((c) => c.imageId)))];
+  const logoIds = new Set(state.formats.map((f) => f.logo).filter((id) => id && images.has(id)));
+  const usedIds = [...new Set([...allCards().map((c) => c.imageId), ...logoIds])];
   const missing = usedIds.filter((id) => !images.has(id));
   const present = usedIds.filter((id) => images.has(id));
   if (missing.length && !confirm(`${missing.length} tarjetas no tienen su imagen en la biblioteca y se publicarán sin ella. ¿Continuar?`)) return;
-  if (!confirm(`Se publicará el tablero con ${present.length} imágenes en ${cfg.owner}/${cfg.repo} (rama ${cfg.branch}). Todos los que abran el panel de lectura verán estos cambios. ¿Publicar?`)) return;
+  if (!confirm(`Se publicarán ${state.formats.length} formatos con ${present.length} imágenes en ${cfg.owner}/${cfg.repo} (rama ${cfg.branch}). Todos los que abran el panel de lectura verán estos cambios. ¿Publicar?`)) return;
 
   publishing = true;
   const btn = $('#publishBtn');
@@ -904,7 +1008,7 @@ async function publish() {
       let path = existing.get(img.hash);
       if (!path) {
         setPublishProgress(`Optimizando y subiendo ${i + 1} de ${present.length}…`);
-        const { blob, ext } = img.published ? { blob: img.blob, ext: img.ext || 'jpg' } : await optimizeImage(img.blob);
+        const { blob, ext } = img.published ? { blob: img.blob, ext: img.ext || 'jpg' } : await optimizeImage(img.blob, { keepAlpha: logoIds.has(img.id) });
         // Espaciar las subidas para no chocar con el límite de GitHub (~80 por minuto).
         const wait = 800 - (Date.now() - lastUpload);
         if (wait > 0) await sleep(wait);
@@ -929,20 +1033,35 @@ async function publish() {
     }
 
     const updatedAt = new Date().toISOString();
+    const usedSlugs = new Set();
     const data = {
       app: 'tablero-senalizacion',
-      version: 1,
+      version: 2,
       updatedAt,
-      sections: board.sections.map((s) => ({
-        name: s.name,
-        cards: s.cards.filter((c) => srcById.has(c.imageId)).map((c) => ({ title: c.title, path: c.imageId, src: srcById.get(c.imageId) })),
-      })),
+      intro: state.intro,
+      formats: state.formats.map((f) => {
+        let slug = norm(f.name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'formato';
+        while (usedSlugs.has(slug)) slug += '-2';
+        usedSlugs.add(slug);
+        return {
+          id: slug,
+          name: f.name,
+          subtitle: f.subtitle,
+          color: f.color,
+          logo: f.logo && srcById.has(f.logo) ? srcById.get(f.logo) : null,
+          logoPath: f.logo && srcById.has(f.logo) ? f.logo : null,
+          sections: f.sections.map((s) => ({
+            name: s.name,
+            cards: s.cards.filter((c) => srcById.has(c.imageId)).map((c) => ({ title: c.title, path: c.imageId, src: srcById.get(c.imageId) })),
+          })),
+        };
+      }),
     };
     entries.push({ path: PUB_JSON, mode: '100644', type: 'blob', content: JSON.stringify(data, null, 2) + '\n' });
 
     setPublishProgress('Guardando cambios en el repositorio…');
     const newTree = await gh(cfg, `${base}/git/trees`, { method: 'POST', body: { base_tree: head.tree.sha, tree: entries } });
-    const cardCount = data.sections.reduce((n, s) => n + s.cards.length, 0);
+    const cardCount = data.formats.reduce((n, f) => n + f.sections.reduce((k, s) => k + s.cards.length, 0), 0);
     const commitObj = await gh(cfg, `${base}/git/commits`, {
       method: 'POST',
       body: { message: `Actualizar tablero de señalización (${cardCount} tarjetas)`, tree: newTree.sha, parents: [headSha] },
@@ -953,8 +1072,8 @@ async function publish() {
       const img = images.get(id);
       if (img) img.publishedSrc = src;
     }
-    board.dirty = false;
-    board.publishedAt = updatedAt;
+    state.dirty = false;
+    state.publishedAt = updatedAt;
     publishing = false;
     saveBoard({ dirty: false });
     toast(`Publicado: ${uploaded} imágenes nuevas${removed ? `, ${removed} retiradas` : ''}. El panel de lectura se actualiza en 1–2 minutos.`, 6000);
@@ -976,11 +1095,17 @@ async function fetchPublished() {
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
-  return data && Array.isArray(data.sections) ? data : null;
+  if (data && Array.isArray(data.formats)) return data;
+  // Versión 1: un solo tablero sin formatos.
+  if (data && Array.isArray(data.sections)) return { ...data, formats: [{ ...DEFAULT_FORMATS[0], sections: data.sections }] };
+  return null;
 }
 
 async function loadPublished(data) {
-  const cards = data.sections.flatMap((s) => (Array.isArray(s.cards) ? s.cards : [])).filter((c) => c && c.path && c.src);
+  const cards = data.formats.flatMap((f) => [
+    ...(Array.isArray(f.sections) ? f.sections : []).flatMap((s) => (Array.isArray(s.cards) ? s.cards : [])),
+    ...(f.logo && f.logoPath ? [{ src: f.logo, path: f.logoPath }] : []),
+  ]).filter((c) => c && c.path && c.src);
   const toFetch = new Map();
   for (const c of cards) {
     const hash = String(c.src).split('/').pop().replace(/\.[^.]+$/, '');
@@ -1013,23 +1138,28 @@ async function loadPublished(data) {
   }
   if (fetched.length) await idb('images', 'readwrite', (s) => { fetched.forEach((r) => s.put(r)); }).catch(console.error);
 
-  board = {
+  const prevActive = board && board.name;
+  state = {
     dirty: false,
     publishedAt: data.updatedAt || null,
-    sections: data.sections.map((s) => ({
-      id: uid(),
-      name: String(s.name || 'Sección'),
-      collapsed: false,
-      cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.path).map((c) => ({ id: uid(), imageId: String(c.path), title: String(c.title ?? '') })),
+    intro: { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) },
+    formats: data.formats.map((f) => newFormat({
+      name: String(f.name || 'Formato'),
+      subtitle: String(f.subtitle || ''),
+      color: String(f.color || '#1f4fd6'),
+      logo: f.logoPath ? String(f.logoPath) : null,
+      sections: sectionsFromJson(f.sections),
     })),
   };
+  if (!state.formats.length) state.formats = defaultState().formats;
+  setActiveFormat((state.formats.find((f) => f.name === prevActive) || state.formats[0]).id);
   saveBoard({ dirty: false });
   render();
   toast('Se cargó la versión publicada.');
 }
 
 async function loadPublishedAction() {
-  if (board.dirty && !confirm('Tienes cambios sin publicar. Se descartarán y se cargará la versión publicada. ¿Continuar?')) return;
+  if (state.dirty && !confirm('Tienes cambios sin publicar. Se descartarán y se cargará la versión publicada. ¿Continuar?')) return;
   try {
     const data = await fetchPublished();
     if (!data) { toast('Todavía no hay nada publicado.'); return; }
@@ -1099,6 +1229,124 @@ function setupSettings() {
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
+/* ---------- Formatos y portada ---------- */
+let editingFormatId = null; // id del formato en edición, o null si es nuevo
+
+function logoOptions(selected) {
+  const list = [...images.values()].sort((a, b) => {
+    const la = /logo/i.test(a.path) ? 0 : 1, lb = /logo/i.test(b.path) ? 0 : 1;
+    return la - lb || collator.compare(a.path, b.path);
+  });
+  return `<option value="">(Sin logo: mostrar el nombre)</option>` +
+    list.map((i) => `<option value="${escapeHtml(i.id)}" ${i.id === selected ? 'selected' : ''}>${escapeHtml(i.path)}</option>`).join('');
+}
+
+function renderFormatPreview() {
+  const name = $('#fmtName').value.trim() || 'Formato';
+  const logo = images.get($('#fmtLogo').value);
+  const prev = $('#fmtPreview');
+  prev.style.setProperty('--fc', $('#fmtColor').value);
+  prev.innerHTML = `<span class="fp-logo">${logo ? `<img alt="" src="${urlFor(logo)}">` : ''}</span>
+    <strong>${escapeHtml(name)}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
+}
+
+function openFormatDialog(formatId) {
+  const f = formatId ? state.formats.find((x) => x.id === formatId) : null;
+  editingFormatId = f ? f.id : null;
+  $('#formatDlgTitle').textContent = f ? `Editar formato ${f.name}` : 'Nuevo formato';
+  $('#fmtName').value = f ? f.name : '';
+  $('#fmtSubtitle').value = f ? f.subtitle : '';
+  $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(f?.color || '') ? f.color : '#1f4fd6';
+  $('#fmtLogo').innerHTML = logoOptions(f ? f.logo : null);
+  $('#fmtDelete').hidden = !f || state.formats.length < 2;
+  renderFormatPreview();
+  $('#formatDlg').showModal();
+  $('#fmtName').focus();
+}
+
+function openIntroDialog() {
+  const t = state.intro;
+  $('#inTitle').value = t.title;
+  $('#inSubtitle').value = t.subtitle;
+  $('#inGuideTitle').value = t.guideTitle;
+  $('#inGuide').value = t.guide;
+  $('#inImportantTitle').value = t.importantTitle;
+  $('#inImportant').value = (t.important || []).join('\n');
+  $('#introDlg').showModal();
+}
+
+function setupFormatUI() {
+  $('#formatTabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-format]');
+    if (tab) {
+      setActiveFormat(tab.dataset.format);
+      saveBoard({ dirty: false });
+      render();
+      return;
+    }
+    const act = e.target.closest('[data-format-action]');
+    if (!act) return;
+    if (act.dataset.formatAction === 'edit') openFormatDialog(board.id);
+    else if (act.dataset.formatAction === 'add') openFormatDialog(null);
+    else if (act.dataset.formatAction === 'intro') openIntroDialog();
+  });
+
+  ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtLogo'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
+
+  $('#formatForm').addEventListener('submit', (e) => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    const values = {
+      name: $('#fmtName').value.trim() || 'Formato',
+      subtitle: $('#fmtSubtitle').value.trim(),
+      color: $('#fmtColor').value,
+      logo: $('#fmtLogo').value || null,
+    };
+    if (editingFormatId) {
+      Object.assign(state.formats.find((f) => f.id === editingFormatId), values);
+    } else {
+      const f = newFormat(values);
+      state.formats.push(f);
+      setActiveFormat(f.id);
+    }
+    commit();
+  });
+
+  $('#fmtDelete').addEventListener('click', () => {
+    const f = state.formats.find((x) => x.id === editingFormatId);
+    if (!f || state.formats.length < 2) return;
+    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
+    if (!confirm(`¿Eliminar el formato ${f.name}${n ? ` y sus ${n} tarjetas` : ''}? Esto no se puede deshacer.`)) return;
+    state.formats = state.formats.filter((x) => x.id !== f.id);
+    setActiveFormat(state.formats[0].id);
+    $('#formatDlg').close();
+    commit();
+  });
+
+  $('#introForm').addEventListener('submit', (e) => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    state.intro = {
+      title: $('#inTitle').value.trim() || DEFAULT_INTRO.title,
+      subtitle: $('#inSubtitle').value.trim(),
+      guideTitle: $('#inGuideTitle').value.trim(),
+      guide: $('#inGuide').value.trim(),
+      importantTitle: $('#inImportantTitle').value.trim(),
+      important: $('#inImportant').value.split('\n').map((x) => x.trim()).filter(Boolean),
+    };
+    commit();
+    toast('Textos de portada actualizados. Publica para que se vean.');
+  });
+  $('#introReset').addEventListener('click', () => {
+    state.intro = structuredClone(DEFAULT_INTRO);
+    $('#introDlg').close();
+    commit();
+  });
+
+  ['#formatDlg', '#introDlg'].forEach((sel) => {
+    const dlg = $(sel);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  });
+}
+
 /* ---------- Acciones del menú ---------- */
 function autoPlace() {
   const counts = placementCounts();
@@ -1144,14 +1392,14 @@ function handleMenu(action) {
     case 'sections-from-folders': return sectionsFromFolders();
     case 'add-section': return addSection();
     case 'clear-board':
-      if (confirm('Se quitarán todas las imágenes del tablero (las secciones se conservan). ¿Continuar?')) {
+      if (confirm(`Se quitarán todas las imágenes del formato ${board.name} (las secciones se conservan). ¿Continuar?`)) {
         board.sections.forEach((s) => { s.cards = []; });
         commit();
       }
       return;
     case 'reset-sections':
-      if (confirm('Se reemplazarán las secciones por las originales y se vaciará el tablero. ¿Continuar?')) {
-        board = defaultBoard();
+      if (confirm(`Se reemplazarán las secciones del formato ${board.name} por las originales y se vaciará. ¿Continuar?`)) {
+        board.sections = newSections();
         commit();
       }
       return;
@@ -1267,6 +1515,7 @@ function setupEvents() {
   setupFileDrop();
   setupViewer();
   setupSettings();
+  setupFormatUI();
 }
 
 /* ---------- Inicio ---------- */
@@ -1291,7 +1540,7 @@ async function init() {
       idb('state', 'readonly', (s) => s.get('board')),
       idb('images', 'readonly', (s) => s.getAll()),
     ]);
-    board = saved && Array.isArray(saved.sections) ? saved : null;
+    state = normalizeState(saved);
     for (const rec of stored || []) images.set(rec.id, { ...rec, url: null });
   } catch (e) {
     console.warn(e);
@@ -1301,16 +1550,18 @@ async function init() {
   // Sincronizar con lo publicado: si no hay trabajo local, o si otra persona publicó después.
   let published = null;
   try { published = await fetchPublished(); } catch (e) { console.warn(e); }
-  if (published && (!board || (!board.dirty && published.updatedAt && published.updatedAt !== board.publishedAt))) {
-    board = board || defaultBoard();
+  if (published && (!state || (!state.dirty && published.updatedAt && published.updatedAt !== state.publishedAt))) {
+    if (!state) state = defaultState();
+    setActiveFormat(state.activeId);
     render();
     await loadPublished(published);
     return;
   }
-  if (!board) board = defaultBoard();
+  if (!state) state = defaultState();
+  setActiveFormat(state.activeId);
   render();
   renderPublishState();
-  if (published && board.dirty && published.updatedAt && board.publishedAt && published.updatedAt > board.publishedAt) {
+  if (published && state.dirty && published.updatedAt && state.publishedAt && published.updatedAt > state.publishedAt) {
     toast('Hay una versión publicada más reciente que tus cambios locales. Usa Más → Cargar lo publicado si quieres verla.', 7000);
   }
 }

@@ -12,7 +12,7 @@
 
 <header class="topbar">
   <div class="brand">
-    <h1>Tablero de Señalización <span class="tag">Administrador</span></h1>
+    <h1>Señalización en tu tienda <span class="tag">Administrador</span></h1>
     <p id="stats" class="stats">Sin imágenes cargadas</p>
   </div>
   <div class="actions">
@@ -43,8 +43,8 @@
         <button type="button" data-action="sections-from-folders">Crear secciones desde carpetas</button>
         <button type="button" data-action="add-section">Agregar sección</button>
         <hr>
-        <button type="button" data-action="clear-board">Vaciar tablero</button>
-        <button type="button" data-action="reset-sections">Restablecer secciones originales</button>
+        <button type="button" data-action="clear-board">Vaciar este formato</button>
+        <button type="button" data-action="reset-sections">Restablecer secciones de este formato</button>
         <button type="button" data-action="clear-library" class="danger">Borrar biblioteca de imágenes</button>
       </div>
     </details>
@@ -56,13 +56,14 @@
     <div class="library-head">
       <h2>Biblioteca</h2>
       <input id="searchInput" type="search" placeholder="Buscar imagen o carpeta…" autocomplete="off">
-      <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar</label>
+      <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar en este formato</label>
     </div>
     <div id="libraryList" class="library-list"></div>
     <p class="library-foot">Arrastra una imagen a una sección. Suelta una tarjeta aquí para quitarla del tablero.</p>
   </aside>
 
   <main class="board-wrap">
+    <div id="formatTabs" class="format-tabs" role="tablist" aria-label="Formatos"></div>
     <nav id="sectionNav" class="section-nav" aria-label="Secciones"></nav>
     <div id="board" class="board"></div>
     <button id="addSectionBtn" class="btn add-section" type="button">+ Agregar sección</button>
@@ -114,6 +115,49 @@
       <button type="button" id="cfgTest" class="btn">Probar conexión</button>
       <button value="cancel" class="btn" formnovalidate>Cancelar</button>
       <button type="submit" id="cfgSave" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="formatDlg" class="settings">
+  <form method="dialog" class="settings-inner" id="formatForm">
+    <h3 id="formatDlgTitle">Editar formato</h3>
+    <div class="fmt-grid">
+      <div class="fmt-fields">
+        <label>Nombre<input id="fmtName" required maxlength="40" autocomplete="off" placeholder="W2"></label>
+        <label>Subtítulo<input id="fmtSubtitle" maxlength="80" autocomplete="off" placeholder="Señalización Walmart"></label>
+        <label>Color de la tarjeta<input id="fmtColor" type="color" value="#1f4fd6"></label>
+        <label>Logo<select id="fmtLogo"></select></label>
+        <p class="muted small">El logo se elige de la biblioteca (por ejemplo <em>logo-w2.png</em>). Usa un PNG con fondo transparente.</p>
+      </div>
+      <div>
+        <p class="muted small">Así se verá en la portada:</p>
+        <div id="fmtPreview" class="fmt-preview"></div>
+      </div>
+    </div>
+    <div class="settings-actions">
+      <button type="button" id="fmtDelete" class="btn danger">Eliminar formato</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="introDlg" class="settings">
+  <form method="dialog" class="settings-inner" id="introForm">
+    <h3>Textos de la portada</h3>
+    <label>Título<input id="inTitle" maxlength="80" autocomplete="off"></label>
+    <label>Subtítulo<input id="inSubtitle" maxlength="120" autocomplete="off"></label>
+    <label>Título del aviso azul<input id="inGuideTitle" maxlength="80" autocomplete="off"></label>
+    <label>Texto del aviso azul<textarea id="inGuide" rows="3"></textarea></label>
+    <label>Título del aviso amarillo<input id="inImportantTitle" maxlength="80" autocomplete="off"></label>
+    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <div class="settings-actions">
+      <button type="button" id="introReset" class="btn">Restablecer textos</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
     </div>
   </form>
 </dialog>

@@ -1,11 +1,11 @@
 :root {
-  --bg: #f4f6f9;
+  --bg: #f5f6f8;
   --surface: #ffffff;
   --surface-2: #eef1f5;
   --border: #d8dde5;
   --text: #1b2330;
   --muted: #5d6878;
-  --accent: #2563eb;
+  --accent: #1f4fd6;
   --accent-soft: #dbe7ff;
   --accent-text: #ffffff;
   --danger: #c62828;
@@ -513,3 +513,119 @@ a.btn { text-decoration: none; color: inherit; }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .settings-actions .spacer { flex: 1; }
 @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+/* ---------- Tema corporativo: barra azul con borde amarillo ---------- */
+:root {
+  --brand: #1f4fd6;
+  --brand-yellow: #ffc220;
+  --on-brand: #ffffff;
+}
+.topbar {
+  background: var(--brand);
+  color: var(--on-brand);
+  border-bottom: 4px solid var(--brand-yellow);
+  box-shadow: 0 2px 8px rgba(16, 24, 40, .15);
+}
+.topbar .stats { color: rgba(255, 255, 255, .82); }
+.topbar .btn {
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .35);
+  color: var(--on-brand);
+}
+.topbar .btn:hover { background: rgba(255, 255, 255, .22); }
+.topbar .btn-primary {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+  color: #1b2330;
+  font-weight: 700;
+}
+.topbar .btn-primary:hover { background: var(--brand-yellow); filter: brightness(1.05); }
+.topbar .btn:focus-visible { outline-color: var(--brand-yellow); }
+.topbar .tag { background: var(--brand-yellow); color: #1b2330; }
+.topbar .publish-state { color: rgba(255, 255, 255, .85); }
+.topbar .publish-state.dirty, .topbar .publish-state.busy { color: var(--brand-yellow); }
+.topbar .menu-panel { color: var(--text); }
+.topbar .menu-panel .danger { color: var(--danger); }
+
+/* ---------- Pestañas de formato ---------- */
+.format-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 14px 0 4px;
+}
+.ftab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+  padding: 8px 14px 8px 8px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+.ftab:hover { border-color: var(--fc); }
+.ftab.active { border-color: var(--fc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fc) 22%, transparent); }
+.ftab-mark {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--fc);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+}
+.ftab-mark img { width: 30px; height: 30px; object-fit: contain; }
+.ftab-text { display: grid; line-height: 1.2; }
+.ftab-text strong { font-size: 15px; }
+.ftab-text small { color: var(--muted); font-size: 12px; }
+.ftab-tool {
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ftab-tool:hover { color: var(--text); border-color: var(--accent); background: var(--surface); }
+
+/* ---------- Diálogos de formato y portada ---------- */
+.settings textarea, .settings select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+.settings input[type="color"] { height: 40px; padding: 3px; cursor: pointer; }
+.small { font-size: 12px; }
+.fmt-grid { display: grid; grid-template-columns: 1fr 220px; gap: 18px; }
+.fmt-fields { display: grid; gap: 10px; }
+.fmt-preview {
+  margin-top: 6px;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 12px;
+  border-radius: 16px;
+  background: var(--fc, var(--brand));
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(16, 24, 40, .18);
+}
+.fmt-preview .fp-logo { height: 64px; display: grid; place-items: center; margin-bottom: 8px; }
+.fmt-preview .fp-logo img { max-height: 64px; max-width: 120px; object-fit: contain; }
+.fmt-preview strong { font-size: 20px; }
+.fmt-preview small { font-size: 12px; opacity: .9; }
+@media (max-width: 560px) { .fmt-grid { grid-template-columns: 1fr; } }

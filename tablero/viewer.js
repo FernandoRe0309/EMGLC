@@ -1,43 +1,139 @@
 'use strict';
 
-/* Panel de solo lectura: muestra data/tablero.json publicado desde admin.html. */
+/* Panel de solo lectura: portada con formatos y catálogo por formato.
+   Lee data/tablero.json, publicado desde admin.html. */
 
 const $ = (s) => document.querySelector(s);
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const imgUrl = (src) => 'data/' + String(src).split('/').map(encodeURIComponent).join('/');
+const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#1f4fd6');
 
-let items = [];   // todas las tarjetas en orden: { title, section, src, el }
-let visible = []; // las que pasan el filtro de búsqueda
+const DEFAULT_INTRO = {
+  title: 'Señalización en tu tienda',
+  subtitle: 'Selecciona tu formato para continuar',
+  guideTitle: 'Guía de señalización',
+  guide: 'En este manual encontrarás la señalización autorizada que debe permanecer en tu tienda. Úsalo como guía para validar cada espacio.',
+  importantTitle: 'Importante',
+  important: [],
+};
+
+let data = null;     // { intro, formats, updatedAt }
+let items = [];      // tarjetas del formato abierto: { title, section, src, el, secEl, key }
+let visible = [];    // las que pasan el filtro de búsqueda
 let current = -1;
+let observer = null;
 
 async function load() {
-  let data = null;
   try {
     const r = await fetch(`data/tablero.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (r.ok) data = await r.json();
-    else if (r.status !== 404) throw new Error(`HTTP ${r.status}`);
+    if (r.status === 404) { data = { intro: DEFAULT_INTRO, formats: [] }; route(); return; }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const raw = await r.json();
+    data = normalize(raw);
   } catch (e) {
     console.error(e);
-    $('#updated').textContent = '';
-    $('#content').innerHTML = '<div class="empty"><strong>No se pudo cargar el catálogo</strong>Revisa tu conexión e intenta de nuevo.</div>';
+    showStatus('No se pudo cargar el manual', 'Revisa tu conexión e intenta de nuevo.');
     return;
   }
+  route();
+}
 
-  const sections = (data && Array.isArray(data.sections) ? data.sections : [])
-    .map((s) => ({ name: String(s.name || ''), cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.src) }))
-    .filter((s) => s.cards.length);
+function normalize(raw) {
+  let formats = Array.isArray(raw.formats) ? raw.formats : null;
+  if (!formats && Array.isArray(raw.sections)) formats = [{ id: 'catalogo', name: 'Catálogo', subtitle: '', sections: raw.sections }];
+  formats = (formats || []).map((f, i) => ({
+    id: String(f.id || `formato-${i + 1}`),
+    name: String(f.name || 'Formato'),
+    subtitle: String(f.subtitle || ''),
+    color: safeColor(f.color),
+    logo: f.logo ? imgUrl(f.logo) : null,
+    sections: (Array.isArray(f.sections) ? f.sections : [])
+      .map((s) => ({ name: String(s.name || ''), cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.src) }))
+      .filter((s) => s.cards.length),
+  }));
+  const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
+  return { intro, formats, updatedAt: raw.updatedAt || null };
+}
 
-  if (!sections.length) {
-    $('#updated').textContent = '';
-    $('#content').innerHTML = '<div class="empty"><strong>Aún no hay nada publicado</strong>Cuando el administrador publique el tablero aparecerá aquí.</div>';
-    return;
-  }
+function updatedText() {
+  return data.updatedAt
+    ? 'Actualizado el ' + new Date(data.updatedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })
+    : '';
+}
 
-  if (data.updatedAt) {
-    $('#updated').textContent = 'Actualizado el ' + new Date(data.updatedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+function showStatus(title, text) {
+  $('#home').hidden = true;
+  $('#catalog').hidden = true;
+  const st = $('#status');
+  st.hidden = false;
+  st.innerHTML = `<strong>${esc(title)}</strong>${esc(text)}`;
+}
+
+/* ---------- Rutas: #/ (portada) y #/<formato> ---------- */
+function route() {
+  if (!data) return;
+  const id = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
+  const fmt = id && data.formats.find((f) => f.id === id);
+  if (fmt) renderFormat(fmt); else renderHome();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+$('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
+
+function setHero({ title, sub, color, logo, back }) {
+  const hero = $('#hero');
+  hero.style.setProperty('--hero', color || '');
+  hero.classList.toggle('compact', !!back);
+  $('#heroTitle').textContent = title;
+  $('#heroSub').textContent = sub || '';
+  $('#backBtn').hidden = !back;
+  const lg = $('#heroLogo');
+  lg.hidden = !logo;
+  lg.innerHTML = logo ? `<img alt="" src="${esc(logo)}">` : '';
+}
+
+function renderHome() {
+  const t = data.intro;
+  document.title = t.title;
+  setHero({ title: t.title, sub: t.subtitle });
+  $('#catalog').hidden = true;
+  $('#status').hidden = true;
+  $('#home').hidden = false;
+
+  $('#guideTitle').textContent = t.guideTitle;
+  $('#guideText').textContent = t.guide;
+  $('#guideTitle').closest('.note').hidden = !t.guideTitle && !t.guide;
+  const imp = Array.isArray(t.important) ? t.important : [];
+  $('#impTitle').textContent = t.importantTitle;
+  $('#impList').innerHTML = imp.map((x) => `<li>${esc(x)}</li>`).join('');
+  $('#impBox').hidden = !imp.length;
+
+  const formats = data.formats.filter((f) => f.sections.length);
+  const box = $('#formats');
+  if (!formats.length) {
+    box.innerHTML = '<div class="status-inline"><strong>Aún no hay nada publicado</strong>Cuando el administrador publique el manual aparecerán aquí los formatos.</div>';
   } else {
-    $('#updated').textContent = '';
+    box.innerHTML = formats.map((f) => {
+      const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
+      return `<a class="format" href="#/${encodeURIComponent(f.id)}" style="--fc:${esc(f.color)}">
+        <span class="format-logo">${f.logo ? `<img alt="" src="${esc(f.logo)}">` : `<span class="format-initials">${esc(f.name.slice(0, 3))}</span>`}</span>
+        <strong>${esc(f.name)}</strong>
+        <span class="format-sub">${esc(f.subtitle)}</span>
+        <span class="format-count">${f.sections.length} ${f.sections.length === 1 ? 'área' : 'áreas'} · ${n} ${n === 1 ? 'señalización' : 'señalizaciones'}</span>
+      </a>`;
+    }).join('');
   }
+  $('#updatedHome').textContent = updatedText();
+}
+
+function renderFormat(f) {
+  document.title = `${f.name} · ${data.intro.title}`;
+  setHero({ title: f.name, sub: [f.subtitle, updatedText()].filter(Boolean).join(' · '), color: f.color, logo: f.logo, back: true });
+  $('#home').hidden = true;
+  $('#status').hidden = true;
+  $('#catalog').hidden = false;
+  $('#search').value = '';
 
   const content = $('#content');
   const nav = $('#nav');
@@ -45,7 +141,12 @@ async function load() {
   content.innerHTML = '';
   nav.innerHTML = '';
 
-  sections.forEach((s, si) => {
+  if (!f.sections.length) {
+    content.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong></div>';
+    return;
+  }
+
+  f.sections.forEach((s, si) => {
     const id = 'area-' + si;
     const sec = document.createElement('section');
     sec.className = 'sec';
@@ -56,7 +157,7 @@ async function load() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'card';
-      const src = 'data/' + String(c.src).split('/').map(encodeURIComponent).join('/');
+      const src = imgUrl(c.src);
       btn.innerHTML = `<img loading="lazy" alt="" src="${esc(src)}"><span>${esc(c.title || '')}</span>`;
       const item = { title: String(c.title || ''), section: s.name, src, el: btn, secEl: sec, key: norm(`${c.title} ${s.name}`) };
       btn.addEventListener('click', () => open(visible.indexOf(item)));
@@ -69,6 +170,7 @@ async function load() {
     a.href = '#' + id;
     a.dataset.target = id;
     a.innerHTML = `${esc(s.name)}<span class="n">${s.cards.length}</span>`;
+    a.addEventListener('click', (e) => { e.preventDefault(); sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     nav.appendChild(a);
   });
 
@@ -92,25 +194,23 @@ function applySearch() {
     const link = document.querySelector(`.nav a[data-target="${sec.id}"]`);
     if (link) link.classList.toggle('hidden', !ok);
   }
-  if (q && !visible.length) {
-    if (!$('#noResults')) $('#content').insertAdjacentHTML('beforeend', '<div id="noResults" class="empty"><strong>Sin resultados</strong>Prueba con otra palabra.</div>');
-  } else {
-    $('#noResults')?.remove();
-  }
+  $('#noResults')?.remove();
+  if (q && !visible.length) $('#content').insertAdjacentHTML('beforeend', '<div id="noResults" class="status-inline"><strong>Sin resultados</strong>Prueba con otra palabra.</div>');
 }
 
 function watchActiveSection() {
   if (!('IntersectionObserver' in window)) return;
+  observer?.disconnect();
   const links = new Map([...document.querySelectorAll('.nav a')].map((a) => [a.dataset.target, a]));
-  const io = new IntersectionObserver((entries) => {
+  observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
       links.forEach((a) => a.classList.remove('active'));
       const a = links.get(e.target.id);
       if (a) { a.classList.add('active'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     }
-  }, { rootMargin: '-140px 0px -60% 0px' });
-  document.querySelectorAll('.sec').forEach((s) => io.observe(s));
+  }, { rootMargin: '-120px 0px -60% 0px' });
+  document.querySelectorAll('.sec').forEach((s) => observer.observe(s));
 }
 
 /* ---------- Imagen en grande ---------- */
