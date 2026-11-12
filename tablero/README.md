@@ -43,7 +43,7 @@ Las páginas usan la sesión de SharePoint de quien las abre: para ver el manual
 
 ### Si SharePoint descarga el archivo en lugar de abrirlo
 
-Algunos sitios de SharePoint no muestran archivos `.html` como página. Si al hacer clic se descarga, renombra los dos archivos a **`Manual.aspx`** y **`Admin.aspx`** (el contenido es compatible). Si tampoco abre, el administrador de SharePoint debe permitir páginas personalizadas en ese sitio.
+Algunos sitios de SharePoint no muestran archivos `.html` como página. Si al hacer clic se descarga, usa en su lugar **`dist/Manual.aspx`** y **`dist/Admin.aspx`** (mismo contenido, con la directiva de página de SharePoint). Si tampoco abre, el administrador de SharePoint debe permitir páginas personalizadas en ese sitio.
 
 ## Uso del panel de administrador
 

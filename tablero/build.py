@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera dist/Manual.html y dist/Admin.html: cada uno con todo su CSS y JS adentro.
+"""Genera dist/Manual.html y dist/Admin.html (y sus versiones .aspx): cada uno con todo su CSS y JS adentro.
 
 Uso:  python3 build.py
 Los dos archivos se suben juntos a la misma carpeta de SharePoint.
@@ -37,12 +37,22 @@ def inline(page: Path) -> str:
     return html
 
 
+ASPX_DIRECTIVE = '<%@ Page Language="C#" %>\n'
+
+
 def main():
     DIST.mkdir(exist_ok=True)
     for name, page in PAGES.items():
         out = inline(page)
         (DIST / name).write_text(out, encoding='utf-8')
         print(f'{name}: {len(out.encode("utf-8")) / 1024:.0f} KB')
+        # Versión .aspx para SharePoint: mismo contenido con la directiva de página.
+        # ASP.NET interpretaría cualquier "<%" como código, así que no debe haber ninguno.
+        if '<%' in out:
+            raise SystemExit(f'{name} contiene "<%": no se puede usar como .aspx')
+        aspx = Path(name).with_suffix('.aspx').name
+        (DIST / aspx).write_text(ASPX_DIRECTIVE + out, encoding='utf-8-sig')
+        print(f'{aspx}: {len((ASPX_DIRECTIVE + out).encode("utf-8")) / 1024:.0f} KB')
 
 
 if __name__ == '__main__':
