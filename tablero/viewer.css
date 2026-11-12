@@ -225,7 +225,10 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- Vista de formato: zonas, áreas y espacios ---------- */
 .catalog { max-width: 1400px; margin: 0 auto; padding: 14px 20px 30px; }
-.cat-toolbar { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.cat-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.tb-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.tb-group.right { justify-content: flex-end; }
+a.pill { text-decoration: none; }
 .pill {
   display: inline-flex;
   align-items: center;

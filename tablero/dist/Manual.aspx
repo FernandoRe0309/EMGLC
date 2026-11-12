@@ -235,7 +235,10 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- Vista de formato: zonas, áreas y espacios ---------- */
 .catalog { max-width: 1400px; margin: 0 auto; padding: 14px 20px 30px; }
-.cat-toolbar { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.cat-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.tb-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.tb-group.right { justify-content: flex-end; }
+a.pill { text-decoration: none; }
 .pill {
   display: inline-flex;
   align-items: center;
@@ -478,10 +481,7 @@ button, input { font: inherit; color: inherit; }
 </main>
 
 <div id="catalog" class="catalog" hidden>
-  <div class="cat-toolbar">
-    <button type="button" id="backBtn" class="pill">← Cambiar formato</button>
-    <button type="button" id="checklistBtn" class="pill">⤓ Descarga Checklist</button>
-  </div>
+  <div id="toolbar" class="cat-toolbar"></div>
   <img id="banner" class="banner" alt="" hidden>
   <nav id="zones" class="zones" aria-label="Zonas de la tienda"></nav>
   <section id="zoneBox" class="zone-box" aria-live="polite"></section>
@@ -815,28 +815,58 @@ function normalize(raw) {
       }] : [];
     }
     const zoneIds = new Set();
+    const panel = normalizePanel(f.panel);
     return {
       id: uniqueId(fmtIds, f.name || 'formato'),
       name: String(f.name || 'Formato'),
       subtitle: String(f.subtitle || ''),
       color: safeColor(f.color),
-      banner: imgSrc(f.banner),
-      zones: zones.map((z) => {
+      hidden: !!f.hidden,
+      panel,
+      banner: panel.showBanner ? imgSrc(f.banner) : null,
+      // Lo marcado como oculto en el administrador no se muestra.
+      zones: zones.filter((z) => !z.hidden).map((z) => {
         const areaIds = new Set();
         return {
           id: uniqueId(zoneIds, z.name || 'zona'),
           name: String(z.name || 'Zona'),
-          areas: (z.areas || []).map((a) => ({
-            id: uniqueId(areaIds, a.name || 'area'),
-            name: String(a.name || 'Área'),
-            note: String(a.note || '') || defaultNote(String(a.name || 'esta área')),
-            spaces: (a.spaces || []).map((sp) => ({ title: String(sp.title || ''), src: imgSrc(sp.image) })),
-          })),
+          areas: (z.areas || []).filter((a) => !a.hidden).map((a) => {
+            const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => ({ title: String(sp.title || ''), src: imgSrc(sp.image) }));
+            return {
+              id: uniqueId(areaIds, a.name || 'area'),
+              name: String(a.name || 'Área'),
+              note: panel.showNotes ? (String(a.note || '') || defaultNote(String(a.name || 'esta área'))) : '',
+              checklist: all,                                          // el checklist incluye todos los espacios visibles
+              spaces: panel.showEmpty ? all : all.filter((sp) => sp.src), // el panel puede ocultar los pendientes
+            };
+          }),
         };
       }),
     };
   });
   return { intro: { ...DEFAULT_INTRO, ...(raw.intro || {}) }, formats, updatedAt: raw.updatedAt || null };
+}
+
+function normalizePanel(p) {
+  const panel = { showBanner: true, showNotes: true, showEmpty: true, ...(p || {}) };
+  const buttons = Array.isArray(panel.buttons) ? panel.buttons : [
+    { type: 'back', label: 'Cambiar formato', visible: true },
+    { type: 'checklist', label: 'Descarga Checklist', visible: true },
+  ];
+  panel.buttons = buttons
+    .filter((b) => b && b.visible !== false)
+    .map((b) => ({ type: b.type, label: String(b.label || ''), url: safeUrl(b.url) }))
+    .filter((b) => (b.type === 'back' || b.type === 'checklist' || (b.type === 'link' && b.url)));
+  return panel;
+}
+
+// Solo enlaces web o rutas relativas (nunca javascript: ni data:).
+function safeUrl(u) {
+  const s = String(u || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) || /^(\/|\.\/|\.\.\/|#)/.test(s)) return s;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+  return '';
 }
 
 function updatedText() {
@@ -868,7 +898,6 @@ function route() {
   else if (area) $('#areaDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 window.addEventListener('hashchange', route);
-$('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
 
 const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 
@@ -896,7 +925,7 @@ function renderHome() {
   $('#impList').innerHTML = imp.map((x) => `<li>${esc(x)}</li>`).join('');
   $('#impBox').hidden = !imp.length;
 
-  $('#formats').innerHTML = data.formats.map((f) => {
+  $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => {
     const spaces = f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
     const withImg = spaces.filter((s) => s.src).length;
     const count = spaces.length ? `${spaces.length} ${spaces.length === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
@@ -915,7 +944,7 @@ function renderFormat(f, zone, area) {
   $('#home').hidden = true;
   $('#status').hidden = true;
   $('#catalog').hidden = false;
-  $('#checklistBtn').onclick = () => openChecklist(f);
+  renderToolbar(f);
 
   const banner = $('#banner');
   banner.hidden = !f.banner;
@@ -966,6 +995,26 @@ function renderFormat(f, zone, area) {
   visible = items.slice();
 }
 
+// Barra del formato: "Cambiar formato" a la izquierda; los demás botones a la derecha.
+function renderToolbar(f) {
+  const bar = $('#toolbar');
+  const html = (b) => {
+    if (b.type === 'back') return `<button type="button" class="pill" data-tb="back">← ${esc(b.label || 'Cambiar formato')}</button>`;
+    if (b.type === 'checklist') return `<button type="button" class="pill" data-tb="checklist">⤓ ${esc(b.label || 'Descarga Checklist')}</button>`;
+    return `<a class="pill" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label || 'Enlace')} ↗</a>`;
+  };
+  const left = f.panel.buttons.filter((b) => b.type === 'back');
+  const right = f.panel.buttons.filter((b) => b.type !== 'back');
+  bar.innerHTML = `<div class="tb-group">${left.map(html).join('')}</div><div class="tb-group right">${right.map(html).join('')}</div>`;
+  bar.hidden = !f.panel.buttons.length;
+  bar.onclick = (e) => {
+    const t = e.target.closest('[data-tb]');
+    if (!t) return;
+    if (t.dataset.tb === 'back') location.hash = '#/';
+    else if (t.dataset.tb === 'checklist') openChecklist(f);
+  };
+}
+
 /* ---------- Checklist para imprimir o guardar como PDF ---------- */
 function openChecklist(f) {
   const rows = f.zones.filter((z) => z.areas.length).map((z) => `
@@ -974,7 +1023,7 @@ function openChecklist(f) {
       <table>
         <thead><tr><th colspan="5">${esc(a.name)}</th></tr>
           <tr><th class="n">#</th><th class="ph">Referencia</th><th>Señalización</th><th class="c">Cumple</th><th class="c">No cumple</th></tr></thead>
-        <tbody>${a.spaces.length ? a.spaces.map((s, i) => `<tr>
+        <tbody>${a.checklist.length ? a.checklist.map((s, i) => `<tr>
           <td class="n">${i + 1}</td>
           <td class="ph">${s.src ? `<img alt="" src="${esc(s.src)}">` : '<span>—</span>'}</td>
           <td>${esc(s.title)}</td><td class="c"><span class="box"></span></td><td class="c"><span class="box"></span></td></tr>`).join('')

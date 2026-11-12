@@ -147,13 +147,34 @@ let state = null;          // { dirty, publishedAt, intro, formats, activeId }
 let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
-const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId });
-const newArea = (name, spaces) => ({ id: uid(), name, note: '', spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
-const newZone = (name, areas = []) => ({ id: uid(), name, areas });
+const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false });
+const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
+const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, areas });
 const newZones = () => DEFAULT_ZONES.map((z) => newZone(z.name, z.areas.map((a) => newArea(a))));
 
-function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, zones } = {}) {
-  const f = { id: uid(), name, subtitle, color, banner, zones: zones || newZones() };
+// Botones de la barra del formato en el manual. type: back | checklist | link
+const newButton = (type, label, url = '') => ({ id: uid(), type, label, url, visible: true });
+function defaultPanel() {
+  return {
+    showBanner: true,   // foto de portada del formato
+    showNotes: true,    // texto azul de cada área
+    showEmpty: true,    // espacios que aún no tienen foto ("Imagen pendiente")
+    buttons: [newButton('back', 'Cambiar formato'), newButton('checklist', 'Descarga Checklist')],
+  };
+}
+
+// Completa campos que no existían en versiones anteriores.
+function ensureFormatShape(f) {
+  const panel = { ...defaultPanel(), ...(f.panel || {}) };
+  if (!Array.isArray(panel.buttons)) panel.buttons = defaultPanel().buttons;
+  panel.buttons = panel.buttons.map((b) => ({ id: b.id || uid(), type: ['back', 'checklist', 'link'].includes(b.type) ? b.type : 'link', label: String(b.label || ''), url: String(b.url || ''), visible: b.visible !== false }));
+  f.panel = panel;
+  f.hidden = !!f.hidden;
+  return f;
+}
+
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, zones, hidden = false, panel } = {}) {
+  const f = ensureFormatShape({ id: uid(), name, subtitle, color, banner, hidden, panel, zones: zones || newZones() });
   f.activeZoneId = f.zones[0]?.id || null;
   f.activeAreaId = null;
   return f;
@@ -193,7 +214,7 @@ function normalizeState(saved) {
   if (!saved || !Array.isArray(saved.formats) || !saved.formats.length) return null;
   saved.intro = { ...structuredClone(DEFAULT_INTRO), ...(saved.intro || {}) };
   saved.formats = saved.formats.map((f) => {
-    if (Array.isArray(f.zones)) return f;
+    if (Array.isArray(f.zones)) return ensureFormatShape(f);
     const nf = newFormat({ name: f.name, subtitle: f.subtitle, color: f.color, zones: migrateSections(f.sections, (c) => c.imageId) });
     nf.id = f.id || nf.id;
     return nf;
@@ -379,9 +400,9 @@ function renderFormatTabs() {
     const filled = spaces.filter((s) => s.imageId).length;
     return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
       <span class="ftab-mark">${escapeHtml(f.name.slice(0, 3))}</span>
-      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${filled}/${spaces.length} con foto</small></span>
+      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${f.hidden ? 'Oculto en la portada' : `${filled}/${spaces.length} con foto`}</small></span>
     </button>`;
-  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Nombre, subtítulo, color y foto de portada de ${escapeHtml(board.name)}">⚙ Editar formato</button>
+  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">⚙ Personalizar panel</button>
     <button type="button" class="ftab-tool" data-format-action="add">+ Formato</button>
     <button type="button" class="ftab-tool" data-format-action="intro" title="Textos de la página de inicio">✎ Textos de portada</button>`;
 }
@@ -398,8 +419,8 @@ function renderBanner() {
 function renderZoneBar() {
   $('#zoneBar').innerHTML = board.zones.map((z) => {
     const n = z.areas.reduce((k, a) => k + a.spaces.length, 0);
-    return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
-      ${escapeHtml(z.name)}<small>${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}</small></button>`;
+    return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
+      ${escapeHtml(z.name)}<small>${z.hidden ? 'Oculta en el manual' : `${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}`}</small></button>`;
   }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>';
 }
 
@@ -419,6 +440,7 @@ function renderZonePanel() {
         <p class="muted">Selecciona un área para acomodar su señalización.</p>
       </div>
       <div class="tools">
+        <button type="button" class="eye-btn${zone.hidden ? ' off' : ''}" data-zone-action="toggle" title="${zone.hidden ? 'Mostrar esta zona en el manual' : 'Ocultar esta zona en el manual'}">${zone.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-zone-action="left" title="Mover zona a la izquierda" ${zi === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-zone-action="right" title="Mover zona a la derecha" ${zi === board.zones.length - 1 ? 'disabled' : ''}>→</button>
         <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">🗑</button>
@@ -427,8 +449,8 @@ function renderZonePanel() {
     <div class="area-grid">
       ${zone.areas.map((a) => {
         const filled = a.spaces.filter((s) => s.imageId).length;
-        return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
-          <span>${escapeHtml(a.name)}</span><small>${filled}/${a.spaces.length}</small></button>`;
+        return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}${a.hidden ? ' is-hidden' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
+          <span>${escapeHtml(a.name)}</span><small>${a.hidden ? 'oculta' : `${filled}/${a.spaces.length}`}</small></button>`;
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
     </div>
@@ -450,6 +472,7 @@ function areaDetailHtml(zone, area) {
         <label class="move-zone">Zona
           <select data-area-zone>${board.zones.map((z) => `<option value="${z.id}" ${z.id === zone.id ? 'selected' : ''}>${escapeHtml(z.name)}</option>`).join('')}</select>
         </label>
+        <button type="button" class="eye-btn${area.hidden ? ' off' : ''}" data-area-action="toggle" title="${area.hidden ? 'Mostrar esta área en el manual' : 'Ocultar esta área en el manual'}">${area.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-area-action="left" title="Mover área antes" ${ai === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-area-action="right" title="Mover área después" ${ai === zone.areas.length - 1 ? 'disabled' : ''}>→</button>
         <button type="button" class="icon-btn danger" data-area-action="delete" title="Eliminar área">🗑</button>
@@ -464,11 +487,12 @@ function areaDetailHtml(zone, area) {
 function spaceEl(sp) {
   const img = sp.imageId && images.get(sp.imageId);
   const el = document.createElement('article');
-  el.className = 'card space';
+  el.className = 'card space' + (sp.hidden ? ' is-hidden' : '');
   el.dataset.cardId = sp.id;
   el.innerHTML = `
     <div class="space-head">
       <div class="space-title" contenteditable="true" spellcheck="false" data-space-title>${escapeHtml(sp.title)}</div>
+      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este espacio en el manual' : 'Ocultar este espacio en el manual'}">${sp.hidden ? '🚫' : '👁'}</button>
       <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">🗑</button>
     </div>
     <div class="slot${img ? ' filled' : ''}" data-slot="${sp.id}">
@@ -889,8 +913,11 @@ figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcapt
 
 function formatToJson(f) {
   return {
-    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner,
-    zones: f.zones.map((z) => ({ name: z.name, areas: z.areas.map((a) => ({ name: a.name, note: a.note, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId })) })) })),
+    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, hidden: !!f.hidden, panel: f.panel,
+    zones: f.zones.map((z) => ({
+      name: z.name, hidden: !!z.hidden,
+      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
+    })),
   };
 }
 
@@ -903,11 +930,22 @@ function formatFromJson(f) {
     subtitle: String(f.subtitle || ''),
     color: String(f.color || '#1f4fd6'),
     banner: f.banner ? String(f.banner) : null,
-    zones: f.zones.map((z) => newZone(String(z.name || 'Zona'), (z.areas || []).map((a) => {
-      const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null)));
-      area.note = String(a.note || '');
-      return area;
-    }))),
+    hidden: !!f.hidden,
+    panel: f.panel,
+    zones: f.zones.map((z) => {
+      const zone = newZone(String(z.name || 'Zona'), (z.areas || []).map((a) => {
+        const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => {
+          const sp = newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null);
+          sp.hidden = !!s.hidden;
+          return sp;
+        }));
+        area.note = String(a.note || '');
+        area.hidden = !!a.hidden;
+        return area;
+      }));
+      zone.hidden = !!z.hidden;
+      return zone;
+    }),
   });
 }
 
@@ -1033,13 +1071,13 @@ async function buildPlan() {
             used.add(name.toLowerCase());
             image = await ref(img, `${folder}/${name}`);
           }
-          spaces.push({ title: s.title, image });
+          spaces.push({ title: s.title, hidden: !!s.hidden, image });
         }
-        areas.push({ name: a.name, note: a.note || '', spaces });
+        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, spaces });
       }
-      zones.push({ name: z.name, areas });
+      zones.push({ name: z.name, hidden: !!z.hidden, areas });
     }
-    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, banner, zones });
+    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, zones });
   }
   return { files, formats };
 }
@@ -1171,7 +1209,7 @@ async function loadPublished(data) {
       return formatFromJson({
         ...f,
         banner: f.banner ? f.banner.path : null,
-        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, image: s.image ? s.image.path : null })) })) })),
+        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, hidden: !!s.hidden, image: s.image ? s.image.path : null })) })) })),
       });
     }
     return formatFromJson(f);
@@ -1250,6 +1288,12 @@ function bannerOptions(selected) {
     list.map((i) => `<option value="${escapeHtml(i.id)}" ${i.id === selected ? 'selected' : ''}>${escapeHtml(i.path)}</option>`).join('');
 }
 
+/* ---------- Editor del panel de un formato ----------
+   Se edita una copia (draft) y solo se aplica al presionar Guardar. */
+let draft = null;
+
+const BUTTON_TYPES = { back: 'Regresar a la portada', checklist: 'Descargar checklist', link: 'Enlace' };
+
 function renderFormatPreview() {
   const prev = $('#fmtPreview');
   prev.style.setProperty('--fc', $('#fmtColor').value);
@@ -1258,18 +1302,204 @@ function renderFormatPreview() {
   $('#fmtBannerPreview').innerHTML = img ? `<img alt="" src="${urlFor(img)}">` : '';
 }
 
-function openFormatDialog(formatId) {
+function renderPanelButtons() {
+  const list = draft.panel.buttons;
+  $('#peButtons').innerHTML = list.length ? list.map((b, i) => `
+    <div class="pe-row${b.visible ? '' : ' off'}" data-btn="${b.id}">
+      <label class="pe-check" title="Mostrar este botón"><input type="checkbox" data-btn-field="visible" ${b.visible ? 'checked' : ''}></label>
+      <div class="pe-main">
+        <input data-btn-field="label" value="${escapeHtml(b.label)}" placeholder="Texto del botón" maxlength="40" aria-label="Texto del botón">
+        ${b.type === 'link'
+          ? `<input data-btn-field="url" value="${escapeHtml(b.url)}" placeholder="https://… (enlace a un PDF, página o archivo de SharePoint)" aria-label="Enlace">`
+          : `<span class="pe-kind">${BUTTON_TYPES[b.type]}</span>`}
+      </div>
+      <button type="button" class="icon-btn" data-btn-move="-1" ${i === 0 ? 'disabled' : ''} title="Subir">↑</button>
+      <button type="button" class="icon-btn" data-btn-move="1" ${i === list.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
+      <button type="button" class="icon-btn danger" data-btn-remove title="Quitar botón">🗑</button>
+    </div>`).join('') : '<p class="muted small">No hay botones. La barra no se mostrará.</p>';
+  const missing = ['back', 'checklist'].filter((t) => !list.some((b) => b.type === t));
+  $('#peRestoreButtons').innerHTML = missing.map((t) => `<button type="button" class="btn" data-btn-restore="${t}">+ ${t === 'back' ? 'Cambiar formato' : 'Descarga Checklist'}</button>`).join('');
+}
+
+function renderPanelZones() {
+  const zones = draft.zones;
+  $('#peZones').innerHTML = zones.map((z, zi) => `
+    <div class="pe-zone${z.hidden ? ' off' : ''}" data-pe-zone="${z.id}">
+      <div class="pe-row">
+        <label class="pe-check" title="Mostrar esta zona"><input type="checkbox" data-zone-field="visible" ${z.hidden ? '' : 'checked'}></label>
+        <div class="pe-main"><input data-zone-field="name" value="${escapeHtml(z.name)}" maxlength="60" aria-label="Nombre de la zona"></div>
+        <span class="pe-count">${plural(z.areas.length, 'área', 'áreas')}</span>
+        <button type="button" class="icon-btn" data-zone-move="-1" ${zi === 0 ? 'disabled' : ''} title="Mover antes">↑</button>
+        <button type="button" class="icon-btn" data-zone-move="1" ${zi === zones.length - 1 ? 'disabled' : ''} title="Mover después">↓</button>
+        <button type="button" class="icon-btn danger" data-zone-remove title="Eliminar zona">🗑</button>
+      </div>
+      <div class="pe-areas">
+        ${z.areas.map((a, ai) => `
+          <div class="pe-row pe-area${a.hidden ? ' off' : ''}" data-pe-area="${a.id}">
+            <label class="pe-check" title="Mostrar esta área"><input type="checkbox" data-area-field="visible" ${a.hidden ? '' : 'checked'}></label>
+            <div class="pe-main"><input data-area-field="name" value="${escapeHtml(a.name)}" maxlength="80" aria-label="Nombre del área"></div>
+            <span class="pe-count">${plural(a.spaces.length, 'espacio', 'espacios')}</span>
+            <button type="button" class="icon-btn" data-area-move="-1" ${ai === 0 ? 'disabled' : ''} title="Subir">↑</button>
+            <button type="button" class="icon-btn" data-area-move="1" ${ai === z.areas.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
+            <button type="button" class="icon-btn danger" data-area-remove title="Eliminar área">🗑</button>
+          </div>`).join('')}
+        <button type="button" class="pe-add" data-area-add>+ Agregar área a ${escapeHtml(z.name)}</button>
+      </div>
+    </div>`).join('') || '<p class="muted small">Este formato no tiene zonas.</p>';
+}
+
+function showPanelTab(name) {
+  document.querySelectorAll('#formatDlg [data-pe-tab]').forEach((b) => b.classList.toggle('active', b.dataset.peTab === name));
+  document.querySelectorAll('#formatDlg [data-pe-page]').forEach((pg) => { pg.hidden = pg.dataset.pePage !== name; });
+}
+
+function openFormatDialog(formatId, tab = 'datos') {
   const f = formatId ? state.formats.find((x) => x.id === formatId) : null;
   editingFormatId = f ? f.id : null;
-  $('#formatDlgTitle').textContent = f ? `Editar formato ${f.name}` : 'Nuevo formato';
-  $('#fmtName').value = f ? f.name : '';
-  $('#fmtSubtitle').value = f ? f.subtitle : '';
-  $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(f?.color || '') ? f.color : '#1f4fd6';
-  $('#fmtBanner').innerHTML = bannerOptions(f ? f.banner : null);
+  draft = f ? structuredClone(f) : newFormat({ name: '' });
+  $('#formatDlgTitle').textContent = f ? `Personalizar panel de ${f.name}` : 'Nuevo formato';
+  $('#fmtName').value = draft.name;
+  $('#fmtSubtitle').value = draft.subtitle;
+  $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(draft.color || '') ? draft.color : '#1f4fd6';
+  $('#fmtBanner').innerHTML = bannerOptions(draft.banner);
+  $('#fmtShowHome').checked = !draft.hidden;
+  $('#peShowBanner').checked = draft.panel.showBanner;
+  $('#peShowNotes').checked = draft.panel.showNotes;
+  $('#peShowEmpty').checked = draft.panel.showEmpty;
   $('#fmtDelete').hidden = !f || state.formats.length < 2;
   renderFormatPreview();
+  renderPanelButtons();
+  renderPanelZones();
+  showPanelTab(tab);
   $('#formatDlg').showModal();
-  $('#fmtName').focus();
+  if (tab === 'datos') $('#fmtName').focus();
+}
+
+function setupPanelEditor() {
+  const dlg = $('#formatDlg');
+  dlg.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-pe-tab]');
+    if (tab) { showPanelTab(tab.dataset.peTab); return; }
+  });
+
+  // Botones de la barra
+  const btnBox = $('#peButtons');
+  const btnOf = (el) => draft.panel.buttons.find((b) => b.id === el.closest('[data-btn]').dataset.btn);
+  btnBox.addEventListener('input', (e) => {
+    const field = e.target.dataset.btnField;
+    if (!field) return;
+    const b = btnOf(e.target);
+    if (field === 'visible') { b.visible = e.target.checked; e.target.closest('.pe-row').classList.toggle('off', !b.visible); }
+    else b[field] = e.target.value;
+  });
+  btnBox.addEventListener('click', (e) => {
+    const list = draft.panel.buttons;
+    const mv = e.target.closest('[data-btn-move]');
+    const rm = e.target.closest('[data-btn-remove]');
+    if (!mv && !rm) return;
+    const b = btnOf(e.target);
+    const i = list.indexOf(b);
+    if (mv) { const j = i + Number(mv.dataset.btnMove); [list[i], list[j]] = [list[j], list[i]]; }
+    else list.splice(i, 1);
+    renderPanelButtons();
+  });
+  $('#peAddButton').addEventListener('click', () => {
+    draft.panel.buttons.push(newButton('link', 'Nuevo botón', ''));
+    renderPanelButtons();
+    const inputs = btnBox.querySelectorAll('[data-btn-field="label"]');
+    inputs[inputs.length - 1]?.select();
+  });
+  $('#peRestoreButtons').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-btn-restore]')?.dataset.btnRestore;
+    if (!t) return;
+    draft.panel.buttons.push(newButton(t, t === 'back' ? 'Cambiar formato' : 'Descarga Checklist'));
+    renderPanelButtons();
+  });
+
+  // Secciones visibles
+  $('#peShowBanner').addEventListener('change', (e) => { draft.panel.showBanner = e.target.checked; });
+  $('#peShowNotes').addEventListener('change', (e) => { draft.panel.showNotes = e.target.checked; });
+  $('#peShowEmpty').addEventListener('change', (e) => { draft.panel.showEmpty = e.target.checked; });
+
+  // Zonas y áreas
+  const zBox = $('#peZones');
+  const zoneOf = (el) => draft.zones.find((z) => z.id === el.closest('[data-pe-zone]').dataset.peZone);
+  const areaOf = (el) => zoneOf(el).areas.find((a) => a.id === el.closest('[data-pe-area]').dataset.peArea);
+  zBox.addEventListener('input', (e) => {
+    const zf = e.target.dataset.zoneField;
+    const af = e.target.dataset.areaField;
+    if (zf) {
+      const z = zoneOf(e.target);
+      if (zf === 'visible') { z.hidden = !e.target.checked; e.target.closest('.pe-zone').classList.toggle('off', z.hidden); }
+      else z.name = e.target.value;
+    } else if (af) {
+      const a = areaOf(e.target);
+      if (af === 'visible') { a.hidden = !e.target.checked; e.target.closest('.pe-row').classList.toggle('off', a.hidden); }
+      else a.name = e.target.value;
+    }
+  });
+  zBox.addEventListener('focusout', (e) => {
+    // Nombres vacíos no se permiten.
+    if (e.target.dataset.zoneField === 'name' && !e.target.value.trim()) { zoneOf(e.target).name = 'Zona'; e.target.value = 'Zona'; }
+    if (e.target.dataset.areaField === 'name' && !e.target.value.trim()) { areaOf(e.target).name = 'Área'; e.target.value = 'Área'; }
+  });
+  zBox.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t.closest('[data-zone-move]')) {
+      const z = zoneOf(t); const i = draft.zones.indexOf(z); const j = i + Number(t.closest('[data-zone-move]').dataset.zoneMove);
+      [draft.zones[i], draft.zones[j]] = [draft.zones[j], draft.zones[i]];
+    } else if (t.closest('[data-zone-remove]')) {
+      const z = zoneOf(t);
+      const n = z.areas.reduce((k, a) => k + a.spaces.length, 0);
+      if ((z.areas.length || n) && !confirm(`¿Eliminar la zona "${z.name}" con ${plural(z.areas.length, 'área', 'áreas')} y ${plural(n, 'espacio', 'espacios')}?`)) return;
+      draft.zones.splice(draft.zones.indexOf(z), 1);
+    } else if (t.closest('[data-area-move]')) {
+      const z = zoneOf(t); const a = areaOf(t); const i = z.areas.indexOf(a); const j = i + Number(t.closest('[data-area-move]').dataset.areaMove);
+      [z.areas[i], z.areas[j]] = [z.areas[j], z.areas[i]];
+    } else if (t.closest('[data-area-remove]')) {
+      const z = zoneOf(t); const a = areaOf(t);
+      if (a.spaces.length && !confirm(`¿Eliminar el área "${a.name}" y sus ${plural(a.spaces.length, 'espacio', 'espacios')}?`)) return;
+      z.areas.splice(z.areas.indexOf(a), 1);
+    } else if (t.closest('[data-area-add]')) {
+      const z = zoneOf(t);
+      z.areas.push(newArea('Nueva área', []));
+      renderPanelZones();
+      const inputs = zBox.querySelectorAll(`[data-pe-zone="${z.id}"] [data-area-field="name"]`);
+      inputs[inputs.length - 1]?.select();
+      return;
+    } else return;
+    renderPanelZones();
+  });
+  $('#peAddZone').addEventListener('click', () => {
+    draft.zones.push(newZone('Nueva zona'));
+    renderPanelZones();
+    const inputs = zBox.querySelectorAll('[data-zone-field="name"]');
+    inputs[inputs.length - 1]?.select();
+  });
+}
+
+function applyDraft() {
+  draft.name = $('#fmtName').value.trim() || 'Formato';
+  draft.subtitle = $('#fmtSubtitle').value.trim();
+  draft.color = $('#fmtColor').value;
+  draft.banner = $('#fmtBanner').value || null;
+  draft.hidden = !$('#fmtShowHome').checked;
+  draft.panel.buttons = draft.panel.buttons.map((b) => ({ ...b, label: b.label.trim() || (b.type === 'back' ? 'Cambiar formato' : b.type === 'checklist' ? 'Descarga Checklist' : 'Enlace'), url: b.url.trim() }));
+  const badLink = draft.panel.buttons.find((b) => b.type === 'link' && b.visible && !b.url);
+  if (badLink) { showPanelTab('botones'); toast(`El botón "${badLink.label}" no tiene enlace.`, 4000); return false; }
+  // Solo enlaces web (https://…) o rutas de SharePoint; nunca javascript:, data:, etc.
+  const unsafe = draft.panel.buttons.find((b) => b.type === 'link' && b.url && /^[a-z][a-z0-9+.-]*:/i.test(b.url) && !/^https?:\/\//i.test(b.url));
+  if (unsafe) { showPanelTab('botones'); toast(`El enlace de "${unsafe.label}" no es válido. Usa una dirección que empiece con https://`, 5000); return false; }
+  if (editingFormatId) {
+    const i = state.formats.findIndex((f) => f.id === editingFormatId);
+    state.formats[i] = draft;
+  } else {
+    state.formats.push(draft);
+  }
+  setActiveFormat(draft.id);
+  if (!findArea(board.activeAreaId)) board.activeAreaId = null;
+  commit();
+  return true;
 }
 
 function openIntroDialog() {
@@ -1295,18 +1525,11 @@ function setupFormatUI() {
   });
 
   ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtBanner'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
+  setupPanelEditor();
 
   $('#formatForm').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'cancel') return;
-    const values = { name: $('#fmtName').value.trim() || 'Formato', subtitle: $('#fmtSubtitle').value.trim(), color: $('#fmtColor').value, banner: $('#fmtBanner').value || null };
-    if (editingFormatId) {
-      Object.assign(state.formats.find((f) => f.id === editingFormatId), values);
-    } else {
-      const f = newFormat(values);
-      state.formats.push(f);
-      setActiveFormat(f.id);
-    }
-    commit();
+    if (!applyDraft()) e.preventDefault();
   });
 
   $('#fmtDelete').addEventListener('click', () => {
@@ -1373,7 +1596,8 @@ function setupBoardUI() {
     const za = e.target.closest('[data-zone-action]');
     if (za && zone) {
       const i = board.zones.indexOf(zone);
-      if (za.dataset.zoneAction === 'left' && i > 0) [board.zones[i - 1], board.zones[i]] = [board.zones[i], board.zones[i - 1]];
+      if (za.dataset.zoneAction === 'toggle') zone.hidden = !zone.hidden;
+      else if (za.dataset.zoneAction === 'left' && i > 0) [board.zones[i - 1], board.zones[i]] = [board.zones[i], board.zones[i - 1]];
       else if (za.dataset.zoneAction === 'right' && i < board.zones.length - 1) [board.zones[i + 1], board.zones[i]] = [board.zones[i], board.zones[i + 1]];
       else if (za.dataset.zoneAction === 'delete') {
         const n = zone.areas.reduce((k, a) => k + a.spaces.length, 0);
@@ -1399,7 +1623,8 @@ function setupBoardUI() {
       }
       if (!area) return;
       const i = zone.areas.indexOf(area);
-      if (aa.dataset.areaAction === 'left' && i > 0) [zone.areas[i - 1], zone.areas[i]] = [zone.areas[i], zone.areas[i - 1]];
+      if (aa.dataset.areaAction === 'toggle') area.hidden = !area.hidden;
+      else if (aa.dataset.areaAction === 'left' && i > 0) [zone.areas[i - 1], zone.areas[i]] = [zone.areas[i], zone.areas[i - 1]];
       else if (aa.dataset.areaAction === 'right' && i < zone.areas.length - 1) [zone.areas[i + 1], zone.areas[i]] = [zone.areas[i], zone.areas[i + 1]];
       else if (aa.dataset.areaAction === 'delete') {
         if (!confirm(`¿Eliminar el área "${area.name}"${area.spaces.length ? ` y sus ${plural(area.spaces.length, 'espacio', 'espacios')}` : ''}?`)) return;
@@ -1423,6 +1648,7 @@ function setupBoardUI() {
       const spaceId = sa.closest('.card')?.dataset.cardId;
       if (!spaceId) return;
       if (sa.dataset.spaceAction === 'clear') clearImage(spaceId);
+      else if (sa.dataset.spaceAction === 'toggle') { const f = findSpace(spaceId); if (f) { f.space.hidden = !f.space.hidden; commit(); } }
       else if (sa.dataset.spaceAction === 'delete') {
         const f = findSpace(spaceId);
         if (f && confirm(`¿Eliminar el espacio "${f.space.title}"?`)) { f.area.spaces.splice(f.index, 1); commit(); }

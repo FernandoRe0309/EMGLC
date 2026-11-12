@@ -814,3 +814,55 @@ a.btn { text-decoration: none; color: inherit; }
 .space-add small { font-weight: 400; font-size: 12px; }
 .space-add:hover { border-color: var(--accent); color: var(--accent); }
 .zone-panel .placeholder { min-height: 240px; border-radius: 12px; }
+
+/* ---------- Ocultos (no se ven en el manual) ---------- */
+.zone-btn.is-hidden, .area-btn.is-hidden, .card.space.is-hidden { opacity: .55; border-style: dashed; }
+.zone-btn.is-hidden.active { opacity: .8; }
+.eye-btn {
+  padding: 4px 10px;
+  border: 1px solid #86c99a;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #157a3c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.eye-btn.off { border-color: var(--border); background: var(--surface-2); color: var(--muted); }
+.space-head .icon-btn.eye.off { opacity: 1; }
+
+/* ---------- Editor del panel de un formato ---------- */
+.panel-editor { width: min(820px, calc(100vw - 32px)); }
+.panel-editor .settings-inner { max-height: calc(100vh - 60px); grid-template-rows: auto auto 1fr auto; }
+.pe-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.pe-tabs button {
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pe-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pe-page { overflow-y: auto; min-height: 280px; max-height: 56vh; padding: 2px 2px 6px; display: grid; gap: 10px; align-content: start; }
+.pe-list { display: grid; gap: 8px; }
+.pe-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.pe-row.off { opacity: .55; }
+.pe-row .pe-main { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.pe-row input:not([type="checkbox"]) { width: 100%; padding: 6px 8px; font-weight: 400; }
+.pe-check { display: grid; place-items: center; padding: 0 4px; }
+.pe-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.pe-kind, .pe-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.pe-zone { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: var(--surface-2); display: grid; gap: 6px; }
+.pe-zone > .pe-row { font-weight: 700; }
+.pe-zone.off > .pe-row { opacity: .55; }
+.pe-zone.off .pe-areas { opacity: .6; }
+.pe-areas { display: grid; gap: 6px; padding-left: 26px; }
+.pe-add { justify-self: start; padding: 6px 10px; border: 1px dashed var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.pe-add:hover { color: var(--accent); border-color: var(--accent); }
+.pe-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pe-toggle { display: flex !important; grid-template-columns: none; align-items: center; gap: 10px; font-weight: 600; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.pe-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }

@@ -70,7 +70,13 @@ Más cosas:
 - Clic en el título de una zona, un área, un espacio o en el texto azul del área para editarlo.
 - Arrastra un espacio para reordenarlo, o suéltalo sobre el botón de otra área para moverlo. Suéltalo sobre la biblioteca para quitarle la foto.
 - **Foto de portada**: arrastra una imagen al recuadro de arriba (o elígela en **⚙ Editar formato**).
-- **⚙ Editar formato**: nombre, subtítulo, color y foto de portada. **+ Formato** agrega uno. **✎ Textos de portada** edita los avisos de la página de inicio.
+- **⚙ Personalizar panel** (de cada formato):
+  - **Datos**: nombre, subtítulo, color, foto de portada y si el formato aparece en la página de inicio.
+  - **Botones**: qué botones tiene la barra del formato (*Cambiar formato*, *Descarga Checklist*), su texto y orden; agregar botones propios con enlace (por ejemplo a un PDF) o quitarlos.
+  - **Secciones**: mostrar u ocultar la foto de portada, el texto azul de cada área y los espacios sin foto.
+  - **Zonas y áreas**: agregar, quitar, renombrar, reordenar y ocultar sin borrar.
+- Botones **Visible / Oculta** en cada zona y área, y 👁 en cada espacio, para ocultarlos del manual sin borrarlos. Lo oculto se ve atenuado en el administrador.
+- **+ Formato** agrega uno. **✎ Textos de portada** edita los avisos de la página de inicio.
 - **Más → Colocar por carpeta**: coloca las fotos sin usar en el área cuyo nombre coincide con su carpeta; si el área ya tiene un espacio vacío con el mismo nombre que la foto, la pone ahí.
 - Al abrir el administrador, si no tienes cambios pendientes, se carga la última versión publicada (por ejemplo, la que publicó otra persona). **Más → Cargar lo publicado** la trae a mano.
 - **Exportar catálogo** descarga un HTML del formato actual con las fotos incrustadas. **Guardar / Abrir tablero** hace un respaldo `.json` sin fotos.
