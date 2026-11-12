@@ -37,6 +37,7 @@ Manual señalización/
 ├── tablero.json                      ← distribución, textos y títulos (no lo edites a mano)
 ├── Portada inicio.jpg                ← foto de portada de la página de inicio (opcional)
 └── W2/
+    ├── Logo.png                      ← logo del formato (opcional)
     ├── Portada.jpg                   ← foto de portada del formato (opcional)
     ├── Frente de Tienda/
     │   └── Entrada y Salida de Clientes/
@@ -49,6 +50,7 @@ Manual señalización/
 
 - Cada foto se guarda con el **nombre del espacio** donde la colocaste.
 - Solo se crean carpetas donde hay fotos.
+- Las fotos de portada se muestran completas, con la proporción de la imagen (sin recortes).
 - Si mueves o quitas una foto, al publicar se mueve o se manda a la **papelera de reciclaje** de SharePoint; las carpetas que quedan vacías también.
 - Las fotos se optimizan al subir (máximo 2000 px, JPEG). Las que no cambiaron no se vuelven a subir.
 - La app solo toca lo que ella misma publicó; nunca borra `Manual.aspx`, `Admin.aspx` ni otros archivos.
@@ -72,7 +74,7 @@ Más cosas:
 - Arrastra un espacio para reordenarlo, o suéltalo sobre el botón de otra área para moverlo. Suéltalo sobre la biblioteca para quitarle la foto.
 - **Foto de portada**: arrastra una imagen al recuadro de arriba (o elígela en **⚙ Editar formato**).
 - **⚙ Personalizar panel** (de cada formato):
-  - **Datos**: nombre, subtítulo, color, foto de portada y si el formato aparece en la página de inicio.
+  - **Datos**: nombre, subtítulo, color, **logo** (aparece en la tarjeta del formato en la página de inicio; se publica en PNG para conservar la transparencia), foto de portada y si el formato aparece en la página de inicio.
   - **Botones**: qué botones tiene la barra del formato (*Cambiar formato*, *Descarga Checklist*), su texto y orden; agregar botones propios con enlace (por ejemplo a un PDF) o quitarlos.
   - **Secciones**: mostrar u ocultar la foto de portada, el texto azul de cada área y los espacios sin foto.
   - **Zonas y áreas**: agregar, quitar, renombrar, reordenar y ocultar sin borrar.

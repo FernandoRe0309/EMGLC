@@ -75,9 +75,8 @@ button, input { font: inherit; color: inherit; }
   display: block;
   width: 100%;
   max-width: 1040px;
-  height: clamp(150px, 24vw, 320px);
+  height: auto;           /* la portada se ajusta a la proporción de la imagen, sin recortes */
   margin: 0 auto;
-  object-fit: cover;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -137,6 +136,8 @@ button, input { font: inherit; color: inherit; }
 }
 .format:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(16, 24, 40, .24); }
 .format:focus-visible { outline: 3px solid var(--brand-yellow); outline-offset: 3px; }
+.format-logo { height: 72px; display: grid; place-items: center; margin-bottom: 12px; }
+.format-logo img { max-height: 72px; max-width: 160px; object-fit: contain; }
 .format strong { font-size: 22px; font-weight: 800; letter-spacing: .01em; }
 .format-sub { font-size: 13px; opacity: .92; }
 .format-count {
@@ -266,8 +267,7 @@ a.pill { text-decoration: none; }
 .banner {
   display: block;
   width: 100%;
-  height: clamp(140px, 22vw, 300px);
-  object-fit: cover;
+  height: auto;           /* sin recortes */
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -834,6 +834,7 @@ function normalize(raw) {
       hidden: !!f.hidden,
       panel,
       banner: panel.showBanner ? imgSrc(f.banner) : null,
+      logo: imgSrc(f.logo),
       // Lo marcado como oculto en el administrador no se muestra.
       zones: zones.filter((z) => !z.hidden).map((z) => {
         const areaIds = new Set();
@@ -943,6 +944,7 @@ function renderHome() {
 
   $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => `
     <a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
+      ${f.logo ? `<span class="format-logo"><img alt="" src="${esc(f.logo)}"></span>` : ''}
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');

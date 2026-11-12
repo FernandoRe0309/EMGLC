@@ -170,11 +170,12 @@ function ensureFormatShape(f) {
   panel.buttons = panel.buttons.map((b) => ({ id: b.id || uid(), type: ['back', 'checklist', 'link'].includes(b.type) ? b.type : 'link', label: String(b.label || ''), url: String(b.url || ''), visible: b.visible !== false }));
   f.panel = panel;
   f.hidden = !!f.hidden;
+  f.logo = f.logo || null;
   return f;
 }
 
-function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, zones, hidden = false, panel } = {}) {
-  const f = ensureFormatShape({ id: uid(), name, subtitle, color, banner, hidden, panel, zones: zones || newZones() });
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, logo = null, zones, hidden = false, panel } = {}) {
+  const f = ensureFormatShape({ id: uid(), name, subtitle, color, banner, logo, hidden, panel, zones: zones || newZones() });
   f.activeZoneId = f.zones[0]?.id || null;
   f.activeAreaId = null;
   return f;
@@ -256,6 +257,7 @@ function placementCounts() {
   const add = (id) => { if (id) counts.set(id, (counts.get(id) || 0) + 1); };
   allSpaces().forEach((s) => add(s.imageId));
   add(board.banner);
+  add(board.logo);
   add(state.intro && state.intro.banner);
   return counts;
 }
@@ -400,7 +402,7 @@ function renderFormatTabs() {
     const spaces = allSpaces(f);
     const filled = spaces.filter((s) => s.imageId).length;
     return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
-      <span class="ftab-mark">${escapeHtml(f.name.slice(0, 3))}</span>
+      <span class="ftab-mark">${f.logo && images.get(f.logo) ? `<img alt="" src="${urlFor(images.get(f.logo))}">` : escapeHtml(f.name.slice(0, 3))}</span>
       <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${f.hidden ? 'Oculto en la portada' : `${filled}/${spaces.length} con foto`}</small></span>
     </button>`;
   }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">⚙ Personalizar panel</button>
@@ -914,7 +916,7 @@ figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcapt
 
 function formatToJson(f) {
   return {
-    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, hidden: !!f.hidden, panel: f.panel,
+    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel,
     zones: f.zones.map((z) => ({
       name: z.name, hidden: !!z.hidden,
       areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
@@ -931,6 +933,7 @@ function formatFromJson(f) {
     subtitle: String(f.subtitle || ''),
     color: String(f.color || '#1f4fd6'),
     banner: f.banner ? String(f.banner) : null,
+    logo: f.logo ? String(f.logo) : null,
     hidden: !!f.hidden,
     panel: f.panel,
     zones: f.zones.map((z) => {
@@ -1011,6 +1014,25 @@ async function optimizeImage(blob) {
   return { blob: out, ext: 'jpg' };
 }
 
+// Logos: PNG (con transparencia) salvo que el original sea JPG o SVG.
+const logoExt = (img) => (img.published ? img.ext || 'png' : /svg/.test(img.blob.type || '') ? 'svg' : /jpe?g/.test(img.blob.type || '') ? 'jpg' : 'png');
+
+async function optimizeLogo(blob) {
+  if (/jpe?g/.test(blob.type || '')) return optimizeImage(blob);
+  if (/svg/.test(blob.type || '')) return { blob, ext: 'svg' };
+  let bmp;
+  try { bmp = await createImageBitmap(blob); } catch { return { blob, ext: 'png' }; }
+  const k = Math.min(1, 600 / Math.max(bmp.width, bmp.height));
+  if (k === 1 && blob.type === 'image/png') { bmp.close?.(); return { blob, ext: 'png' }; }
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k);
+  c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  const png = await new Promise((res) => c.toBlob(res, 'image/png'));
+  return { blob: png || blob, ext: 'png' };
+}
+
 const expectedExt = (img) => (img.published ? img.ext || 'jpg' : /svg/.test(img.blob.type || '') ? 'svg' : 'jpg');
 
 function setPublishProgress(text) {
@@ -1047,13 +1069,20 @@ async function buildPlan() {
   // Foto de portada de la página de inicio: <carpeta>/Portada inicio.jpg
   const homeImg = state.intro.banner && images.get(state.intro.banner);
   const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : null };
+  const logoFiles = new Set(); // los logos se publican en PNG para conservar la transparencia
   const fmtNames = new Set();
   const formats = [];
   for (const f of state.formats) {
     const fname = uniq(fmtNames, SP.safeName(f.name) || 'Formato');
     const bannerImg = f.banner && images.get(f.banner);
     const banner = bannerImg ? await ref(bannerImg, `${fname}/Portada.${expectedExt(bannerImg)}`) : null;
-    const zoneNames = new Set(['portada.jpg', 'portada.png', 'portada.svg']);
+    const logoImg = f.logo && images.get(f.logo);
+    let logo = null;
+    if (logoImg) {
+      logo = await ref(logoImg, `${fname}/Logo.${logoExt(logoImg)}`);
+      logoFiles.add(logo.file);
+    }
+    const zoneNames = new Set(['portada.jpg', 'portada.png', 'portada.svg', 'logo.jpg', 'logo.png', 'logo.svg']);
     const zones = [];
     for (const z of f.zones) {
       const zname = uniq(zoneNames, SP.safeName(z.name) || 'Zona');
@@ -1081,9 +1110,9 @@ async function buildPlan() {
       }
       zones.push({ name: z.name, hidden: !!z.hidden, areas });
     }
-    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, zones });
+    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, logo, zones });
   }
-  return { files, formats, intro };
+  return { files, formats, intro, logoFiles };
 }
 
 // Todas las imágenes referenciadas por un tablero.json publicado (versión 3 o 4).
@@ -1092,6 +1121,7 @@ function publishedRefs(data) {
   if (data && data.intro && data.intro.banner && data.intro.banner.file) refs.push(data.intro.banner);
   for (const f of (data && data.formats) || []) {
     if (f.banner && f.banner.file) refs.push(f.banner);
+    if (f.logo && f.logo.file) refs.push(f.logo);
     for (const z of f.zones || []) for (const a of z.areas || []) for (const s of a.spaces || []) if (s.image && s.image.file) refs.push(s.image);
     for (const s of f.sections || []) for (const c of s.cards || []) if (c.file) refs.push({ path: c.path, hash: c.hash, file: c.file });
   }
@@ -1129,7 +1159,7 @@ async function publish() {
     const worker = async () => {
       while (queue.length) {
         const [file, img] = queue.shift();
-        const { blob } = img.published ? { blob: img.blob } : await optimizeImage(img.blob);
+        const { blob } = img.published ? { blob: img.blob } : plan.logoFiles.has(file) ? await optimizeLogo(img.blob) : await optimizeImage(img.blob);
         await SP.upload(file, blob);
         setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
       }
@@ -1214,6 +1244,7 @@ async function loadPublished(data) {
       return formatFromJson({
         ...f,
         banner: f.banner ? f.banner.path : null,
+        logo: f.logo ? f.logo.path : null,
         zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, hidden: !!s.hidden, image: s.image ? s.image.path : null })) })) })),
       });
     }
@@ -1286,6 +1317,16 @@ function setupConnection() {
 /* ---------- Formatos y textos de portada ---------- */
 let editingFormatId = null;
 
+// Las imágenes con "logo" en el nombre aparecen primero.
+function logoOptions(selected) {
+  const list = [...images.values()].sort((a, b) => {
+    const pa = /logo/i.test(a.path) ? 0 : 1, pb = /logo/i.test(b.path) ? 0 : 1;
+    return pa - pb || collator.compare(a.path, b.path);
+  });
+  return '<option value="">(Sin logo)</option>' +
+    list.map((i) => `<option value="${escapeHtml(i.id)}" ${i.id === selected ? 'selected' : ''}>${escapeHtml(i.path)}</option>`).join('');
+}
+
 function bannerOptions(selected) {
   const list = [...images.values()].sort((a, b) => {
     const pa = /portada|fachada|banner|tienda/i.test(a.path) ? 0 : 1, pb = /portada|fachada|banner|tienda/i.test(b.path) ? 0 : 1;
@@ -1304,7 +1345,8 @@ const BUTTON_TYPES = { back: 'Regresar a la portada', checklist: 'Descargar chec
 function renderFormatPreview() {
   const prev = $('#fmtPreview');
   prev.style.setProperty('--fc', $('#fmtColor').value);
-  prev.innerHTML = `<strong>${escapeHtml($('#fmtName').value.trim() || 'Formato')}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
+  const logo = images.get($('#fmtLogo').value);
+  prev.innerHTML = `${logo ? `<span class="fp-logo"><img alt="" src="${urlFor(logo)}"></span>` : ''}<strong>${escapeHtml($('#fmtName').value.trim() || 'Formato')}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
   const img = images.get($('#fmtBanner').value);
   $('#fmtBannerPreview').innerHTML = img ? `<img alt="" src="${urlFor(img)}">` : '';
 }
@@ -1369,6 +1411,7 @@ function openFormatDialog(formatId, tab = 'datos') {
   $('#fmtSubtitle').value = draft.subtitle;
   $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(draft.color || '') ? draft.color : '#1f4fd6';
   $('#fmtBanner').innerHTML = bannerOptions(draft.banner);
+  $('#fmtLogo').innerHTML = logoOptions(draft.logo);
   $('#fmtShowHome').checked = !draft.hidden;
   $('#peShowBanner').checked = draft.panel.showBanner;
   $('#peShowNotes').checked = draft.panel.showNotes;
@@ -1490,6 +1533,7 @@ function applyDraft() {
   draft.subtitle = $('#fmtSubtitle').value.trim();
   draft.color = $('#fmtColor').value;
   draft.banner = $('#fmtBanner').value || null;
+  draft.logo = $('#fmtLogo').value || null;
   draft.hidden = !$('#fmtShowHome').checked;
   draft.panel.buttons = draft.panel.buttons.map((b) => ({ ...b, label: b.label.trim() || (b.type === 'back' ? 'Cambiar formato' : b.type === 'checklist' ? 'Descarga Checklist' : 'Enlace'), url: b.url.trim() }));
   const badLink = draft.panel.buttons.find((b) => b.type === 'link' && b.visible && !b.url);
@@ -1538,7 +1582,7 @@ function setupFormatUI() {
     else if (act.dataset.formatAction === 'intro') openIntroDialog();
   });
 
-  ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtBanner'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
+  ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtBanner', '#fmtLogo'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
   setupPanelEditor();
 
   $('#formatForm').addEventListener('submit', (e) => {

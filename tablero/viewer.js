@@ -98,6 +98,7 @@ function normalize(raw) {
       hidden: !!f.hidden,
       panel,
       banner: panel.showBanner ? imgSrc(f.banner) : null,
+      logo: imgSrc(f.logo),
       // Lo marcado como oculto en el administrador no se muestra.
       zones: zones.filter((z) => !z.hidden).map((z) => {
         const areaIds = new Set();
@@ -207,6 +208,7 @@ function renderHome() {
 
   $('#formats').innerHTML = data.formats.filter((f) => !f.hidden).map((f) => `
     <a class="format" href="${link(f.id)}" style="--fc:${esc(f.color)}">
+      ${f.logo ? `<span class="format-logo"><img alt="" src="${esc(f.logo)}"></span>` : ''}
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');
