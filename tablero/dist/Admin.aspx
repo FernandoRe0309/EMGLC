@@ -967,6 +967,27 @@ a.btn { text-decoration: none; color: inherit; }
 .blk-preview { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f5f6f8; }
 @media (max-width: 760px) { .be-grid { grid-template-columns: 1fr; } }
 
+/* ---------- Texto opcional debajo de la imagen ---------- */
+.space-text {
+  min-height: 1.4em;
+  padding: 6px 8px;
+  border: 1px dashed transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #3b4555;
+  white-space: pre-line;
+  outline: none;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.space-text:empty::before { content: attr(data-placeholder); color: var(--muted); font-size: 12px; }
+.space-text:empty { border-color: var(--border); opacity: .7; }
+.card.space:hover .space-text:empty { opacity: 1; }
+.space-text.has-text { background: #f5f7fb; border-color: var(--border); }
+.space-text:focus { background: var(--surface); border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); opacity: 1; }
+
 </style>
 </head>
 <body>
@@ -1683,7 +1704,7 @@ let state = null;          // { dirty, publishedAt, intro, formats, activeId }
 let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
-const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false });
+const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false, text: '' });
 const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, blocks: [], spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
 const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, blocks: [], areas });
 const newZones = () => DEFAULT_ZONES.map((z) => {
@@ -2071,7 +2092,9 @@ function spaceEl(sp) {
         <button type="button" class="slot-clear" data-space-action="clear" title="Quitar foto">×</button>`
         : sp.imageId ? `<span class="missing">Falta la foto en la biblioteca:<br>${escapeHtml(sp.imageId)}</span>`
           : `<span class="slot-hint">Coloca aquí la imagen de ${escapeHtml(sp.title)}</span>`}
-    </div>`;
+    </div>
+    <div class="space-text${sp.text ? ' has-text' : ''}" contenteditable="true" spellcheck="true" data-space-text
+      data-placeholder="+ Agregar texto debajo de la imagen" title="Texto opcional que aparece debajo de la imagen. Mayús + Enter para un renglón nuevo.">${escapeHtml(sp.text || '')}</div>`;
   return el;
 }
 
@@ -2487,7 +2510,7 @@ function formatToJson(f) {
     name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel,
     zones: f.zones.map((z) => ({
       name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
-      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
+      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden, text: s.text || '' })) })),
     })),
   };
 }
@@ -2509,6 +2532,7 @@ function formatFromJson(f) {
         const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => {
           const sp = newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null);
           sp.hidden = !!s.hidden;
+          sp.text = String(s.text || '');
           return sp;
         }));
         area.note = String(a.note || '');
@@ -2674,7 +2698,7 @@ async function buildPlan() {
             used.add(name.toLowerCase());
             image = await ref(img, `${folder}/${name}`);
           }
-          spaces.push({ title: s.title, hidden: !!s.hidden, image });
+          spaces.push({ title: s.title, hidden: !!s.hidden, text: s.text || '', image });
         }
         areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
@@ -2815,7 +2839,7 @@ async function loadPublished(data) {
         ...f,
         banner: f.banner ? f.banner.path : null,
         logo: f.logo ? f.logo.path : null,
-        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, hidden: !!s.hidden, image: s.image ? s.image.path : null })) })) })),
+        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, hidden: !!s.hidden, text: s.text || '', image: s.image ? s.image.path : null })) })) })),
       });
     }
     return formatFromJson(f);
@@ -3303,7 +3327,7 @@ function setupBoardUI() {
   // Edición en línea de títulos y notas.
   panel.addEventListener('keydown', (e) => {
     if (!e.target.matches('[contenteditable="true"]')) return;
-    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    if (e.key === 'Enter' && !(e.shiftKey && e.target.matches('[data-space-text]'))) { e.preventDefault(); e.target.blur(); }
     if (e.key === 'Escape') { e.target.dataset.cancel = '1'; e.target.blur(); }
   });
   panel.addEventListener('focusout', (e) => {
@@ -3324,6 +3348,14 @@ function setupBoardUI() {
       const note = value === defaultNote(area.name) ? '' : value;
       if (note !== area.note) { area.note = note; saveBoard(); }
       if (!note) t.textContent = '';
+    } else if (t.matches('[data-space-text]')) {
+      const f = findSpace(t.closest('.card').dataset.cardId);
+      if (!f) return;
+      if (cancel) { t.textContent = f.space.text || ''; return; }
+      const text = t.innerText.replace(/\r/g, '').split('\n').map((x) => x.replace(/\s+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      if (text !== (f.space.text || '')) { f.space.text = text; saveBoard(); }
+      t.textContent = text;
+      t.classList.toggle('has-text', !!text);
     } else if (t.matches('[data-space-title]')) {
       const f = findSpace(t.closest('.card').dataset.cardId);
       if (!f) return;

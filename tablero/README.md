@@ -71,6 +71,7 @@ Son el mismo contenido; el `.aspx` solo agrega en la primera línea la directiva
 Más cosas:
 
 - Clic en el título de una zona, un área, un espacio o en el texto azul del área para editarlo.
+- **Texto debajo de la imagen** (opcional, por tarjeta): clic en *+ Agregar texto debajo de la imagen* en el espacio. Mayús + Enter hace un renglón nuevo. Si se deja vacío no aparece en el manual; si tiene texto, también sale en el checklist.
 - Arrastra un espacio para reordenarlo, o suéltalo sobre el botón de otra área para moverlo. Suéltalo sobre la biblioteca para quitarle la foto.
 - **Foto de portada**: arrastra una imagen al recuadro de arriba (o elígela en **⚙ Editar formato**).
 - **⚙ Personalizar panel** (de cada formato):

@@ -897,3 +897,24 @@ a.btn { text-decoration: none; color: inherit; }
 .be-preview-col { min-width: 0; }
 .blk-preview { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f5f6f8; }
 @media (max-width: 760px) { .be-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Texto opcional debajo de la imagen ---------- */
+.space-text {
+  min-height: 1.4em;
+  padding: 6px 8px;
+  border: 1px dashed transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #3b4555;
+  white-space: pre-line;
+  outline: none;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.space-text:empty::before { content: attr(data-placeholder); color: var(--muted); font-size: 12px; }
+.space-text:empty { border-color: var(--border); opacity: .7; }
+.card.space:hover .space-text:empty { opacity: 1; }
+.space-text.has-text { background: #f5f7fb; border-color: var(--border); }
+.space-text:focus { background: var(--surface); border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); opacity: 1; }
