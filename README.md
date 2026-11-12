@@ -32,4 +32,4 @@ Luego visita `http://localhost:8000`.
 
 # 🗂️ Tablero de Señalización
 
-En [`tablero/`](tablero/) está el tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando. Una vez publicado queda en `https://<usuario>.github.io/<repositorio>/tablero/`. Instrucciones en [`tablero/README.md`](tablero/README.md).
+En [`tablero/`](tablero/) está el tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando. Tiene un panel de solo lectura (`index.html`) y un panel de administrador (`admin.html`) que publica los cambios al repositorio. Instrucciones en [`tablero/README.md`](tablero/README.md).
