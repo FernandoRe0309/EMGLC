@@ -27,3 +27,9 @@ Luego visita `http://localhost:8000`.
 - Easter egg: si escribes el mismo nombre en ambos campos.
 - Corazones flotando de fondo y botón para copiar el resultado y compartirlo.
 - 100% responsive, sin dependencias externas de JS.
+
+---
+
+# 🗂️ Tablero de Señalización
+
+En [`tablero/`](tablero/) está el tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando. Una vez publicado queda en `https://<usuario>.github.io/<repositorio>/tablero/`. Instrucciones en [`tablero/README.md`](tablero/README.md).
