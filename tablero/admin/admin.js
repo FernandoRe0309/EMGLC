@@ -148,9 +148,18 @@ let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
 const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false });
-const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
-const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, areas });
-const newZones = () => DEFAULT_ZONES.map((z) => newZone(z.name, z.areas.map((a) => newArea(a))));
+const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, blocks: [], spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
+const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, blocks: [], areas });
+const newZones = () => DEFAULT_ZONES.map((z) => {
+  const zone = newZone(z.name, z.areas.map((a) => newArea(a)));
+  // Protección Civil empieza con las notas de ejemplo de la guía.
+  if (z.name === 'Protección Civil') {
+    const info = newBlock('info');
+    info.text = 'Consulta aquí la señalización relacionada con Protección Civil.';
+    zone.blocks = [newBlock('importante-amarillo'), info];
+  }
+  return zone;
+});
 
 // Botones de la barra del formato en el manual. type: back | checklist | link
 const newButton = (type, label, url = '') => ({ id: uid(), type, label, url, visible: true });
@@ -449,6 +458,8 @@ function renderZonePanel() {
         <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">🗑</button>
       </div>
     </div>
+    ${blocksEditHtml('zone', zone.blocks, 'top')}
+    <button type="button" class="note-add" data-block-action="add" data-owner="zone">+ Agregar nota a ${escapeHtml(zone.name)}</button>
     <div class="area-grid">
       ${zone.areas.map((a) => {
         const filled = a.spaces.filter((s) => s.imageId).length;
@@ -457,6 +468,7 @@ function renderZonePanel() {
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
     </div>
+    ${blocksEditHtml('zone', zone.blocks, 'bottom')}
     ${area ? areaDetailHtml(zone, area) : `<p class="pick-hint">${zone.areas.length ? 'Elige un área para ver y acomodar sus espacios.' : 'Esta zona aún no tiene áreas. Usa <strong>+ Área</strong>.'}</p>`}`;
 
   if (area) {
@@ -482,9 +494,29 @@ function areaDetailHtml(zone, area) {
       </div>
     </div>
     <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
+    ${blocksEditHtml('area', area.blocks, 'top')}
+    <button type="button" class="note-add" data-block-action="add" data-owner="area">+ Agregar nota a ${escapeHtml(area.name)}</button>
     <div class="dropzone" data-area-id="${area.id}">
       <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
-    </div>`;
+    </div>
+    ${blocksEditHtml('area', area.blocks, 'bottom')}`;
+}
+
+// Notas con sus herramientas (editar, mover, eliminar) para el administrador.
+function blocksEditHtml(owner, blocks, pos) {
+  const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
+  if (!list.length) return '';
+  return `<div class="blocks blocks-edit">${list.map((b) => `
+    <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
+      ${blockHtml(b)}
+      <div class="blk-tools">
+        <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')}${pos === 'bottom' ? ' · abajo' : ''}</span>
+        <button type="button" data-block-action="edit">✎ Editar</button>
+        <button type="button" data-block-action="up" title="Subir">↑</button>
+        <button type="button" data-block-action="down" title="Bajar">↓</button>
+        <button type="button" data-block-action="delete" class="danger" title="Eliminar nota">🗑</button>
+      </div>
+    </div>`).join('')}</div>`;
 }
 
 function spaceEl(sp) {
@@ -918,8 +950,8 @@ function formatToJson(f) {
   return {
     name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel,
     zones: f.zones.map((z) => ({
-      name: z.name, hidden: !!z.hidden,
-      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
+      name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
+      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
     })),
   };
 }
@@ -944,10 +976,12 @@ function formatFromJson(f) {
           return sp;
         }));
         area.note = String(a.note || '');
+        area.blocks = (a.blocks || []).map(normalizeBlock);
         area.hidden = !!a.hidden;
         return area;
       }));
       zone.hidden = !!z.hidden;
+      zone.blocks = (z.blocks || []).map(normalizeBlock);
       return zone;
     }),
   });
@@ -1106,9 +1140,9 @@ async function buildPlan() {
           }
           spaces.push({ title: s.title, hidden: !!s.hidden, image });
         }
-        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, spaces });
+        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
-      zones.push({ name: z.name, hidden: !!z.hidden, areas });
+      zones.push({ name: z.name, hidden: !!z.hidden, blocks: (z.blocks || []).map(normalizeBlock), areas });
     }
     formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, logo, zones });
   }
@@ -1768,6 +1802,140 @@ function setupBoardUI() {
   });
 }
 
+/* ---------- Editor de notas ---------- */
+let blockEdit = null; // { owner: 'zone'|'area', id: string|null, touched: bool }
+
+function blockOwner(owner) {
+  const o = owner === 'zone' ? activeZone() : activeArea();
+  if (o && !Array.isArray(o.blocks)) o.blocks = [];
+  return o;
+}
+
+function readBlockForm() {
+  return normalizeBlock({
+    id: blockEdit && blockEdit.id,
+    type: $('#blkType').value,
+    pos: $('#blkPos').value,
+    title: $('#blkTitle').value.trim(),
+    text: $('#blkText').value.trim(),
+    items: $('#blkItems').value.split('\n').map((x) => x.trim()).filter(Boolean),
+    footer: $('#blkFooter').value.trim(),
+    buttonLabel: $('#blkBtnLabel').value.trim(),
+    buttonUrl: $('#blkBtnUrl').value.trim(),
+  });
+}
+
+function fillBlockForm(b) {
+  $('#blkType').value = b.type;
+  $('#blkPos').value = b.pos;
+  $('#blkTitle').value = b.title;
+  $('#blkText').value = b.text;
+  $('#blkItems').value = b.items.join('\n');
+  $('#blkFooter').value = b.footer;
+  $('#blkBtnLabel').value = b.buttonLabel;
+  $('#blkBtnUrl').value = b.buttonUrl;
+}
+
+function renderBlockForm() {
+  const fields = BLOCK_TYPES[$('#blkType').value].fields;
+  document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
+}
+
+function openBlockDialog(owner, id) {
+  const o = blockOwner(owner);
+  if (!o) return;
+  const existing = id ? o.blocks.find((b) => b.id === id) : null;
+  blockEdit = { owner, id: existing ? existing.id : null, touched: !!existing };
+  $('#blockDlgTitle').textContent = `${existing ? 'Editar nota' : 'Nueva nota'} · ${o.name}`;
+  $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
+  const where = owner === 'zone' ? 'las áreas' : 'la señalización';
+  $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
+  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo'));
+  $('#blkDelete').hidden = !existing;
+  renderBlockForm();
+  $('#blockDlg').showModal();
+}
+
+function moveBlock(owner, id, dir) {
+  const o = blockOwner(owner);
+  const list = o.blocks;
+  const i = list.findIndex((b) => b.id === id);
+  const pos = list[i].pos || 'top';
+  let j = i + dir;
+  while (j >= 0 && j < list.length && (list[j].pos || 'top') !== pos) j += dir;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  commit();
+}
+
+function setupBlockEditor() {
+  const dlg = $('#blockDlg');
+  $('#blkType').addEventListener('change', () => {
+    // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
+    if (!blockEdit.touched) {
+      const pos = $('#blkPos').value;
+      fillBlockForm(newBlock($('#blkType').value, pos));
+    }
+    renderBlockForm();
+  });
+  dlg.addEventListener('input', (e) => {
+    if (e.target.id === 'blkType') return;
+    if (e.target.id !== 'blkPos') blockEdit.touched = true;
+    renderBlockForm();
+  });
+  $('#blkPreview').addEventListener('click', (e) => { if (e.target.closest('a')) e.preventDefault(); });
+
+  $('#blockForm').addEventListener('submit', (e) => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    const b = readBlockForm();
+    const fields = BLOCK_TYPES[b.type].fields;
+    if (fields.includes('button')) {
+      if (!b.buttonUrl) { e.preventDefault(); toast('Agrega el enlace del botón.', 4000); return; }
+      if (/^[a-z][a-z0-9+.-]*:/i.test(b.buttonUrl) && !/^https?:\/\//i.test(b.buttonUrl)) { e.preventDefault(); toast('El enlace no es válido. Usa una dirección que empiece con https://', 5000); return; }
+    }
+    // Solo se guardan los campos que usa el tipo elegido.
+    for (const f of ['title', 'text', 'items', 'footer']) if (!fields.includes(f)) b[f] = f === 'items' ? [] : '';
+    if (!fields.includes('button')) { b.buttonLabel = ''; b.buttonUrl = ''; }
+    const o = blockOwner(blockEdit.owner);
+    const i = o.blocks.findIndex((x) => x.id === b.id);
+    if (i === -1) o.blocks.push(b); else o.blocks[i] = b;
+    commit();
+  });
+  $('#blkDelete').addEventListener('click', () => {
+    const o = blockOwner(blockEdit.owner);
+    if (!confirm('¿Eliminar esta nota?')) return;
+    o.blocks = o.blocks.filter((b) => b.id !== blockEdit.id);
+    dlg.close();
+    commit();
+  });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+
+  // Botones de las notas en el tablero.
+  $('#zonePanel').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-block-action]');
+    if (!btn) {
+      if (e.target.closest('.blk a')) e.preventDefault(); // en el admin los enlaces no navegan
+      return;
+    }
+    const wrap = btn.closest('[data-block]');
+    const owner = btn.dataset.owner || wrap?.dataset.owner;
+    const id = wrap?.dataset.block;
+    switch (btn.dataset.blockAction) {
+      case 'add': return openBlockDialog(owner, null);
+      case 'edit': return openBlockDialog(owner, id);
+      case 'up': return moveBlock(owner, id, -1);
+      case 'down': return moveBlock(owner, id, 1);
+      case 'delete': {
+        const o = blockOwner(owner);
+        if (!confirm('¿Eliminar esta nota?')) return;
+        o.blocks = o.blocks.filter((b) => b.id !== id);
+        commit();
+      }
+    }
+  });
+}
+
 /* ---------- Menú ---------- */
 function autoPlace() {
   const counts = placementCounts();
@@ -1889,6 +2057,7 @@ function setupEvents() {
   setupConnection();
   setupFormatUI();
   setupBoardUI();
+  setupBlockEditor();
 }
 
 /* ---------- Inicio ---------- */

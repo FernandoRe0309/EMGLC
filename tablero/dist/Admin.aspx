@@ -9,6 +9,64 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
 <style>
+/* ---------- Notas (bloques de contenido) ---------- */
+.blocks { display: grid; gap: 16px; margin: 16px 0; }
+.blk { border-radius: 14px; padding: 20px 24px; font-size: 15px; line-height: 1.5; color: #2b3445; }
+.blk p { margin: 0; }
+.blk p + ul, .blk p + p { margin-top: 10px; }
+.blk ul { margin: 10px 0 0; padding-left: 22px; }
+.blk li + li { margin-top: 4px; }
+.blk-title { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.blk-ico { width: 22px; height: 22px; flex: none; }
+
+.blk-importante-rojo { background: #fdf0f0; border-left: 5px solid #e5484d; box-shadow: 0 1px 3px rgba(16, 24, 40, .05); }
+.blk-importante-rojo .blk-title { color: #2b3445; }
+
+.blk-importante-amarillo { background: #fffaeb; border: 2.5px solid #f5c542; }
+.blk-importante-amarillo .blk-title { color: #7a3d00; }
+
+.blk-retira { background: #1f4fd6; color: #fff; border: 2px solid #183ea8; box-shadow: 0 6px 16px rgba(31, 79, 214, .25); }
+.blk-retira .blk-title { font-size: 19px; }
+.blk-retira .blk-grid { border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 12px; padding: 16px 20px; background: rgba(0, 0, 0, .06); }
+.blk-retira .blk-cols { margin: 0; padding-left: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 28px; font-weight: 600; }
+.blk-retira .blk-cols li { position: relative; padding-left: 16px; margin: 0; }
+.blk-retira .blk-cols li::before { content: "•"; position: absolute; left: 0; }
+.blk-retira hr { border: 0; border-top: 2px solid rgba(255, 255, 255, .45); margin: 18px 0 14px; }
+.blk-retira .blk-footer { font-weight: 700; }
+
+.blk-info { background: #eef3ff; color: #1e3a9a; font-weight: 700; padding: 16px 22px; }
+
+.blk-nota { display: flex; gap: 12px; align-items: flex-start; background: #f2f4f7; border: 1px solid #dde2ea; color: #3b4555; font-size: 14px; }
+.blk-nota .blk-ico { color: #5d6878; margin-top: 1px; }
+
+.blk-enlace { background: #f0f5ff; border: 1.5px solid #c9dafb; }
+.blk-enlace .blk-btn { margin-top: 14px; }
+
+.blk-boton { padding: 0; }
+.blk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.blk-btn .blk-ico { width: 20px; height: 20px; }
+.blk-btn-solid, .blk-btn-outline { background: #1f4fd6; color: #fff; }
+.blk-btn-outline { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #1f4fd6; }
+.blk-btn:hover { filter: brightness(1.08); }
+.blk-btn.disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .blk { padding: 16px; font-size: 14px; }
+  .blk-retira .blk-cols { grid-template-columns: 1fr; }
+}
+
+</style>
+<style>
 :root {
   --bg: #f5f6f8;
   --surface: #ffffff;
@@ -881,6 +939,34 @@ a.btn { text-decoration: none; color: inherit; }
 .pe-toggle { display: flex !important; grid-template-columns: none; align-items: center; gap: 10px; font-weight: 600; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
 .pe-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 
+/* ---------- Notas en el tablero ---------- */
+.blocks-edit { margin: 14px 0; }
+.blk-wrap { position: relative; }
+.blk-wrap .blk { outline: 2px dashed transparent; outline-offset: 4px; transition: outline-color .12s; }
+.blk-wrap:hover .blk { outline-color: #9dbbf3; }
+.blk-tools {
+  display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap;
+}
+.blk-tools .blk-kind { margin-right: auto; font-size: 12px; color: var(--muted); }
+.blk-tools button {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; font-size: 12px;
+}
+.blk-tools button:hover { border-color: var(--accent); color: var(--accent); }
+.blk-tools button.danger:hover { border-color: var(--danger); color: var(--danger); }
+.note-add {
+  display: block; margin: 12px 0 4px; padding: 8px 14px; border: 1.5px dashed var(--border); border-radius: 10px;
+  background: none; color: var(--muted); cursor: pointer; font-weight: 600;
+}
+.note-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- Editor de notas ---------- */
+.block-editor { width: min(980px, calc(100vw - 32px)); }
+.be-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 20px; max-height: 64vh; overflow-y: auto; padding: 2px; }
+.be-fields { display: grid; gap: 10px; align-content: start; }
+.be-preview-col { min-width: 0; }
+.blk-preview { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f5f6f8; }
+@media (max-width: 760px) { .be-grid { grid-template-columns: 1fr; } }
+
 </style>
 </head>
 <body>
@@ -1030,6 +1116,34 @@ a.btn { text-decoration: none; color: inherit; }
 
     <div class="settings-actions">
       <button type="button" id="fmtDelete" class="btn danger">Eliminar formato</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="blockDlg" class="settings block-editor">
+  <form method="dialog" class="settings-inner" id="blockForm">
+    <h3 id="blockDlgTitle">Nota</h3>
+    <div class="be-grid">
+      <div class="be-fields">
+        <label>Tipo de nota<select id="blkType"></select></label>
+        <label>Ubicación<select id="blkPos"></select></label>
+        <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
+        <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
+        <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
+        <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
+        <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
+        <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
+      </div>
+      <div class="be-preview-col">
+        <p class="muted small">Vista previa</p>
+        <div id="blkPreview" class="blk-preview"></div>
+      </div>
+    </div>
+    <div class="settings-actions">
+      <button type="button" id="blkDelete" class="btn danger">Eliminar nota</button>
       <span class="spacer"></span>
       <button value="cancel" class="btn" formnovalidate>Cancelar</button>
       <button type="submit" class="btn btn-primary" value="save">Guardar</button>
@@ -1277,6 +1391,151 @@ const SP = (() => {
 <script>
 'use strict';
 
+/* =====================================================================
+   Notas (bloques de contenido) que se agregan a zonas y áreas.
+   Lo usan el panel de lectura y el de administrador, para que se vean igual.
+   ===================================================================== */
+
+const BLOCK_TYPES = {
+  'importante-rojo': {
+    label: 'Importante (rojo)',
+    fields: ['title', 'text', 'items'],
+    defaults: {
+      title: 'Importante',
+      items: [
+        'Retira cualquier señalización que no esté indicada en este manual.',
+        'Mantén únicamente la señalización autorizada en tienda.',
+        'Coloca máximo una señalización por departamento.',
+      ],
+    },
+  },
+  'importante-amarillo': {
+    label: 'Importante (amarillo)',
+    fields: ['title', 'text', 'items'],
+    defaults: {
+      title: 'Importante',
+      text: 'Esta señalización debe permanecer en la ubicación definida de acuerdo con el layout de cada tienda.',
+      items: [
+        'No la retires ni la cambies de lugar.',
+        'Mantenla intacta, limpia y en buen estado.',
+        'Si requiere renovación, consulta en este archivo los códigos correspondientes para solicitarla.',
+      ],
+    },
+  },
+  retira: {
+    label: 'Recuadro azul con lista',
+    fields: ['title', 'items', 'footer'],
+    defaults: {
+      title: 'Retira toda señalización que no esté incluida en este manual, por ejemplo:',
+      items: ['Letrero de Wi-Fi Gratis', 'Pizarrón Vecino Valioso', 'Prohibido sacar los carritos', 'Teléfono de emergencia 911 & CAE', 'Certificación COVID', 'Cualquier otra señalización adicional'],
+      footer: 'Recuerda: Si la señalización no aparece en este manual, debe retirarse de tienda.',
+    },
+  },
+  info: {
+    label: 'Aviso azul claro',
+    fields: ['text'],
+    defaults: { text: 'Consulta aquí la señalización relacionada con esta sección.' },
+  },
+  nota: {
+    label: 'Nota gris',
+    fields: ['text'],
+    defaults: {
+      text: 'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    },
+  },
+  enlace: {
+    label: 'Texto con botón',
+    fields: ['text', 'button'],
+    defaults: { text: 'Consulta las licencias y permisos de tu unidad en la siguiente liga:', buttonLabel: 'Consultar licencias y permisos' },
+  },
+  boton: {
+    label: 'Solo botón',
+    fields: ['button'],
+    defaults: { buttonLabel: 'Descargar texto' },
+  },
+};
+
+const blkEsc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Solo enlaces web o rutas relativas (nunca javascript:, data:, etc.).
+function blkSafeUrl(u) {
+  const s = String(u || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) || /^(\/|\.\/|\.\.\/|#)/.test(s)) return s;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+  return '';
+}
+
+// Limpia una nota guardada o publicada.
+function normalizeBlock(b) {
+  const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
+  return {
+    id: (b && b.id) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+    type,
+    pos: b && b.pos === 'bottom' ? 'bottom' : 'top',
+    title: String((b && b.title) || ''),
+    text: String((b && b.text) || ''),
+    items: Array.isArray(b && b.items) ? b.items.map((x) => String(x)).filter((x) => x.trim()) : [],
+    footer: String((b && b.footer) || ''),
+    buttonLabel: String((b && b.buttonLabel) || ''),
+    buttonUrl: String((b && b.buttonUrl) || ''),
+  };
+}
+
+function newBlock(type, pos = 'top') {
+  const t = BLOCK_TYPES[type] || BLOCK_TYPES.info;
+  return normalizeBlock({ type, pos, ...structuredClone(t.defaults) });
+}
+
+const BLK_ICONS = {
+  warn: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" fill="#f5b400" stroke="#9a6b00" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#3d2b00" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#3d2b00"/></svg>',
+  trash: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  info: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor"/></svg>',
+  down: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+function blkButton(b, cls) {
+  const url = blkSafeUrl(b.buttonUrl);
+  const label = blkEsc(b.buttonLabel || 'Abrir');
+  const icon = cls.includes('blk-btn-solid') ? BLK_ICONS.down : '';
+  return url
+    ? `<a class="${cls}" href="${blkEsc(url)}" target="_blank" rel="noopener">${icon}${label}</a>`
+    : `<span class="${cls} disabled" title="Falta el enlace">${icon}${label}</span>`;
+}
+
+// HTML de una nota. Todo el texto se escapa.
+function blockHtml(raw) {
+  const b = normalizeBlock(raw);
+  const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
+  switch (b.type) {
+    case 'importante-rojo':
+    case 'importante-amarillo':
+      return `<div class="blk blk-${b.type}">
+        ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
+        ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
+        ${list()}
+      </div>`;
+    case 'retira':
+      return `<div class="blk blk-retira">
+        ${b.title ? `<h4 class="blk-title">${BLK_ICONS.trash}<span>${blkEsc(b.title)}</span></h4>` : ''}
+        ${b.items.length ? `<div class="blk-grid">${list('blk-cols')}</div>` : ''}
+        ${b.footer ? `<hr><p class="blk-footer">${blkEsc(b.footer)}</p>` : ''}
+      </div>`;
+    case 'nota':
+      return `<div class="blk blk-nota">${BLK_ICONS.info}<p>${blkEsc(b.text)}</p></div>`;
+    case 'enlace':
+      return `<div class="blk blk-enlace">${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}${blkButton(b, 'blk-btn blk-btn-outline')}</div>`;
+    case 'boton':
+      return `<div class="blk blk-boton">${blkButton(b, 'blk-btn blk-btn-solid')}</div>`;
+    default:
+      return `<div class="blk blk-info"><p>${blkEsc(b.text)}</p></div>`;
+  }
+}
+
+</script>
+<script>
+'use strict';
+
 /* =========================================================================
    Panel de administrador del Manual de Señalización.
    Estructura: Formato → Zona → Área → Espacios (cada espacio: título + foto).
@@ -1425,9 +1684,18 @@ let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
 const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false });
-const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
-const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, areas });
-const newZones = () => DEFAULT_ZONES.map((z) => newZone(z.name, z.areas.map((a) => newArea(a))));
+const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, blocks: [], spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
+const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, blocks: [], areas });
+const newZones = () => DEFAULT_ZONES.map((z) => {
+  const zone = newZone(z.name, z.areas.map((a) => newArea(a)));
+  // Protección Civil empieza con las notas de ejemplo de la guía.
+  if (z.name === 'Protección Civil') {
+    const info = newBlock('info');
+    info.text = 'Consulta aquí la señalización relacionada con Protección Civil.';
+    zone.blocks = [newBlock('importante-amarillo'), info];
+  }
+  return zone;
+});
 
 // Botones de la barra del formato en el manual. type: back | checklist | link
 const newButton = (type, label, url = '') => ({ id: uid(), type, label, url, visible: true });
@@ -1726,6 +1994,8 @@ function renderZonePanel() {
         <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">🗑</button>
       </div>
     </div>
+    ${blocksEditHtml('zone', zone.blocks, 'top')}
+    <button type="button" class="note-add" data-block-action="add" data-owner="zone">+ Agregar nota a ${escapeHtml(zone.name)}</button>
     <div class="area-grid">
       ${zone.areas.map((a) => {
         const filled = a.spaces.filter((s) => s.imageId).length;
@@ -1734,6 +2004,7 @@ function renderZonePanel() {
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
     </div>
+    ${blocksEditHtml('zone', zone.blocks, 'bottom')}
     ${area ? areaDetailHtml(zone, area) : `<p class="pick-hint">${zone.areas.length ? 'Elige un área para ver y acomodar sus espacios.' : 'Esta zona aún no tiene áreas. Usa <strong>+ Área</strong>.'}</p>`}`;
 
   if (area) {
@@ -1759,9 +2030,29 @@ function areaDetailHtml(zone, area) {
       </div>
     </div>
     <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
+    ${blocksEditHtml('area', area.blocks, 'top')}
+    <button type="button" class="note-add" data-block-action="add" data-owner="area">+ Agregar nota a ${escapeHtml(area.name)}</button>
     <div class="dropzone" data-area-id="${area.id}">
       <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
-    </div>`;
+    </div>
+    ${blocksEditHtml('area', area.blocks, 'bottom')}`;
+}
+
+// Notas con sus herramientas (editar, mover, eliminar) para el administrador.
+function blocksEditHtml(owner, blocks, pos) {
+  const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
+  if (!list.length) return '';
+  return `<div class="blocks blocks-edit">${list.map((b) => `
+    <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
+      ${blockHtml(b)}
+      <div class="blk-tools">
+        <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')}${pos === 'bottom' ? ' · abajo' : ''}</span>
+        <button type="button" data-block-action="edit">✎ Editar</button>
+        <button type="button" data-block-action="up" title="Subir">↑</button>
+        <button type="button" data-block-action="down" title="Bajar">↓</button>
+        <button type="button" data-block-action="delete" class="danger" title="Eliminar nota">🗑</button>
+      </div>
+    </div>`).join('')}</div>`;
 }
 
 function spaceEl(sp) {
@@ -2195,8 +2486,8 @@ function formatToJson(f) {
   return {
     name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel,
     zones: f.zones.map((z) => ({
-      name: z.name, hidden: !!z.hidden,
-      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
+      name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
+      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden })) })),
     })),
   };
 }
@@ -2221,10 +2512,12 @@ function formatFromJson(f) {
           return sp;
         }));
         area.note = String(a.note || '');
+        area.blocks = (a.blocks || []).map(normalizeBlock);
         area.hidden = !!a.hidden;
         return area;
       }));
       zone.hidden = !!z.hidden;
+      zone.blocks = (z.blocks || []).map(normalizeBlock);
       return zone;
     }),
   });
@@ -2383,9 +2676,9 @@ async function buildPlan() {
           }
           spaces.push({ title: s.title, hidden: !!s.hidden, image });
         }
-        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, spaces });
+        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
-      zones.push({ name: z.name, hidden: !!z.hidden, areas });
+      zones.push({ name: z.name, hidden: !!z.hidden, blocks: (z.blocks || []).map(normalizeBlock), areas });
     }
     formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, logo, zones });
   }
@@ -3045,6 +3338,140 @@ function setupBoardUI() {
   });
 }
 
+/* ---------- Editor de notas ---------- */
+let blockEdit = null; // { owner: 'zone'|'area', id: string|null, touched: bool }
+
+function blockOwner(owner) {
+  const o = owner === 'zone' ? activeZone() : activeArea();
+  if (o && !Array.isArray(o.blocks)) o.blocks = [];
+  return o;
+}
+
+function readBlockForm() {
+  return normalizeBlock({
+    id: blockEdit && blockEdit.id,
+    type: $('#blkType').value,
+    pos: $('#blkPos').value,
+    title: $('#blkTitle').value.trim(),
+    text: $('#blkText').value.trim(),
+    items: $('#blkItems').value.split('\n').map((x) => x.trim()).filter(Boolean),
+    footer: $('#blkFooter').value.trim(),
+    buttonLabel: $('#blkBtnLabel').value.trim(),
+    buttonUrl: $('#blkBtnUrl').value.trim(),
+  });
+}
+
+function fillBlockForm(b) {
+  $('#blkType').value = b.type;
+  $('#blkPos').value = b.pos;
+  $('#blkTitle').value = b.title;
+  $('#blkText').value = b.text;
+  $('#blkItems').value = b.items.join('\n');
+  $('#blkFooter').value = b.footer;
+  $('#blkBtnLabel').value = b.buttonLabel;
+  $('#blkBtnUrl').value = b.buttonUrl;
+}
+
+function renderBlockForm() {
+  const fields = BLOCK_TYPES[$('#blkType').value].fields;
+  document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
+}
+
+function openBlockDialog(owner, id) {
+  const o = blockOwner(owner);
+  if (!o) return;
+  const existing = id ? o.blocks.find((b) => b.id === id) : null;
+  blockEdit = { owner, id: existing ? existing.id : null, touched: !!existing };
+  $('#blockDlgTitle').textContent = `${existing ? 'Editar nota' : 'Nueva nota'} · ${o.name}`;
+  $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
+  const where = owner === 'zone' ? 'las áreas' : 'la señalización';
+  $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
+  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo'));
+  $('#blkDelete').hidden = !existing;
+  renderBlockForm();
+  $('#blockDlg').showModal();
+}
+
+function moveBlock(owner, id, dir) {
+  const o = blockOwner(owner);
+  const list = o.blocks;
+  const i = list.findIndex((b) => b.id === id);
+  const pos = list[i].pos || 'top';
+  let j = i + dir;
+  while (j >= 0 && j < list.length && (list[j].pos || 'top') !== pos) j += dir;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  commit();
+}
+
+function setupBlockEditor() {
+  const dlg = $('#blockDlg');
+  $('#blkType').addEventListener('change', () => {
+    // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
+    if (!blockEdit.touched) {
+      const pos = $('#blkPos').value;
+      fillBlockForm(newBlock($('#blkType').value, pos));
+    }
+    renderBlockForm();
+  });
+  dlg.addEventListener('input', (e) => {
+    if (e.target.id === 'blkType') return;
+    if (e.target.id !== 'blkPos') blockEdit.touched = true;
+    renderBlockForm();
+  });
+  $('#blkPreview').addEventListener('click', (e) => { if (e.target.closest('a')) e.preventDefault(); });
+
+  $('#blockForm').addEventListener('submit', (e) => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    const b = readBlockForm();
+    const fields = BLOCK_TYPES[b.type].fields;
+    if (fields.includes('button')) {
+      if (!b.buttonUrl) { e.preventDefault(); toast('Agrega el enlace del botón.', 4000); return; }
+      if (/^[a-z][a-z0-9+.-]*:/i.test(b.buttonUrl) && !/^https?:\/\//i.test(b.buttonUrl)) { e.preventDefault(); toast('El enlace no es válido. Usa una dirección que empiece con https://', 5000); return; }
+    }
+    // Solo se guardan los campos que usa el tipo elegido.
+    for (const f of ['title', 'text', 'items', 'footer']) if (!fields.includes(f)) b[f] = f === 'items' ? [] : '';
+    if (!fields.includes('button')) { b.buttonLabel = ''; b.buttonUrl = ''; }
+    const o = blockOwner(blockEdit.owner);
+    const i = o.blocks.findIndex((x) => x.id === b.id);
+    if (i === -1) o.blocks.push(b); else o.blocks[i] = b;
+    commit();
+  });
+  $('#blkDelete').addEventListener('click', () => {
+    const o = blockOwner(blockEdit.owner);
+    if (!confirm('¿Eliminar esta nota?')) return;
+    o.blocks = o.blocks.filter((b) => b.id !== blockEdit.id);
+    dlg.close();
+    commit();
+  });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+
+  // Botones de las notas en el tablero.
+  $('#zonePanel').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-block-action]');
+    if (!btn) {
+      if (e.target.closest('.blk a')) e.preventDefault(); // en el admin los enlaces no navegan
+      return;
+    }
+    const wrap = btn.closest('[data-block]');
+    const owner = btn.dataset.owner || wrap?.dataset.owner;
+    const id = wrap?.dataset.block;
+    switch (btn.dataset.blockAction) {
+      case 'add': return openBlockDialog(owner, null);
+      case 'edit': return openBlockDialog(owner, id);
+      case 'up': return moveBlock(owner, id, -1);
+      case 'down': return moveBlock(owner, id, 1);
+      case 'delete': {
+        const o = blockOwner(owner);
+        if (!confirm('¿Eliminar esta nota?')) return;
+        o.blocks = o.blocks.filter((b) => b.id !== id);
+        commit();
+      }
+    }
+  });
+}
+
 /* ---------- Menú ---------- */
 function autoPlace() {
   const counts = placementCounts();
@@ -3166,6 +3593,7 @@ function setupEvents() {
   setupConnection();
   setupFormatUI();
   setupBoardUI();
+  setupBlockEditor();
 }
 
 /* ---------- Inicio ---------- */

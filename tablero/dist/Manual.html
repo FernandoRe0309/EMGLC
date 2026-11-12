@@ -7,6 +7,64 @@
 <meta name="description" content="Manual de señalización autorizada por formato y área de tienda (solo lectura).">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231f4fd6%22/><rect x=%226%22 y=%2224%22 width=%2220%22 height=%223%22 rx=%221.5%22 fill=%22%23ffc220%22/><rect x=%228%22 y=%227%22 width=%2216%22 height=%2213%22 rx=%222%22 fill=%22%23fff%22/></svg>">
 <style>
+/* ---------- Notas (bloques de contenido) ---------- */
+.blocks { display: grid; gap: 16px; margin: 16px 0; }
+.blk { border-radius: 14px; padding: 20px 24px; font-size: 15px; line-height: 1.5; color: #2b3445; }
+.blk p { margin: 0; }
+.blk p + ul, .blk p + p { margin-top: 10px; }
+.blk ul { margin: 10px 0 0; padding-left: 22px; }
+.blk li + li { margin-top: 4px; }
+.blk-title { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.blk-ico { width: 22px; height: 22px; flex: none; }
+
+.blk-importante-rojo { background: #fdf0f0; border-left: 5px solid #e5484d; box-shadow: 0 1px 3px rgba(16, 24, 40, .05); }
+.blk-importante-rojo .blk-title { color: #2b3445; }
+
+.blk-importante-amarillo { background: #fffaeb; border: 2.5px solid #f5c542; }
+.blk-importante-amarillo .blk-title { color: #7a3d00; }
+
+.blk-retira { background: #1f4fd6; color: #fff; border: 2px solid #183ea8; box-shadow: 0 6px 16px rgba(31, 79, 214, .25); }
+.blk-retira .blk-title { font-size: 19px; }
+.blk-retira .blk-grid { border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 12px; padding: 16px 20px; background: rgba(0, 0, 0, .06); }
+.blk-retira .blk-cols { margin: 0; padding-left: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 28px; font-weight: 600; }
+.blk-retira .blk-cols li { position: relative; padding-left: 16px; margin: 0; }
+.blk-retira .blk-cols li::before { content: "•"; position: absolute; left: 0; }
+.blk-retira hr { border: 0; border-top: 2px solid rgba(255, 255, 255, .45); margin: 18px 0 14px; }
+.blk-retira .blk-footer { font-weight: 700; }
+
+.blk-info { background: #eef3ff; color: #1e3a9a; font-weight: 700; padding: 16px 22px; }
+
+.blk-nota { display: flex; gap: 12px; align-items: flex-start; background: #f2f4f7; border: 1px solid #dde2ea; color: #3b4555; font-size: 14px; }
+.blk-nota .blk-ico { color: #5d6878; margin-top: 1px; }
+
+.blk-enlace { background: #f0f5ff; border: 1.5px solid #c9dafb; }
+.blk-enlace .blk-btn { margin-top: 14px; }
+
+.blk-boton { padding: 0; }
+.blk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.blk-btn .blk-ico { width: 20px; height: 20px; }
+.blk-btn-solid, .blk-btn-outline { background: #1f4fd6; color: #fff; }
+.blk-btn-outline { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #1f4fd6; }
+.blk-btn:hover { filter: brightness(1.08); }
+.blk-btn.disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .blk { padding: 16px; font-size: 14px; }
+  .blk-retira .blk-cols { grid-template-columns: 1fr; }
+}
+
+</style>
+<style>
 :root {
   --bg: #f5f6f8;
   --surface: #ffffff;
@@ -736,6 +794,151 @@ const SP = (() => {
 <script>
 'use strict';
 
+/* =====================================================================
+   Notas (bloques de contenido) que se agregan a zonas y áreas.
+   Lo usan el panel de lectura y el de administrador, para que se vean igual.
+   ===================================================================== */
+
+const BLOCK_TYPES = {
+  'importante-rojo': {
+    label: 'Importante (rojo)',
+    fields: ['title', 'text', 'items'],
+    defaults: {
+      title: 'Importante',
+      items: [
+        'Retira cualquier señalización que no esté indicada en este manual.',
+        'Mantén únicamente la señalización autorizada en tienda.',
+        'Coloca máximo una señalización por departamento.',
+      ],
+    },
+  },
+  'importante-amarillo': {
+    label: 'Importante (amarillo)',
+    fields: ['title', 'text', 'items'],
+    defaults: {
+      title: 'Importante',
+      text: 'Esta señalización debe permanecer en la ubicación definida de acuerdo con el layout de cada tienda.',
+      items: [
+        'No la retires ni la cambies de lugar.',
+        'Mantenla intacta, limpia y en buen estado.',
+        'Si requiere renovación, consulta en este archivo los códigos correspondientes para solicitarla.',
+      ],
+    },
+  },
+  retira: {
+    label: 'Recuadro azul con lista',
+    fields: ['title', 'items', 'footer'],
+    defaults: {
+      title: 'Retira toda señalización que no esté incluida en este manual, por ejemplo:',
+      items: ['Letrero de Wi-Fi Gratis', 'Pizarrón Vecino Valioso', 'Prohibido sacar los carritos', 'Teléfono de emergencia 911 & CAE', 'Certificación COVID', 'Cualquier otra señalización adicional'],
+      footer: 'Recuerda: Si la señalización no aparece en este manual, debe retirarse de tienda.',
+    },
+  },
+  info: {
+    label: 'Aviso azul claro',
+    fields: ['text'],
+    defaults: { text: 'Consulta aquí la señalización relacionada con esta sección.' },
+  },
+  nota: {
+    label: 'Nota gris',
+    fields: ['text'],
+    defaults: {
+      text: 'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    },
+  },
+  enlace: {
+    label: 'Texto con botón',
+    fields: ['text', 'button'],
+    defaults: { text: 'Consulta las licencias y permisos de tu unidad en la siguiente liga:', buttonLabel: 'Consultar licencias y permisos' },
+  },
+  boton: {
+    label: 'Solo botón',
+    fields: ['button'],
+    defaults: { buttonLabel: 'Descargar texto' },
+  },
+};
+
+const blkEsc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Solo enlaces web o rutas relativas (nunca javascript:, data:, etc.).
+function blkSafeUrl(u) {
+  const s = String(u || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) || /^(\/|\.\/|\.\.\/|#)/.test(s)) return s;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+  return '';
+}
+
+// Limpia una nota guardada o publicada.
+function normalizeBlock(b) {
+  const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
+  return {
+    id: (b && b.id) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+    type,
+    pos: b && b.pos === 'bottom' ? 'bottom' : 'top',
+    title: String((b && b.title) || ''),
+    text: String((b && b.text) || ''),
+    items: Array.isArray(b && b.items) ? b.items.map((x) => String(x)).filter((x) => x.trim()) : [],
+    footer: String((b && b.footer) || ''),
+    buttonLabel: String((b && b.buttonLabel) || ''),
+    buttonUrl: String((b && b.buttonUrl) || ''),
+  };
+}
+
+function newBlock(type, pos = 'top') {
+  const t = BLOCK_TYPES[type] || BLOCK_TYPES.info;
+  return normalizeBlock({ type, pos, ...structuredClone(t.defaults) });
+}
+
+const BLK_ICONS = {
+  warn: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" fill="#f5b400" stroke="#9a6b00" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#3d2b00" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#3d2b00"/></svg>',
+  trash: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  info: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor"/></svg>',
+  down: '<svg class="blk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+function blkButton(b, cls) {
+  const url = blkSafeUrl(b.buttonUrl);
+  const label = blkEsc(b.buttonLabel || 'Abrir');
+  const icon = cls.includes('blk-btn-solid') ? BLK_ICONS.down : '';
+  return url
+    ? `<a class="${cls}" href="${blkEsc(url)}" target="_blank" rel="noopener">${icon}${label}</a>`
+    : `<span class="${cls} disabled" title="Falta el enlace">${icon}${label}</span>`;
+}
+
+// HTML de una nota. Todo el texto se escapa.
+function blockHtml(raw) {
+  const b = normalizeBlock(raw);
+  const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
+  switch (b.type) {
+    case 'importante-rojo':
+    case 'importante-amarillo':
+      return `<div class="blk blk-${b.type}">
+        ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
+        ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
+        ${list()}
+      </div>`;
+    case 'retira':
+      return `<div class="blk blk-retira">
+        ${b.title ? `<h4 class="blk-title">${BLK_ICONS.trash}<span>${blkEsc(b.title)}</span></h4>` : ''}
+        ${b.items.length ? `<div class="blk-grid">${list('blk-cols')}</div>` : ''}
+        ${b.footer ? `<hr><p class="blk-footer">${blkEsc(b.footer)}</p>` : ''}
+      </div>`;
+    case 'nota':
+      return `<div class="blk blk-nota">${BLK_ICONS.info}<p>${blkEsc(b.text)}</p></div>`;
+    case 'enlace':
+      return `<div class="blk blk-enlace">${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}${blkButton(b, 'blk-btn blk-btn-outline')}</div>`;
+    case 'boton':
+      return `<div class="blk blk-boton">${blkButton(b, 'blk-btn blk-btn-solid')}</div>`;
+    default:
+      return `<div class="blk blk-info"><p>${blkEsc(b.text)}</p></div>`;
+  }
+}
+
+</script>
+<script>
+'use strict';
+
 /* Panel de solo lectura del Manual de Señalización.
    Portada → Formato → Zona → Área → Espacios (título + foto).
    Lee tablero.json y las fotos de la misma carpeta de SharePoint donde está este archivo. */
@@ -841,11 +1044,13 @@ function normalize(raw) {
         return {
           id: uniqueId(zoneIds, z.name || 'zona'),
           name: String(z.name || 'Zona'),
+          blocks: (z.blocks || []).map(normalizeBlock),
           areas: (z.areas || []).filter((a) => !a.hidden).map((a) => {
             const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => ({ title: String(sp.title || ''), src: imgSrc(sp.image) }));
             return {
               id: uniqueId(areaIds, a.name || 'area'),
               name: String(a.name || 'Área'),
+              blocks: (a.blocks || []).map(normalizeBlock),
               note: panel.showNotes ? (String(a.note || '') || defaultNote(String(a.name || 'esta área'))) : '',
               checklist: all,                                          // el checklist incluye todos los espacios visibles
               spaces: panel.showEmpty ? all : all.filter((sp) => sp.src), // el panel puede ocultar los pendientes
@@ -974,22 +1179,31 @@ function renderFormat(f, zone, area) {
     box.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong>Vuelve más tarde.</div>';
     return;
   }
+  const notes = (list, pos) => {
+    const items = list.filter((b) => b.pos === pos);
+    return items.length ? `<div class="blocks">${items.map(blockHtml).join('')}</div>` : '';
+  };
+  const zoneSub = zone.areas.length ? 'Selecciona un área para consultar su señalización.' : zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
   box.innerHTML = `
     <h2 class="zone-title">${esc(zone.name)}</h2>
-    <p class="zone-sub">${zone.areas.length ? 'Selecciona un área para consultar su señalización.' : 'Aún no hay áreas en esta sección.'}</p>
-    <div class="areas">${zone.areas.map((a) =>
-      `<a class="area${area && a.id === area.id ? ' active' : ''}" href="${link(f.id, zone.id, a.id)}">${esc(a.name)}</a>`).join('')}</div>
+    ${notes(zone.blocks, 'top')}
+    ${zoneSub ? `<p class="zone-sub">${zoneSub}</p>` : ''}
+    ${zone.areas.length ? `<div class="areas">${zone.areas.map((a) =>
+      `<a class="area${area && a.id === area.id ? ' active' : ''}" href="${link(f.id, zone.id, a.id)}">${esc(a.name)}</a>`).join('')}</div>` : ''}
+    ${notes(zone.blocks, 'bottom')}
     ${area ? `<div id="areaDetail" class="area-detail">
       <hr>
       <h3 class="area-title">${esc(area.name)}</h3>
-      <p class="area-note">${esc(area.note)}</p>
+      ${area.note ? `<p class="area-note">${esc(area.note)}</p>` : ''}
+      ${notes(area.blocks, 'top')}
       <div class="spaces"></div>
+      ${notes(area.blocks, 'bottom')}
     </div>` : ''}`;
 
   if (!area) return;
   const grid = box.querySelector('.spaces');
   if (!area.spaces.length) {
-    grid.outerHTML = '<p class="zone-sub">Esta área aún no tiene señalización registrada.</p>';
+    grid.outerHTML = area.blocks.length ? '' : '<p class="zone-sub">Esta área aún no tiene señalización registrada.</p>';
     return;
   }
   for (const sp of area.spaces) {

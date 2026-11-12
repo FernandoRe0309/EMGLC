@@ -78,6 +78,7 @@ Más cosas:
   - **Botones**: qué botones tiene la barra del formato (*Cambiar formato*, *Descarga Checklist*), su texto y orden; agregar botones propios con enlace (por ejemplo a un PDF) o quitarlos.
   - **Secciones**: mostrar u ocultar la foto de portada, el texto azul de cada área y los espacios sin foto.
   - **Zonas y áreas**: agregar, quitar, renombrar, reordenar y ocultar sin borrar.
+- **Notas** en cada zona y cada área (**+ Agregar nota**): *Importante* rojo o amarillo, recuadro azul con lista (por ejemplo "Retira toda señalización…"), aviso azul claro, nota gris (por ejemplo "La imagen mostrada puede variar…"), texto con botón y solo botón (con enlace a un PDF, archivo o página). Cada nota va arriba o abajo del contenido, y se puede editar, mover o eliminar. La zona Protección Civil empieza con dos notas de ejemplo.
 - Botones **Visible / Oculta** en cada zona y área, y 👁 en cada espacio, para ocultarlos del manual sin borrarlos. Lo oculto se ve atenuado en el administrador.
 - **+ Formato** agrega uno. **✎ Página de inicio**: foto de portada de la página de inicio (opcional) y los textos de los avisos.
 - **Más → Colocar por carpeta**: coloca las fotos sin usar en el área cuyo nombre coincide con su carpeta; si el área ya tiene un espacio vacío con el mismo nombre que la foto, la pone ahí.
@@ -93,6 +94,7 @@ El código fuente está separado para poder editarlo con calma:
 | `index.html`, `viewer.css`, `viewer.js` | Panel de lectura |
 | `admin/index.html`, `admin/styles.css`, `admin/admin.js` | Panel de administrador |
 | `sharepoint.js` | Conexión con la carpeta de SharePoint (API REST del sitio) |
+| `blocks.js`, `blocks.css` | Notas (bloques de contenido); las usan los dos paneles |
 
 Después de cualquier cambio, genera los dos HTML finales:
 

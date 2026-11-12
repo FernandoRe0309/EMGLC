@@ -105,11 +105,13 @@ function normalize(raw) {
         return {
           id: uniqueId(zoneIds, z.name || 'zona'),
           name: String(z.name || 'Zona'),
+          blocks: (z.blocks || []).map(normalizeBlock),
           areas: (z.areas || []).filter((a) => !a.hidden).map((a) => {
             const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => ({ title: String(sp.title || ''), src: imgSrc(sp.image) }));
             return {
               id: uniqueId(areaIds, a.name || 'area'),
               name: String(a.name || 'Área'),
+              blocks: (a.blocks || []).map(normalizeBlock),
               note: panel.showNotes ? (String(a.note || '') || defaultNote(String(a.name || 'esta área'))) : '',
               checklist: all,                                          // el checklist incluye todos los espacios visibles
               spaces: panel.showEmpty ? all : all.filter((sp) => sp.src), // el panel puede ocultar los pendientes
@@ -238,22 +240,31 @@ function renderFormat(f, zone, area) {
     box.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong>Vuelve más tarde.</div>';
     return;
   }
+  const notes = (list, pos) => {
+    const items = list.filter((b) => b.pos === pos);
+    return items.length ? `<div class="blocks">${items.map(blockHtml).join('')}</div>` : '';
+  };
+  const zoneSub = zone.areas.length ? 'Selecciona un área para consultar su señalización.' : zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
   box.innerHTML = `
     <h2 class="zone-title">${esc(zone.name)}</h2>
-    <p class="zone-sub">${zone.areas.length ? 'Selecciona un área para consultar su señalización.' : 'Aún no hay áreas en esta sección.'}</p>
-    <div class="areas">${zone.areas.map((a) =>
-      `<a class="area${area && a.id === area.id ? ' active' : ''}" href="${link(f.id, zone.id, a.id)}">${esc(a.name)}</a>`).join('')}</div>
+    ${notes(zone.blocks, 'top')}
+    ${zoneSub ? `<p class="zone-sub">${zoneSub}</p>` : ''}
+    ${zone.areas.length ? `<div class="areas">${zone.areas.map((a) =>
+      `<a class="area${area && a.id === area.id ? ' active' : ''}" href="${link(f.id, zone.id, a.id)}">${esc(a.name)}</a>`).join('')}</div>` : ''}
+    ${notes(zone.blocks, 'bottom')}
     ${area ? `<div id="areaDetail" class="area-detail">
       <hr>
       <h3 class="area-title">${esc(area.name)}</h3>
-      <p class="area-note">${esc(area.note)}</p>
+      ${area.note ? `<p class="area-note">${esc(area.note)}</p>` : ''}
+      ${notes(area.blocks, 'top')}
       <div class="spaces"></div>
+      ${notes(area.blocks, 'bottom')}
     </div>` : ''}`;
 
   if (!area) return;
   const grid = box.querySelector('.spaces');
   if (!area.spaces.length) {
-    grid.outerHTML = '<p class="zone-sub">Esta área aún no tiene señalización registrada.</p>';
+    grid.outerHTML = area.blocks.length ? '' : '<p class="zone-sub">Esta área aún no tiene señalización registrada.</p>';
     return;
   }
   for (const sp of area.spaces) {

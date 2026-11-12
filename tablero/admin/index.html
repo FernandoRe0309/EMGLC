@@ -7,6 +7,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="../blocks.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -163,6 +164,34 @@
   </form>
 </dialog>
 
+<dialog id="blockDlg" class="settings block-editor">
+  <form method="dialog" class="settings-inner" id="blockForm">
+    <h3 id="blockDlgTitle">Nota</h3>
+    <div class="be-grid">
+      <div class="be-fields">
+        <label>Tipo de nota<select id="blkType"></select></label>
+        <label>Ubicación<select id="blkPos"></select></label>
+        <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
+        <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
+        <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
+        <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
+        <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
+        <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
+      </div>
+      <div class="be-preview-col">
+        <p class="muted small">Vista previa</p>
+        <div id="blkPreview" class="blk-preview"></div>
+      </div>
+    </div>
+    <div class="settings-actions">
+      <button type="button" id="blkDelete" class="btn danger">Eliminar nota</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="introDlg" class="settings">
   <form method="dialog" class="settings-inner" id="introForm">
     <h3>Página de inicio</h3>
@@ -186,6 +215,7 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="../sharepoint.js"></script>
+<script src="../blocks.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>
