@@ -23,12 +23,10 @@ const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
 const DB_NAME = 'tablero-senalizacion';
 const DB_VERSION = 1;
 
-// Publicación: el panel de lectura lee data/tablero.json y data/img/<sha1>.<ext>
-const PUB_DIR = 'data';
-const PUB_JSON = `${PUB_DIR}/tablero.json`;
+// Publicación en SharePoint: <carpeta>/<Formato>/<Área>/<foto>.jpg + tablero.json
 const MAX_SIDE = 2000;      // px del lado mayor tras optimizar
 const JPEG_QUALITY = 0.85;
-const CFG_KEY = 'tablero-senalizacion:github';
+const SCOPES = ['Files.ReadWrite.All'];
 
 /* ---------- Utilidades ---------- */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -132,8 +130,8 @@ function newSections() {
   return DEFAULT_SECTIONS.map((name) => ({ id: uid(), name, collapsed: false, cards: [] }));
 }
 
-function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', logo = null, sections } = {}) {
-  return { id: uid(), name, subtitle, color, logo, sections: sections || newSections() };
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', sections } = {}) {
+  return { id: uid(), name, subtitle, color, sections: sections || newSections() };
 }
 
 function defaultState() {
@@ -385,12 +383,11 @@ function renderFormatTabs() {
   const el = $('#formatTabs');
   el.innerHTML = state.formats.map((f) => {
     const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
-    const logo = f.logo && images.get(f.logo);
     return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
-      <span class="ftab-mark">${logo ? `<img alt="" src="${urlFor(logo)}">` : escapeHtml(f.name.slice(0, 3))}</span>
+      <span class="ftab-mark">${escapeHtml(f.name.slice(0, 3))}</span>
       <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${n} ${n === 1 ? 'tarjeta' : 'tarjetas'}</small></span>
     </button>`;
-  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Editar nombre, color y logo de ${escapeHtml(board.name)}">⚙ Editar formato</button>
+  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Editar nombre, subtítulo y color de ${escapeHtml(board.name)}">⚙ Editar formato</button>
     <button type="button" class="ftab-tool" data-format-action="add" title="Agregar un formato">+ Formato</button>
     <button type="button" class="ftab-tool" data-format-action="intro" title="Editar los textos de la portada">✎ Textos de portada</button>`;
 }
@@ -798,7 +795,7 @@ function saveJson() {
     version: 2,
     savedAt: new Date().toISOString(),
     intro: state.intro,
-    formats: state.formats.map((f) => ({ name: f.name, subtitle: f.subtitle, color: f.color, logoPath: f.logo, sections: sectionsToJson(f.sections) })),
+    formats: state.formats.map((f) => ({ name: f.name, subtitle: f.subtitle, color: f.color, sections: sectionsToJson(f.sections) })),
   };
   const stamp = new Date().toISOString().slice(0, 10);
   download(`tablero-senalizacion-${stamp}.json`, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -813,7 +810,7 @@ async function openJson(file) {
     state.intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
     state.formats = data.formats.map((f) => newFormat({
       name: String(f.name || 'Formato'), subtitle: String(f.subtitle || ''), color: String(f.color || '#1f4fd6'),
-      logo: f.logoPath ? String(f.logoPath) : null, sections: sectionsFromJson(f.sections),
+      sections: sectionsFromJson(f.sections),
     }));
     if (!state.formats.length) state.formats = defaultState().formats;
     setActiveFormat(state.formats[0].id);
@@ -829,98 +826,43 @@ async function openJson(file) {
   toast(missing ? `Tablero abierto. ${missing} imágenes faltan en la biblioteca: carga la carpeta para verlas.` : 'Tablero abierto.', 4500);
 }
 
-/* ---------- Publicación en GitHub ---------- */
-function getConfig() {
-  let cfg = {};
-  try { cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch { /* sin almacenamiento */ }
-  // En <org>.github.io/<repo>/ se puede deducir la organización y el repositorio.
-  const host = location.hostname;
-  if (!cfg.owner && /\.github\.io$/i.test(host) && !/\.pages\.github\.io$/i.test(host)) {
-    cfg.owner = host.split('.')[0];
-    const first = location.pathname.split('/').filter(Boolean)[0];
-    cfg.repo = first && !/\.html?$/i.test(first) ? first : `${cfg.owner}.github.io`;
-  }
-  return { owner: '', repo: '', branch: 'main', token: '', ...cfg };
+/* ---------- Publicación en SharePoint ---------- */
+let spReady = false;   // SP.init terminó
+let publishing = false;
+
+function configProblem() {
+  const m = SP.missingConfig();
+  return m.length ? `Falta configurar en config.js: ${m.join(', ')}.` : null;
 }
 
-function setConfig(cfg) {
-  try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); return true; } catch { return false; }
+function renderAccount() {
+  const btn = $('#authBtn');
+  const acc = spReady ? SP.currentAccount() : null;
+  btn.textContent = acc ? (acc.name || acc.username) : 'Iniciar sesión';
+  btn.title = acc ? `Sesión iniciada como ${acc.username}. Clic para ver la conexión.` : 'Inicia sesión con tu cuenta de la empresa';
+  btn.classList.toggle('signed', !!acc);
 }
 
-class GhError extends Error {
-  constructor(status, message, retryAfter) { super(message); this.status = status; this.retryAfter = retryAfter; }
-}
-
-function ghErrorText(e) {
-  if (!(e instanceof GhError)) return 'No se pudo conectar con GitHub. Revisa tu conexión a internet.';
-  const m = e.message || '';
-  if (e.status === 401) return 'El token no es válido o ya expiró.';
-  if (e.status === 403 && /SAML|SSO/i.test(m)) return 'La organización usa SSO: autoriza el token para la organización en GitHub (Settings → Tokens → Configure SSO).';
-  if (e.status === 403) return `GitHub rechazó la operación: ${m || 'sin permiso'}. Revisa que el token tenga "Contents: Read and write" en este repositorio y que la organización lo haya aprobado.`;
-  if (e.status === 404) return 'No se encontró el repositorio o la rama, o el token no tiene acceso a ellos.';
-  if (e.status === 409) return 'El repositorio está vacío. Sube primero los archivos de la app.';
-  if (e.status === 422) return `GitHub no aceptó el cambio: ${m}. Intenta publicar de nuevo.`;
-  return `Error de GitHub (${e.status}): ${m}`;
-}
-
-async function gh(cfg, path, { method = 'GET', body } = {}) {
-  for (let attempt = 0; ; attempt++) {
-    const r = await fetch(`https://api.github.com${path}`, {
-      method,
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${cfg.token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-      cache: 'no-store',
-    });
-    if (r.ok) return r.status === 204 ? null : r.json();
-    const data = await r.json().catch(() => ({}));
-    const msg = data.message || r.statusText;
-    // Límite secundario de GitHub para creación de contenido: esperar y reintentar.
-    const limited = r.status === 429 || (r.status === 403 && /rate limit/i.test(msg));
-    if (limited && attempt < 6) {
-      const wait = Number(r.headers.get('retry-after')) || 60;
-      await countdown(wait, 'GitHub pidió esperar por exceso de solicitudes');
-      continue;
-    }
-    throw new GhError(r.status, msg);
+async function signInFromClick() {
+  const problem = configProblem();
+  if (problem) { openConnection(); return false; }
+  if (!spReady) { toast('Conectando con Microsoft, intenta en un momento.'); return false; }
+  if (SP.currentAccount()) return true;
+  try {
+    await SP.signIn();
+    renderAccount();
+    return true;
+  } catch (e) {
+    console.error(e);
+    toast(SP.errorText(e), 7000);
+    return false;
   }
 }
 
-async function countdown(seconds, label) {
-  for (let s = seconds; s > 0; s--) {
-    setPublishProgress(`${label}… ${s} s`);
-    await new Promise((res) => setTimeout(res, 1000));
-  }
-}
-
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-
-function repoPath(cfg) { return `/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`; }
-function refPath(cfg) { return cfg.branch.split('/').map(encodeURIComponent).join('/'); }
-
-async function optimizeImage(blob, { keepAlpha = false } = {}) {
+async function optimizeImage(blob) {
   let bmp;
   try { bmp = await createImageBitmap(blob); } catch { bmp = null; }
-  if (!bmp) {
-    // Formato que el navegador no puede redibujar (p. ej. SVG): se publica tal cual.
-    const ext = (blob.type.split('/')[1] || 'bin').replace('jpeg', 'jpg').replace('svg+xml', 'svg');
-    return { blob, ext };
-  }
-  if (keepAlpha && blob.type !== 'image/jpeg') {
-    // Logos: conservar la transparencia (PNG) y limitar a 600 px.
-    const k = Math.min(1, 600 / Math.max(bmp.width, bmp.height));
-    if (k === 1 && blob.type === 'image/png') { bmp.close?.(); return { blob, ext: 'png' }; }
-    const c = document.createElement('canvas');
-    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-    bmp.close?.();
-    const png = await new Promise((res) => c.toBlob(res, 'image/png'));
-    return { blob: png || blob, ext: 'png' };
-  }
+  if (!bmp) return { blob, ext: (blob.type.split('/')[1] || 'bin').replace('jpeg', 'jpg').replace('svg+xml', 'svg') };
   const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
   if (scale === 1 && blob.type === 'image/jpeg' && blob.size < 700 * 1024) { bmp.close?.(); return { blob, ext: 'jpg' }; }
   const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
@@ -938,12 +880,10 @@ async function optimizeImage(blob, { keepAlpha = false } = {}) {
   return { blob: out, ext: 'jpg' };
 }
 
-async function blobToBase64(blob) {
-  const url = await blobToDataURL(blob);
-  return url.slice(url.indexOf(',') + 1);
+function expectedExt(img) {
+  if (img.published) return img.ext || 'jpg';
+  return /svg/.test(img.blob.type || '') ? 'svg' : 'jpg';
 }
-
-let publishing = false;
 
 function setPublishProgress(text) {
   const el = $('#publishState');
@@ -954,7 +894,7 @@ function setPublishProgress(text) {
 function renderPublishState() {
   if (publishing) return;
   const el = $('#publishState');
-  if (!el) return;
+  if (!el || !state) return;
   if (state.dirty) {
     el.className = 'publish-state dirty';
     el.textContent = 'Cambios sin publicar';
@@ -967,121 +907,138 @@ function renderPublishState() {
   }
 }
 
+// Arma la estructura de carpetas: <Formato>/<Área>/<foto>.<ext>, solo donde hay fotos colocadas.
+async function buildPlan() {
+  const files = new Map();   // ruta -> img
+  const folders = new Set(); // rutas de carpeta de área usadas
+  const fmtNames = new Set();
+  const formats = [];
+  for (const f of state.formats) {
+    let fname = SP.safeName(f.name) || 'Formato';
+    while (fmtNames.has(fname.toLowerCase())) fname += ' (2)';
+    fmtNames.add(fname.toLowerCase());
+    const secNames = new Set();
+    const sections = [];
+    for (const s of f.sections) {
+      let sname = SP.safeName(s.name) || 'Área';
+      while (secNames.has(sname.toLowerCase())) sname += ' (2)';
+      secNames.add(sname.toLowerCase());
+      const folder = `${fname}/${sname}`;
+      const used = new Set();
+      const cards = [];
+      for (const c of s.cards) {
+        const img = images.get(c.imageId);
+        if (!img) continue;
+        if (!img.hash) img.hash = await sha1(img.blob);
+        const base = SP.safeName(titleFromName(img.name)) || 'foto';
+        const ext = expectedExt(img);
+        let name = `${base}.${ext}`;
+        for (let k = 2; used.has(name.toLowerCase()); k++) name = `${base} (${k}).${ext}`;
+        used.add(name.toLowerCase());
+        const file = `${folder}/${name}`;
+        files.set(file, img);
+        cards.push({ title: c.title, path: c.imageId, hash: img.hash, file });
+      }
+      if (cards.length) folders.add(folder);
+      sections.push({ name: s.name, folder: cards.length ? folder : null, cards });
+    }
+    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, folder: fname, sections });
+  }
+  return { files, folders, formats };
+}
+
 async function publish() {
   if (publishing) return;
-  const cfg = getConfig();
-  if (!cfg.owner || !cfg.repo || !cfg.branch || !cfg.token) { openSettings('Configura el repositorio y el token antes de publicar.'); return; }
+  if (!(await signInFromClick())) return;
 
-  const logoIds = new Set(state.formats.map((f) => f.logo).filter((id) => id && images.has(id)));
-  const usedIds = [...new Set([...allCards().map((c) => c.imageId), ...logoIds])];
-  const missing = usedIds.filter((id) => !images.has(id));
-  const present = usedIds.filter((id) => images.has(id));
-  if (missing.length && !confirm(`${missing.length} tarjetas no tienen su imagen en la biblioteca y se publicarán sin ella. ¿Continuar?`)) return;
-  if (!confirm(`Se publicarán ${state.formats.length} formatos con ${present.length} imágenes en ${cfg.owner}/${cfg.repo} (rama ${cfg.branch}). Todos los que abran el panel de lectura verán estos cambios. ¿Publicar?`)) return;
+  const missing = allCards().filter((c) => !images.has(c.imageId)).length;
+  if (missing && !confirm(`${missing} tarjetas no tienen su imagen en la biblioteca y no se publicarán. ¿Continuar?`)) return;
+  if (!confirm(`Se publicarán los ${state.formats.length} formatos en la carpeta de SharePoint. Todos los que abran el panel de lectura verán estos cambios. ¿Publicar?`)) return;
 
   publishing = true;
   const btn = $('#publishBtn');
   btn.disabled = true;
   try {
-    const base = repoPath(cfg);
-    setPublishProgress('Conectando con GitHub…');
-    const ref = await gh(cfg, `${base}/git/ref/heads/${refPath(cfg)}`);
-    const headSha = ref.object.sha;
-    const head = await gh(cfg, `${base}/git/commits/${headSha}`);
-    const tree = await gh(cfg, `${base}/git/trees/${head.tree.sha}?recursive=1`);
-
-    // Imágenes ya publicadas: data/img/<sha1>.<ext>
-    const existing = new Map();
-    for (const t of tree.tree) {
-      if (t.type !== 'blob' || !t.path.startsWith(`${PUB_DIR}/img/`)) continue;
-      const file = t.path.slice(PUB_DIR.length + 5);
-      existing.set(file.replace(/\.[^.]+$/, ''), t.path);
-    }
-
-    const entries = [];
-    const keep = new Set();
-    const srcById = new Map();
-    let uploaded = 0, lastUpload = 0;
-    for (let i = 0; i < present.length; i++) {
-      const img = images.get(present[i]);
-      if (!img.hash) img.hash = await sha1(img.blob);
-      let path = existing.get(img.hash);
-      if (!path) {
-        setPublishProgress(`Optimizando y subiendo ${i + 1} de ${present.length}…`);
-        const { blob, ext } = img.published ? { blob: img.blob, ext: img.ext || 'jpg' } : await optimizeImage(img.blob, { keepAlpha: logoIds.has(img.id) });
-        // Espaciar las subidas para no chocar con el límite de GitHub (~80 por minuto).
-        const wait = 800 - (Date.now() - lastUpload);
-        if (wait > 0) await sleep(wait);
-        lastUpload = Date.now();
-        const created = await gh(cfg, `${base}/git/blobs`, { method: 'POST', body: { content: await blobToBase64(blob), encoding: 'base64' } });
-        path = `${PUB_DIR}/img/${img.hash}.${ext}`;
-        entries.push({ path, mode: '100644', type: 'blob', sha: created.sha });
-        existing.set(img.hash, path);
-        uploaded++;
+    setPublishProgress('Conectando con SharePoint…');
+    await SP.resolveRoot();
+    const prev = await SP.readJson();
+    const prevFiles = new Map();
+    const prevFolders = new Set();
+    const prevFormatFolders = new Set();
+    for (const f of (prev && prev.formats) || []) {
+      if (f.folder) prevFormatFolders.add(f.folder);
+      for (const s of f.sections || []) {
+        if (s.folder) prevFolders.add(s.folder);
+        for (const c of s.cards || []) if (c.file) prevFiles.set(c.file, c.hash);
       }
-      keep.add(path);
-      srcById.set(img.id, path.slice(PUB_DIR.length + 1));
     }
 
-    // Quitar del repositorio las imágenes que ya no se usan.
+    setPublishProgress('Preparando…');
+    const plan = await buildPlan();
+    const uploads = [...plan.files].filter(([file, img]) => prevFiles.get(file) !== img.hash);
+
+    // Subir fotos nuevas o cambiadas (3 a la vez).
+    let done = 0;
+    const queue = uploads.slice();
+    const worker = async () => {
+      while (queue.length) {
+        const [file, img] = queue.shift();
+        const { blob } = img.published ? { blob: img.blob } : await optimizeImage(img.blob);
+        await SP.upload(file, blob, blob.type || 'image/jpeg');
+        setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+
+    // Borrar fotos que ya no están en el tablero (solo las que publicó esta app).
     let removed = 0;
-    for (const t of tree.tree) {
-      if (t.type === 'blob' && t.path.startsWith(`${PUB_DIR}/img/`) && !keep.has(t.path)) {
-        entries.push({ path: t.path, mode: '100644', type: 'blob', sha: null });
-        removed++;
-      }
+    const stale = [...prevFiles.keys()].filter((f) => !plan.files.has(f));
+    for (const file of stale) {
+      setPublishProgress(`Retirando fotos ${++removed} de ${stale.length}…`);
+      await SP.remove(file);
     }
 
+    // Guardar la distribución.
     const updatedAt = new Date().toISOString();
-    const usedSlugs = new Set();
+    const acc = SP.currentAccount();
     const data = {
       app: 'tablero-senalizacion',
-      version: 2,
+      version: 3,
       updatedAt,
+      updatedBy: acc ? (acc.name || acc.username) : null,
       intro: state.intro,
-      formats: state.formats.map((f) => {
-        let slug = norm(f.name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'formato';
-        while (usedSlugs.has(slug)) slug += '-2';
-        usedSlugs.add(slug);
-        return {
-          id: slug,
-          name: f.name,
-          subtitle: f.subtitle,
-          color: f.color,
-          logo: f.logo && srcById.has(f.logo) ? srcById.get(f.logo) : null,
-          logoPath: f.logo && srcById.has(f.logo) ? f.logo : null,
-          sections: f.sections.map((s) => ({
-            name: s.name,
-            cards: s.cards.filter((c) => srcById.has(c.imageId)).map((c) => ({ title: c.title, path: c.imageId, src: srcById.get(c.imageId) })),
-          })),
-        };
-      }),
+      formats: plan.formats,
     };
-    entries.push({ path: PUB_JSON, mode: '100644', type: 'blob', content: JSON.stringify(data, null, 2) + '\n' });
+    setPublishProgress('Guardando tablero.json…');
+    await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'application/json');
 
-    setPublishProgress('Guardando cambios en el repositorio…');
-    const newTree = await gh(cfg, `${base}/git/trees`, { method: 'POST', body: { base_tree: head.tree.sha, tree: entries } });
-    const cardCount = data.formats.reduce((n, f) => n + f.sections.reduce((k, s) => k + s.cards.length, 0), 0);
-    const commitObj = await gh(cfg, `${base}/git/commits`, {
-      method: 'POST',
-      body: { message: `Actualizar tablero de señalización (${cardCount} tarjetas)`, tree: newTree.sha, parents: [headSha] },
-    });
-    await gh(cfg, `${base}/git/refs/heads/${refPath(cfg)}`, { method: 'PATCH', body: { sha: commitObj.sha } });
+    // Quitar carpetas que quedaron vacías.
+    const usedFormatFolders = new Set(plan.formats.filter((f) => f.sections.some((s) => s.folder)).map((f) => f.folder));
+    for (const folder of prevFolders) {
+      if (plan.folders.has(folder)) continue;
+      const children = await SP.list(folder);
+      if (!children.size) await SP.remove(folder);
+    }
+    for (const folder of prevFormatFolders) {
+      if (usedFormatFolders.has(folder)) continue;
+      const children = await SP.list(folder);
+      if (!children.size) await SP.remove(folder);
+    }
 
-    for (const [id, src] of srcById) {
-      const img = images.get(id);
-      if (img) img.publishedSrc = src;
+    for (const [, img] of plan.files) {
+      if (img.published) continue;
+      img.publishedHash = img.hash;
     }
     state.dirty = false;
     state.publishedAt = updatedAt;
     publishing = false;
     saveBoard({ dirty: false });
-    toast(`Publicado: ${uploaded} imágenes nuevas${removed ? `, ${removed} retiradas` : ''}. El panel de lectura se actualiza en 1–2 minutos.`, 6000);
+    const fotos = (n) => `${n} ${n === 1 ? 'foto' : 'fotos'}`;
+    toast(`Publicado: ${fotos(uploads.length)} ${uploads.length === 1 ? 'subida' : 'subidas'}${stale.length ? `, ${fotos(stale.length)} ${stale.length === 1 ? 'retirada' : 'retiradas'}` : ''}.`, 6000);
   } catch (e) {
     console.error(e);
     publishing = false;
-    renderPublishState();
-    toast('No se publicó. ' + ghErrorText(e), 8000);
+    toast('No se publicó. ' + SP.errorText(e), 8000);
   } finally {
     publishing = false;
     btn.disabled = false;
@@ -1091,49 +1048,49 @@ async function publish() {
 
 /* ---------- Cargar lo publicado ---------- */
 async function fetchPublished() {
-  const r = await fetch(`${PUB_JSON}?t=${Date.now()}`, { cache: 'no-store' });
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const data = await r.json();
-  if (data && Array.isArray(data.formats)) return data;
-  // Versión 1: un solo tablero sin formatos.
-  if (data && Array.isArray(data.sections)) return { ...data, formats: [{ ...DEFAULT_FORMATS[0], sections: data.sections }] };
-  return null;
+  const data = await SP.readJson();
+  return data && Array.isArray(data.formats) ? data : null;
 }
 
 async function loadPublished(data) {
-  const cards = data.formats.flatMap((f) => [
-    ...(Array.isArray(f.sections) ? f.sections : []).flatMap((s) => (Array.isArray(s.cards) ? s.cards : [])),
-    ...(f.logo && f.logoPath ? [{ src: f.logo, path: f.logoPath }] : []),
-  ]).filter((c) => c && c.path && c.src);
-  const toFetch = new Map();
-  for (const c of cards) {
-    const hash = String(c.src).split('/').pop().replace(/\.[^.]+$/, '');
-    const local = images.get(c.path);
-    if (!local || local.hash !== hash) toFetch.set(c.path, { src: c.src, hash });
-  }
+  const cards = data.formats.flatMap((f) => (f.sections || []).flatMap((s) => s.cards || [])).filter((c) => c && c.path && c.file);
+  const need = cards.filter((c) => { const local = images.get(c.path); return !local || local.hash !== c.hash; });
 
+  // Agrupar por carpeta para pedir los enlaces de descarga de una sola vez.
+  const byFolder = new Map();
+  for (const c of need) {
+    const folder = c.file.slice(0, c.file.lastIndexOf('/'));
+    if (!byFolder.has(folder)) byFolder.set(folder, []);
+    byFolder.get(folder).push(c);
+  }
   let done = 0;
   const fetched = [];
-  for (const [path, { src, hash }] of toFetch) {
-    toast(`Descargando imágenes publicadas… ${++done}/${toFetch.size}`, 60000);
-    try {
-      const r = await fetch(`${PUB_DIR}/${src}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const blob = await r.blob();
-      const cut = path.lastIndexOf('/');
-      const prev = images.get(path);
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      const rec = {
-        id: path, path,
-        folder: cut === -1 ? '' : path.slice(0, cut),
-        name: cut === -1 ? path : path.slice(cut + 1),
-        blob, hash, published: true, ext: src.split('.').pop(),
-      };
-      images.set(path, { ...rec, url: null });
-      fetched.push(rec);
-    } catch (e) {
-      console.warn('No se pudo descargar', src, e);
+  for (const [folder, list] of byFolder) {
+    let entries;
+    try { entries = await SP.list(folder); } catch (e) { console.warn(e); continue; }
+    for (const c of list) {
+      toast(`Descargando fotos publicadas… ${++done}/${need.length}`, 60000);
+      const name = c.file.slice(c.file.lastIndexOf('/') + 1);
+      const entry = entries.get(name);
+      if (!entry || !entry.downloadUrl || images.get(c.path)?.hash === c.hash) continue;
+      try {
+        const r = await fetch(entry.downloadUrl);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const blob = await r.blob();
+        const cut = c.path.lastIndexOf('/');
+        const prevImg = images.get(c.path);
+        if (prevImg?.url) URL.revokeObjectURL(prevImg.url);
+        const rec = {
+          id: c.path, path: c.path,
+          folder: cut === -1 ? '' : c.path.slice(0, cut),
+          name: cut === -1 ? c.path : c.path.slice(cut + 1),
+          blob, hash: c.hash, published: true, ext: name.split('.').pop(),
+        };
+        images.set(c.path, { ...rec, url: null });
+        fetched.push(rec);
+      } catch (e) {
+        console.warn('No se pudo descargar', c.file, e);
+      }
     }
   }
   if (fetched.length) await idb('images', 'readwrite', (s) => { fetched.forEach((r) => s.put(r)); }).catch(console.error);
@@ -1147,7 +1104,6 @@ async function loadPublished(data) {
       name: String(f.name || 'Formato'),
       subtitle: String(f.subtitle || ''),
       color: String(f.color || '#1f4fd6'),
-      logo: f.logoPath ? String(f.logoPath) : null,
       sections: sectionsFromJson(f.sections),
     })),
   };
@@ -1159,6 +1115,7 @@ async function loadPublished(data) {
 }
 
 async function loadPublishedAction() {
+  if (!(await signInFromClick())) return;
   if (state.dirty && !confirm('Tienes cambios sin publicar. Se descartarán y se cargará la versión publicada. ¿Continuar?')) return;
   try {
     const data = await fetchPublished();
@@ -1166,65 +1123,63 @@ async function loadPublishedAction() {
     await loadPublished(data);
   } catch (e) {
     console.error(e);
-    toast('No se pudo leer la versión publicada.');
+    toast('No se pudo leer la versión publicada. ' + SP.errorText(e), 7000);
   }
 }
 
-/* ---------- Configuración ---------- */
-function openSettings(message) {
-  const cfg = getConfig();
-  $('#cfgOwner').value = cfg.owner;
-  $('#cfgRepo').value = cfg.repo;
-  $('#cfgBranch').value = cfg.branch || 'main';
-  $('#cfgToken').value = cfg.token;
-  const res = $('#cfgResult');
-  res.className = 'cfg-result';
-  res.textContent = message || '';
-  $('#settings').showModal();
+// Al iniciar o al iniciar sesión: traer lo publicado si no hay cambios locales pendientes.
+async function syncWithPublished() {
+  let published = null;
+  try { published = await fetchPublished(); } catch (e) { console.warn(e); toast(SP.errorText(e), 7000); return; }
+  if (!published) return;
+  if (!state.dirty && published.updatedAt !== state.publishedAt) { await loadPublished(published); return; }
+  if (state.dirty && state.publishedAt && published.updatedAt > state.publishedAt) {
+    toast('Hay una versión publicada más reciente que tus cambios locales. Usa Más → Cargar lo publicado si quieres verla.', 7000);
+  }
 }
 
-function readSettingsForm() {
-  return {
-    owner: $('#cfgOwner').value.trim(),
-    repo: $('#cfgRepo').value.trim(),
-    branch: $('#cfgBranch').value.trim() || 'main',
-    token: $('#cfgToken').value.trim(),
-  };
+/* ---------- Conexión ---------- */
+function openConnection() {
+  const problem = configProblem();
+  $('#connFolder').textContent = SP.config.sharepointFolderUrl || '(sin configurar)';
+  const acc = spReady ? SP.currentAccount() : null;
+  $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : 'Sin iniciar sesión';
+  const res = $('#connResult');
+  res.className = 'cfg-result' + (problem ? ' err' : '');
+  res.textContent = problem || '';
+  $('#connTest').disabled = !!problem;
+  $('#connSignOut').hidden = !acc;
+  $('#connection').showModal();
 }
 
-function setupSettings() {
-  const dlg = $('#settings');
-  const res = $('#cfgResult');
-  $('#settingsForm').addEventListener('submit', (e) => {
-    if (e.submitter && e.submitter.value === 'cancel') return;
-    if (!setConfig(readSettingsForm())) toast('Este navegador no permite guardar la configuración.');
-    else toast('Configuración guardada.');
-  });
-  $('#cfgTest').addEventListener('click', async () => {
-    const cfg = readSettingsForm();
-    if (!cfg.owner || !cfg.repo || !cfg.token) { res.className = 'cfg-result err'; res.textContent = 'Completa organización, repositorio y token.'; return; }
+function setupConnection() {
+  const dlg = $('#connection');
+  const res = $('#connResult');
+  $('#connTest').addEventListener('click', async () => {
+    if (!(await signInFromClick())) return;
     res.className = 'cfg-result'; res.textContent = 'Probando…';
     try {
-      const repo = await gh(cfg, repoPath(cfg));
-      await gh(cfg, `${repoPath(cfg)}/git/ref/heads/${refPath(cfg)}`);
-      if (repo.permissions && !repo.permissions.push) {
-        res.className = 'cfg-result err';
-        res.textContent = 'El token puede leer el repositorio pero no escribir en él.';
-      } else {
-        res.className = 'cfg-result ok';
-        res.textContent = `Conexión correcta con ${repo.full_name} (rama ${cfg.branch}).`;
-      }
+      const r = await SP.resolveRoot();
+      res.className = 'cfg-result ok';
+      res.textContent = `Conexión correcta con la carpeta "${r.name}".`;
+      const acc = SP.currentAccount();
+      $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : '';
+      $('#connSignOut').hidden = !acc;
     } catch (e) {
+      console.error(e);
       res.className = 'cfg-result err';
-      res.textContent = ghErrorText(e);
+      res.textContent = SP.errorText(e);
     }
   });
-  $('#cfgForget').addEventListener('click', () => {
-    const cfg = { ...getConfig(), token: '' };
-    setConfig(cfg);
-    $('#cfgToken').value = '';
-    res.className = 'cfg-result ok';
-    res.textContent = 'Token borrado de este navegador.';
+  $('#connSignOut').addEventListener('click', async () => {
+    await SP.signOut();
+    renderAccount();
+    dlg.close();
+    toast('Sesión cerrada.');
+  });
+  $('#authBtn').addEventListener('click', async () => {
+    if (spReady && SP.currentAccount()) { openConnection(); return; }
+    if (await signInFromClick()) await syncWithPublished();
   });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
@@ -1232,22 +1187,11 @@ function setupSettings() {
 /* ---------- Formatos y portada ---------- */
 let editingFormatId = null; // id del formato en edición, o null si es nuevo
 
-function logoOptions(selected) {
-  const list = [...images.values()].sort((a, b) => {
-    const la = /logo/i.test(a.path) ? 0 : 1, lb = /logo/i.test(b.path) ? 0 : 1;
-    return la - lb || collator.compare(a.path, b.path);
-  });
-  return `<option value="">(Sin logo: mostrar el nombre)</option>` +
-    list.map((i) => `<option value="${escapeHtml(i.id)}" ${i.id === selected ? 'selected' : ''}>${escapeHtml(i.path)}</option>`).join('');
-}
-
 function renderFormatPreview() {
   const name = $('#fmtName').value.trim() || 'Formato';
-  const logo = images.get($('#fmtLogo').value);
   const prev = $('#fmtPreview');
   prev.style.setProperty('--fc', $('#fmtColor').value);
-  prev.innerHTML = `<span class="fp-logo">${logo ? `<img alt="" src="${urlFor(logo)}">` : ''}</span>
-    <strong>${escapeHtml(name)}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
+  prev.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${escapeHtml($('#fmtSubtitle').value.trim())}</small>`;
 }
 
 function openFormatDialog(formatId) {
@@ -1257,7 +1201,6 @@ function openFormatDialog(formatId) {
   $('#fmtName').value = f ? f.name : '';
   $('#fmtSubtitle').value = f ? f.subtitle : '';
   $('#fmtColor').value = /^#[0-9a-f]{6}$/i.test(f?.color || '') ? f.color : '#1f4fd6';
-  $('#fmtLogo').innerHTML = logoOptions(f ? f.logo : null);
   $('#fmtDelete').hidden = !f || state.formats.length < 2;
   renderFormatPreview();
   $('#formatDlg').showModal();
@@ -1291,7 +1234,7 @@ function setupFormatUI() {
     else if (act.dataset.formatAction === 'intro') openIntroDialog();
   });
 
-  ['#fmtName', '#fmtSubtitle', '#fmtColor', '#fmtLogo'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
+  ['#fmtName', '#fmtSubtitle', '#fmtColor'].forEach((sel) => $(sel).addEventListener('input', renderFormatPreview));
 
   $('#formatForm').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'cancel') return;
@@ -1299,7 +1242,6 @@ function setupFormatUI() {
       name: $('#fmtName').value.trim() || 'Formato',
       subtitle: $('#fmtSubtitle').value.trim(),
       color: $('#fmtColor').value,
-      logo: $('#fmtLogo').value || null,
     };
     if (editingFormatId) {
       Object.assign(state.formats.find((f) => f.id === editingFormatId), values);
@@ -1386,7 +1328,7 @@ async function clearLibrary() {
 
 function handleMenu(action) {
   switch (action) {
-    case 'settings': return openSettings();
+    case 'connection': return openConnection();
     case 'load-published': return loadPublishedAction();
     case 'auto-place': return autoPlace();
     case 'sections-from-folders': return sectionsFromFolders();
@@ -1514,7 +1456,7 @@ function setupEvents() {
 
   setupFileDrop();
   setupViewer();
-  setupSettings();
+  setupConnection();
   setupFormatUI();
 }
 
@@ -1547,22 +1489,27 @@ async function init() {
     toast('Este navegador no permite guardar datos: el tablero se perderá al cerrar la página.', 5000);
   }
 
-  // Sincronizar con lo publicado: si no hay trabajo local, o si otra persona publicó después.
-  let published = null;
-  try { published = await fetchPublished(); } catch (e) { console.warn(e); }
-  if (published && (!state || (!state.dirty && published.updatedAt && published.updatedAt !== state.publishedAt))) {
-    if (!state) state = defaultState();
-    setActiveFormat(state.activeId);
-    render();
-    await loadPublished(published);
-    return;
-  }
   if (!state) state = defaultState();
   setActiveFormat(state.activeId);
   render();
   renderPublishState();
-  if (published && state.dirty && published.updatedAt && state.publishedAt && published.updatedAt > state.publishedAt) {
-    toast('Hay una versión publicada más reciente que tus cambios locales. Usa Más → Cargar lo publicado si quieres verla.', 7000);
+
+  const problem = configProblem();
+  if (problem) {
+    renderAccount();
+    toast(problem + ' El tablero funciona, pero no se puede publicar.', 9000);
+    return;
+  }
+  try {
+    await SP.init(SCOPES);
+    spReady = true;
+  } catch (e) {
+    console.error(e);
+    toast(SP.errorText(e), 7000);
+  }
+  renderAccount();
+  if (spReady && SP.currentAccount()) {
+    try { await SP.silentToken(); await syncWithPublished(); } catch { /* hará falta iniciar sesión con clic */ }
   }
 }
 

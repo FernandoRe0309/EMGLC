@@ -6,6 +6,7 @@
 <title>Admin de Señalización</title>
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
+<meta name="robots" content="noindex">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,8 +18,8 @@
   </div>
   <div class="actions">
     <span id="publishState" class="publish-state"></span>
-    <button id="publishBtn" class="btn btn-primary" type="button" title="Sube el tablero y sus imágenes al repositorio para que se vea en el panel de lectura">Publicar</button>
-    <a class="btn" href="./" target="_blank" rel="noopener" title="Abre el panel de solo lectura">Ver panel de lectura</a>
+    <button id="publishBtn" class="btn btn-primary" type="button" title="Guarda las fotos y la distribución en la carpeta de SharePoint para que se vean en el panel de lectura">Publicar</button>
+    <button id="authBtn" class="btn account" type="button">Iniciar sesión</button>
     <label class="btn" title="Elige la carpeta Señalización completa; se conservan las subcarpetas">
       Cargar carpeta
       <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
@@ -36,7 +37,7 @@
     <details class="menu">
       <summary class="btn" aria-label="Más opciones">Más ▾</summary>
       <div class="menu-panel">
-        <button type="button" data-action="settings">Configurar publicación (GitHub)</button>
+        <button type="button" data-action="connection">Conexión a SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
         <hr>
         <button type="button" data-action="auto-place">Colocar por carpeta (nombre exacto)</button>
@@ -86,35 +87,19 @@
   </form>
 </dialog>
 
-<dialog id="settings" class="settings">
-  <form method="dialog" class="settings-inner" id="settingsForm">
-    <h3>Configurar publicación</h3>
-    <p class="muted">El botón <strong>Publicar</strong> sube los cambios al repositorio de GitHub donde vive esta página. Solo funciona con un token de alguien con permiso de escritura en ese repositorio.</p>
-    <div class="field-row">
-      <label>Organización o usuario<input id="cfgOwner" required autocomplete="off" spellcheck="false" placeholder="mi-empresa"></label>
-      <label>Repositorio<input id="cfgRepo" required autocomplete="off" spellcheck="false" placeholder="tablero-senalizacion"></label>
-      <label>Rama<input id="cfgBranch" required autocomplete="off" spellcheck="false" value="main"></label>
-    </div>
-    <label>Token personal de GitHub
-      <input id="cfgToken" type="password" required autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-    </label>
-    <details class="help">
-      <summary>¿Cómo creo el token?</summary>
-      <ol>
-        <li>En GitHub: tu foto → <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token</strong>.</li>
-        <li><strong>Resource owner</strong>: la organización de la empresa. <strong>Repository access</strong>: solo este repositorio.</li>
-        <li><strong>Permissions → Repository permissions → Contents: Read and write</strong>.</li>
-        <li>Si la organización usa inicio de sesión corporativo (SSO) o pide aprobación de tokens, autorízalo o espera la aprobación.</li>
-      </ol>
-      <p>El token se guarda solo en este navegador. No lo compartas ni lo uses en computadoras públicas.</p>
-    </details>
-    <p id="cfgResult" class="cfg-result" role="status"></p>
+<dialog id="connection" class="settings">
+  <form method="dialog" class="settings-inner">
+    <h3>Conexión a SharePoint</h3>
+    <p class="muted">Las fotos y la distribución se guardan en esta carpeta. Para cambiarla, edita <strong>config.js</strong> (campo <code>sharepointFolderUrl</code>).</p>
+    <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
+    <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
+    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. Solo pueden publicar las personas con permiso de edición en esa carpeta.</p>
+    <p id="connResult" class="cfg-result" role="status"></p>
     <div class="settings-actions">
-      <button type="button" id="cfgForget" class="btn danger">Olvidar token</button>
+      <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
       <span class="spacer"></span>
-      <button type="button" id="cfgTest" class="btn">Probar conexión</button>
-      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
-      <button type="submit" id="cfgSave" class="btn btn-primary" value="save">Guardar</button>
+      <button type="button" id="connTest" class="btn">Probar conexión</button>
+      <button value="close" class="btn btn-primary">Cerrar</button>
     </div>
   </form>
 </dialog>
@@ -127,8 +112,6 @@
         <label>Nombre<input id="fmtName" required maxlength="40" autocomplete="off" placeholder="W2"></label>
         <label>Subtítulo<input id="fmtSubtitle" maxlength="80" autocomplete="off" placeholder="Señalización Walmart"></label>
         <label>Color de la tarjeta<input id="fmtColor" type="color" value="#1f4fd6"></label>
-        <label>Logo<select id="fmtLogo"></select></label>
-        <p class="muted small">El logo se elige de la biblioteca (por ejemplo <em>logo-w2.png</em>). Usa un PNG con fondo transparente.</p>
       </div>
       <div>
         <p class="muted small">Así se verá en la portada:</p>
@@ -164,6 +147,9 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<script src="../config.js"></script>
+<script src="../vendor/msal-browser.min.js"></script>
+<script src="../sharepoint.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

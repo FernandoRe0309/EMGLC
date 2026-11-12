@@ -13,7 +13,6 @@
 <header id="hero" class="hero">
   <div class="hero-inner">
     <button type="button" id="backBtn" class="back" hidden>‹ Formatos</button>
-    <span id="heroLogo" class="hero-logo" hidden></span>
     <div class="hero-text">
       <h1 id="heroTitle">Señalización en tu tienda</h1>
       <p id="heroSub"></p>
@@ -54,7 +53,7 @@
 
 <div id="status" class="status" hidden></div>
 
-<footer class="foot"><a href="admin.html">Administrar</a></footer>
+<footer class="foot"><span id="account" hidden><span id="accountName"></span> · <button type="button" id="signOut" class="link-btn">Cerrar sesión</button></span></footer>
 
 <dialog id="lightbox" class="lightbox" aria-label="Imagen ampliada">
   <div class="lb-top">
@@ -63,7 +62,7 @@
       <span id="lbMeta"></span>
     </div>
     <button type="button" class="lb-btn" id="lbZoom" title="Acercar (Z)" aria-label="Acercar">⤢</button>
-    <a class="lb-btn" id="lbOpen" target="_blank" rel="noopener" title="Abrir en otra pestaña" aria-label="Abrir en otra pestaña">↗</a>
+    <a class="lb-btn" id="lbOpen" target="_blank" rel="noopener" title="Descargar foto" aria-label="Descargar foto">⤓</a>
     <button type="button" class="lb-btn" id="lbClose" title="Cerrar (Esc)" aria-label="Cerrar">×</button>
   </div>
   <div class="lb-stage" id="lbStage">
@@ -73,6 +72,9 @@
   <button type="button" class="lb-nav next" id="lbNext" aria-label="Siguiente">›</button>
 </dialog>
 
+<script src="config.js"></script>
+<script src="vendor/msal-browser.min.js"></script>
+<script src="sharepoint.js"></script>
 <script src="viewer.js"></script>
 </body>
 </html>

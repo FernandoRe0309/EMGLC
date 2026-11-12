@@ -629,3 +629,9 @@ a.btn { text-decoration: none; color: inherit; }
 .fmt-preview strong { font-size: 20px; }
 .fmt-preview small { font-size: 12px; opacity: .9; }
 @media (max-width: 560px) { .fmt-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Cuenta y conexión ---------- */
+.topbar .btn.account { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.topbar .btn.account.signed::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex: none; }
+.conn-row { display: grid; grid-template-columns: 70px 1fr; gap: 10px; font-size: 13px; align-items: baseline; }
+.settings code { font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }

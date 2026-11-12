@@ -1,13 +1,13 @@
 'use strict';
 
 /* Panel de solo lectura: portada con formatos y catálogo por formato.
-   Lee data/tablero.json, publicado desde admin.html. */
+   Lee tablero.json y las fotos de la carpeta de SharePoint configurada en config.js. */
 
 const $ = (s) => document.querySelector(s);
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const imgUrl = (src) => 'data/' + String(src).split('/').map(encodeURIComponent).join('/');
 const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#1f4fd6');
+const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'formato';
 
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
@@ -15,7 +15,11 @@ const DEFAULT_INTRO = {
   guideTitle: 'Guía de señalización',
   guide: 'En este manual encontrarás la señalización autorizada que debe permanecer en tu tienda. Úsalo como guía para validar cada espacio.',
   importantTitle: 'Importante',
-  important: [],
+  important: [
+    'Retira cualquier señalización que no esté indicada en este manual.',
+    'Mantén únicamente la señalización autorizada en tienda.',
+    'Coloca máximo una señalización por departamento.',
+  ],
 };
 
 let data = null;     // { intro, formats, updatedAt }
@@ -23,52 +27,111 @@ let items = [];      // tarjetas del formato abierto: { title, section, src, el,
 let visible = [];    // las que pasan el filtro de búsqueda
 let current = -1;
 let observer = null;
+let renderToken = 0;
 
-async function load() {
-  try {
-    const r = await fetch(`data/tablero.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (r.status === 404) { data = { intro: DEFAULT_INTRO, formats: [] }; route(); return; }
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const raw = await r.json();
-    data = normalize(raw);
-  } catch (e) {
-    console.error(e);
-    showStatus('No se pudo cargar el manual', 'Revisa tu conexión e intenta de nuevo.');
+/* ---------- Inicio y sesión ---------- */
+async function start() {
+  setHero({ title: DEFAULT_INTRO.title, sub: '' });
+  const missing = SP.missingConfig();
+  if (missing.length) {
+    showStatus('El manual aún no está configurado', `Falta en config.js: ${missing.join(', ')}.`);
     return;
   }
+  try {
+    await SP.init(['Files.Read.All']);
+  } catch (e) {
+    console.error(e);
+    showStatus('No se pudo iniciar', SP.errorText(e));
+    return;
+  }
+  if (SP.currentAccount()) {
+    try { await SP.silentToken(); await load(); return; } catch { /* pedir inicio de sesión */ }
+  }
+  showLogin();
+}
+
+function showLogin(message) {
+  showStatus('Inicia sesión para ver el manual', message || 'Usa tu cuenta de la empresa (la misma de Outlook y Teams).', true);
+}
+
+async function doLogin() {
+  try {
+    await SP.signIn();
+    await load();
+  } catch (e) {
+    console.error(e);
+    showLogin(SP.errorText(e));
+  }
+}
+
+async function load() {
+  showStatus('Cargando manual…', '');
+  try {
+    const raw = await SP.readJson();
+    data = normalize(raw || {});
+  } catch (e) {
+    console.error(e);
+    if (e && e.status === 401) { showLogin(SP.errorText(e)); return; }
+    showStatus('No se pudo cargar el manual', SP.errorText(e));
+    return;
+  }
+  renderAccount();
   route();
 }
 
+function renderAccount() {
+  const acc = SP.currentAccount();
+  $('#account').hidden = !acc;
+  $('#accountName').textContent = acc ? (acc.name || acc.username) : '';
+}
+
 function normalize(raw) {
-  let formats = Array.isArray(raw.formats) ? raw.formats : null;
-  if (!formats && Array.isArray(raw.sections)) formats = [{ id: 'catalogo', name: 'Catálogo', subtitle: '', sections: raw.sections }];
-  formats = (formats || []).map((f, i) => ({
-    id: String(f.id || `formato-${i + 1}`),
-    name: String(f.name || 'Formato'),
-    subtitle: String(f.subtitle || ''),
-    color: safeColor(f.color),
-    logo: f.logo ? imgUrl(f.logo) : null,
-    sections: (Array.isArray(f.sections) ? f.sections : [])
-      .map((s) => ({ name: String(s.name || ''), cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.src) }))
-      .filter((s) => s.cards.length),
-  }));
+  const usedIds = new Set();
+  const formats = (Array.isArray(raw.formats) && raw.formats.length ? raw.formats : [
+    { name: 'W2', subtitle: 'Señalización Walmart', color: '#1f4fd6' },
+    { name: 'B2', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+    { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
+  ]).map((f) => {
+    let id = slug(f.name);
+    while (usedIds.has(id)) id += '-2';
+    usedIds.add(id);
+    return {
+      id,
+      name: String(f.name || 'Formato'),
+      subtitle: String(f.subtitle || ''),
+      color: safeColor(f.color),
+      sections: (Array.isArray(f.sections) ? f.sections : [])
+        .map((s) => ({ name: String(s.name || ''), folder: s.folder || null, cards: (Array.isArray(s.cards) ? s.cards : []).filter((c) => c && c.file) }))
+        .filter((s) => s.cards.length),
+    };
+  });
   const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
   return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 
 function updatedText() {
-  return data.updatedAt
+  return data && data.updatedAt
     ? 'Actualizado el ' + new Date(data.updatedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })
     : '';
 }
 
-function showStatus(title, text) {
+function showStatus(title, text, withLogin = false) {
   $('#home').hidden = true;
   $('#catalog').hidden = true;
   const st = $('#status');
   st.hidden = false;
-  st.innerHTML = `<strong>${esc(title)}</strong>${esc(text)}`;
+  st.innerHTML = `<strong>${esc(title)}</strong>${esc(text)}${withLogin ? '<button type="button" id="loginBtn" class="login-btn">Iniciar sesión</button>' : ''}`;
+  if (withLogin) $('#loginBtn').addEventListener('click', doLogin);
 }
+
+$('#signOut').addEventListener('click', async () => {
+  await SP.signOut();
+  renderAccount();
+  data = null;
+  location.hash = '';
+  setHero({ title: DEFAULT_INTRO.title, sub: '' });
+  showLogin();
+});
 
 /* ---------- Rutas: #/ (portada) y #/<formato> ---------- */
 function route() {
@@ -81,16 +144,13 @@ function route() {
 window.addEventListener('hashchange', route);
 $('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
 
-function setHero({ title, sub, color, logo, back }) {
+function setHero({ title, sub, color, back }) {
   const hero = $('#hero');
   hero.style.setProperty('--hero', color || '');
   hero.classList.toggle('compact', !!back);
   $('#heroTitle').textContent = title;
   $('#heroSub').textContent = sub || '';
   $('#backBtn').hidden = !back;
-  const lg = $('#heroLogo');
-  lg.hidden = !logo;
-  lg.innerHTML = logo ? `<img alt="" src="${esc(logo)}">` : '';
 }
 
 function renderHome() {
@@ -109,27 +169,22 @@ function renderHome() {
   $('#impList').innerHTML = imp.map((x) => `<li>${esc(x)}</li>`).join('');
   $('#impBox').hidden = !imp.length;
 
-  const formats = data.formats.filter((f) => f.sections.length);
-  const box = $('#formats');
-  if (!formats.length) {
-    box.innerHTML = '<div class="status-inline"><strong>Aún no hay nada publicado</strong>Cuando el administrador publique el manual aparecerán aquí los formatos.</div>';
-  } else {
-    box.innerHTML = formats.map((f) => {
-      const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
-      return `<a class="format" href="#/${encodeURIComponent(f.id)}" style="--fc:${esc(f.color)}">
-        <span class="format-logo">${f.logo ? `<img alt="" src="${esc(f.logo)}">` : `<span class="format-initials">${esc(f.name.slice(0, 3))}</span>`}</span>
-        <strong>${esc(f.name)}</strong>
-        <span class="format-sub">${esc(f.subtitle)}</span>
-        <span class="format-count">${f.sections.length} ${f.sections.length === 1 ? 'área' : 'áreas'} · ${n} ${n === 1 ? 'señalización' : 'señalizaciones'}</span>
-      </a>`;
-    }).join('');
-  }
+  $('#formats').innerHTML = data.formats.map((f) => {
+    const n = f.sections.reduce((k, s) => k + s.cards.length, 0);
+    const count = n ? `${f.sections.length} ${f.sections.length === 1 ? 'área' : 'áreas'} · ${n} ${n === 1 ? 'señalización' : 'señalizaciones'}` : 'Próximamente';
+    return `<a class="format" href="#/${encodeURIComponent(f.id)}" style="--fc:${esc(f.color)}">
+      <strong>${esc(f.name)}</strong>
+      <span class="format-sub">${esc(f.subtitle)}</span>
+      <span class="format-count">${esc(count)}</span>
+    </a>`;
+  }).join('');
   $('#updatedHome').textContent = updatedText();
 }
 
-function renderFormat(f) {
+async function renderFormat(f) {
+  const myToken = ++renderToken;
   document.title = `${f.name} · ${data.intro.title}`;
-  setHero({ title: f.name, sub: [f.subtitle, updatedText()].filter(Boolean).join(' · '), color: f.color, logo: f.logo, back: true });
+  setHero({ title: f.name, sub: [f.subtitle, updatedText()].filter(Boolean).join(' · '), color: f.color, back: true });
   $('#home').hidden = true;
   $('#status').hidden = true;
   $('#catalog').hidden = false;
@@ -138,14 +193,16 @@ function renderFormat(f) {
   const content = $('#content');
   const nav = $('#nav');
   items = [];
+  visible = [];
   content.innerHTML = '';
   nav.innerHTML = '';
 
   if (!f.sections.length) {
-    content.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong></div>';
+    content.innerHTML = '<div class="status-inline"><strong>Este formato aún no tiene señalización publicada</strong>Vuelve más tarde.</div>';
     return;
   }
 
+  const imgEls = new Map(); // carpeta -> [{ file, img, item }]
   f.sections.forEach((s, si) => {
     const id = 'area-' + si;
     const sec = document.createElement('section');
@@ -157,12 +214,14 @@ function renderFormat(f) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'card';
-      const src = imgUrl(c.src);
-      btn.innerHTML = `<img loading="lazy" alt="" src="${esc(src)}"><span>${esc(c.title || '')}</span>`;
-      const item = { title: String(c.title || ''), section: s.name, src, el: btn, secEl: sec, key: norm(`${c.title} ${s.name}`) };
-      btn.addEventListener('click', () => open(visible.indexOf(item)));
+      btn.innerHTML = `<img loading="lazy" alt=""><span>${esc(c.title || '')}</span>`;
+      const item = { title: String(c.title || ''), section: s.name, src: '', file: c.file, el: btn, secEl: sec, key: norm(`${c.title} ${s.name}`) };
+      btn.addEventListener('click', () => { if (item.src) open(visible.indexOf(item)); });
       items.push(item);
       grid.appendChild(btn);
+      const folder = c.file.slice(0, c.file.lastIndexOf('/'));
+      if (!imgEls.has(folder)) imgEls.set(folder, []);
+      imgEls.get(folder).push({ name: c.file.slice(c.file.lastIndexOf('/') + 1), img: btn.querySelector('img'), item });
     }
     content.appendChild(sec);
 
@@ -177,6 +236,24 @@ function renderFormat(f) {
   visible = items.slice();
   applySearch();
   watchActiveSection();
+
+  // Pedir los enlaces de descarga por carpeta (son temporales y no requieren sesión).
+  for (const [folder, list] of imgEls) {
+    if (myToken !== renderToken) return;
+    await fillFolder(folder, list);
+  }
+}
+
+async function fillFolder(folder, list, retry = true) {
+  let entries;
+  try { entries = await SP.list(folder); } catch (e) { console.warn(e); entries = new Map(); }
+  for (const { name, img, item } of list) {
+    const entry = entries.get(name);
+    if (!entry || !entry.downloadUrl) { item.el.classList.add('missing'); continue; }
+    item.src = entry.downloadUrl;
+    img.onerror = retry ? () => { img.onerror = null; fillFolder(folder, [{ name, img, item }], false); } : null;
+    img.src = entry.downloadUrl;
+  }
 }
 
 function applySearch() {
@@ -220,6 +297,7 @@ const lbImg = $('#lbImg');
 
 function open(i) {
   if (i < 0 || i >= visible.length) return;
+  if (!visible[i].src) return;
   current = i;
   const it = visible[i];
   stage.classList.remove('zoomed');
@@ -304,4 +382,4 @@ stage.addEventListener('touchend', (e) => {
 
 $('#search').addEventListener('input', applySearch);
 
-load();
+start();
