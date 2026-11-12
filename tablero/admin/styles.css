@@ -918,3 +918,12 @@ a.btn { text-decoration: none; color: inherit; }
 .card.space:hover .space-text:empty { opacity: 1; }
 .space-text.has-text { background: #f5f7fb; border-color: var(--border); }
 .space-text:focus { background: var(--surface); border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); opacity: 1; }
+
+/* ---------- Lugares para notas ---------- */
+.notes-slot { margin: 10px 0; }
+.notes-slot .blocks-edit { margin: 0 0 8px; }
+.notes-slot .note-add { margin: 0; font-size: 13px; padding: 6px 12px; }
+.format-notes .notes-slot { margin: 12px 0 0; }
+#formatNotesBottom .notes-slot { margin: 0 0 40px; }
+.zone-panel { margin-bottom: 14px; }
+.blk-tools button[disabled] { opacity: .4; cursor: default; }

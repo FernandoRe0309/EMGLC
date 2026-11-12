@@ -180,11 +180,12 @@ function ensureFormatShape(f) {
   f.panel = panel;
   f.hidden = !!f.hidden;
   f.logo = f.logo || null;
+  f.blocks = Array.isArray(f.blocks) ? f.blocks.map(normalizeBlock) : [];
   return f;
 }
 
-function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, logo = null, zones, hidden = false, panel } = {}) {
-  const f = ensureFormatShape({ id: uid(), name, subtitle, color, banner, logo, hidden, panel, zones: zones || newZones() });
+function newFormat({ name = 'Nuevo formato', subtitle = '', color = '#1f4fd6', banner = null, logo = null, zones, hidden = false, panel, blocks } = {}) {
+  const f = ensureFormatShape({ id: uid(), name, subtitle, color, banner, logo, hidden, panel, blocks, zones: zones || newZones() });
   f.activeZoneId = f.zones[0]?.id || null;
   f.activeAreaId = null;
   return f;
@@ -459,7 +460,6 @@ function renderZonePanel() {
       </div>
     </div>
     ${blocksEditHtml('zone', zone.blocks, 'top')}
-    <button type="button" class="note-add" data-block-action="add" data-owner="zone">+ Agregar nota a ${escapeHtml(zone.name)}</button>
     <div class="area-grid">
       ${zone.areas.map((a) => {
         const filled = a.spaces.filter((s) => s.imageId).length;
@@ -495,28 +495,35 @@ function areaDetailHtml(zone, area) {
     </div>
     <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
     ${blocksEditHtml('area', area.blocks, 'top')}
-    <button type="button" class="note-add" data-block-action="add" data-owner="area">+ Agregar nota a ${escapeHtml(area.name)}</button>
     <div class="dropzone" data-area-id="${area.id}">
       <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
     </div>
     ${blocksEditHtml('area', area.blocks, 'bottom')}`;
 }
 
-// Notas con sus herramientas (editar, mover, eliminar) para el administrador.
+// Qué hay entre las notas de arriba y las de abajo, según dónde están.
+const NOTE_WHERE = { format: 'las zonas', zone: 'las áreas', area: 'la señalización' };
+
+// Notas con sus herramientas (editar, mover, eliminar) y el botón para agregar en ese lugar.
 function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
-  if (!list.length) return '';
-  return `<div class="blocks blocks-edit">${list.map((b) => `
+  const where = NOTE_WHERE[owner];
+  const other = pos === 'top' ? 'abajo' : 'arriba';
+  const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
+  const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
       ${blockHtml(b)}
       <div class="blk-tools">
-        <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')}${pos === 'bottom' ? ' · abajo' : ''}</span>
+        <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
         <button type="button" data-block-action="edit">✎ Editar</button>
-        <button type="button" data-block-action="up" title="Subir">↑</button>
-        <button type="button" data-block-action="down" title="Bajar">↓</button>
+        <button type="button" data-block-action="up" title="Subir" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" data-block-action="down" title="Bajar" ${i === list.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" data-block-action="flip" title="Pasar ${other} de ${where}">⇅ Pasar ${other}</button>
         <button type="button" data-block-action="delete" class="danger" title="Eliminar nota">🗑</button>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`).join('')}</div>` : '';
+  // Arriba: primero las notas y luego el botón; abajo: igual, para que el botón quede junto a su lugar.
+  return `<div class="notes-slot notes-${pos}">${notes}${add}</div>`;
 }
 
 function spaceEl(sp) {
@@ -554,6 +561,8 @@ function render() {
   renderBanner();
   renderZoneBar();
   renderZonePanel();
+  $('#formatNotesTop').innerHTML = blocksEditHtml('format', board.blocks, 'top');
+  $('#formatNotesBottom').innerHTML = blocksEditHtml('format', board.blocks, 'bottom');
   renderLibrary(counts);
   renderStats(counts);
 }
@@ -950,7 +959,7 @@ figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcapt
 
 function formatToJson(f) {
   return {
-    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel,
+    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
     zones: f.zones.map((z) => ({
       name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
       areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden, text: s.text || '' })) })),
@@ -968,6 +977,7 @@ function formatFromJson(f) {
     color: String(f.color || '#1f4fd6'),
     banner: f.banner ? String(f.banner) : null,
     logo: f.logo ? String(f.logo) : null,
+    blocks: f.blocks,
     hidden: !!f.hidden,
     panel: f.panel,
     zones: f.zones.map((z) => {
@@ -1147,7 +1157,7 @@ async function buildPlan() {
       }
       zones.push({ name: z.name, hidden: !!z.hidden, blocks: (z.blocks || []).map(normalizeBlock), areas });
     }
-    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, banner, logo, zones });
+    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, blocks: (f.blocks || []).map(normalizeBlock), banner, logo, zones });
   }
   return { files, formats, intro, logoFiles };
 }
@@ -1814,10 +1824,10 @@ function setupBoardUI() {
 }
 
 /* ---------- Editor de notas ---------- */
-let blockEdit = null; // { owner: 'zone'|'area', id: string|null, touched: bool }
+let blockEdit = null; // { owner: 'format'|'zone'|'area', id: string|null, touched: bool }
 
 function blockOwner(owner) {
-  const o = owner === 'zone' ? activeZone() : activeArea();
+  const o = owner === 'format' ? board : owner === 'zone' ? activeZone() : activeArea();
   if (o && !Array.isArray(o.blocks)) o.blocks = [];
   return o;
 }
@@ -1853,16 +1863,16 @@ function renderBlockForm() {
   $('#blkPreview').innerHTML = blockHtml(readBlockForm());
 }
 
-function openBlockDialog(owner, id) {
+function openBlockDialog(owner, id, pos = 'top') {
   const o = blockOwner(owner);
   if (!o) return;
   const existing = id ? o.blocks.find((b) => b.id === id) : null;
   blockEdit = { owner, id: existing ? existing.id : null, touched: !!existing };
   $('#blockDlgTitle').textContent = `${existing ? 'Editar nota' : 'Nueva nota'} · ${o.name}`;
   $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
-  const where = owner === 'zone' ? 'las áreas' : 'la señalización';
+  const where = NOTE_WHERE[owner];
   $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
-  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo'));
+  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo', pos));
   $('#blkDelete').hidden = !existing;
   renderBlockForm();
   $('#blockDlg').showModal();
@@ -1923,7 +1933,7 @@ function setupBlockEditor() {
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
   // Botones de las notas en el tablero.
-  $('#zonePanel').addEventListener('click', (e) => {
+  $('.board-wrap').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-block-action]');
     if (!btn) {
       if (e.target.closest('.blk a')) e.preventDefault(); // en el admin los enlaces no navegan
@@ -1933,7 +1943,17 @@ function setupBlockEditor() {
     const owner = btn.dataset.owner || wrap?.dataset.owner;
     const id = wrap?.dataset.block;
     switch (btn.dataset.blockAction) {
-      case 'add': return openBlockDialog(owner, null);
+      case 'add': return openBlockDialog(owner, null, btn.dataset.pos || 'top');
+      case 'flip': {
+        const o = blockOwner(owner);
+        const b = o.blocks.find((x) => x.id === id);
+        b.pos = b.pos === 'bottom' ? 'top' : 'bottom';
+        // Al cambiar de lugar queda al final de las notas de su nuevo lugar.
+        o.blocks = [...o.blocks.filter((x) => x.id !== id), b];
+        commit();
+        toast(`Nota movida ${b.pos === 'top' ? 'arriba' : 'abajo'} de ${NOTE_WHERE[owner]}.`);
+        return;
+      }
       case 'edit': return openBlockDialog(owner, id);
       case 'up': return moveBlock(owner, id, -1);
       case 'down': return moveBlock(owner, id, 1);

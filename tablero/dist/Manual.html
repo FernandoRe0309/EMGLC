@@ -329,6 +329,8 @@ a.pill { text-decoration: none; }
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
+.format-notes .blocks { margin: 16px 0 0; }
+#formatNotesBottom .blocks { margin: 18px 0 0; }
 .zones { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 14px 0 18px; }
 .zone {
   display: grid;
@@ -561,8 +563,10 @@ a.pill { text-decoration: none; }
 <div id="catalog" class="catalog" hidden>
   <div id="toolbar" class="cat-toolbar"></div>
   <img id="banner" class="banner" alt="" hidden>
+  <div id="formatNotesTop" class="format-notes"></div>
   <nav id="zones" class="zones" aria-label="Zonas de la tienda"></nav>
   <section id="zoneBox" class="zone-box" aria-live="polite"></section>
+  <div id="formatNotesBottom" class="format-notes"></div>
 </div>
 
 <div id="status" class="status" hidden></div>
@@ -1048,6 +1052,7 @@ function normalize(raw) {
       panel,
       banner: panel.showBanner ? imgSrc(f.banner) : null,
       logo: imgSrc(f.logo),
+      blocks: (f.blocks || []).map(normalizeBlock),
       // Lo marcado como oculto en el administrador no se muestra.
       zones: zones.filter((z) => !z.hidden).map((z) => {
         const areaIds = new Set();
@@ -1177,6 +1182,13 @@ function renderFormat(f, zone, area) {
   const banner = $('#banner');
   banner.hidden = !f.banner;
   if (f.banner && banner.getAttribute('src') !== f.banner) banner.src = f.banner;
+
+  const formatNotes = (pos) => {
+    const list = f.blocks.filter((b) => b.pos === pos);
+    return list.length ? `<div class="blocks">${list.map(blockHtml).join('')}</div>` : '';
+  };
+  $('#formatNotesTop').innerHTML = formatNotes('top');
+  $('#formatNotesBottom').innerHTML = formatNotes('bottom');
 
   $('#zones').innerHTML = f.zones.map((z) =>
     `<a class="zone${zone && z.id === zone.id ? ' active' : ''}" href="${link(f.id, z.id)}">${esc(z.name)}</a>`).join('');

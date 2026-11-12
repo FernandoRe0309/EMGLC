@@ -99,6 +99,7 @@ function normalize(raw) {
       panel,
       banner: panel.showBanner ? imgSrc(f.banner) : null,
       logo: imgSrc(f.logo),
+      blocks: (f.blocks || []).map(normalizeBlock),
       // Lo marcado como oculto en el administrador no se muestra.
       zones: zones.filter((z) => !z.hidden).map((z) => {
         const areaIds = new Set();
@@ -228,6 +229,13 @@ function renderFormat(f, zone, area) {
   const banner = $('#banner');
   banner.hidden = !f.banner;
   if (f.banner && banner.getAttribute('src') !== f.banner) banner.src = f.banner;
+
+  const formatNotes = (pos) => {
+    const list = f.blocks.filter((b) => b.pos === pos);
+    return list.length ? `<div class="blocks">${list.map(blockHtml).join('')}</div>` : '';
+  };
+  $('#formatNotesTop').innerHTML = formatNotes('top');
+  $('#formatNotesBottom').innerHTML = formatNotes('bottom');
 
   $('#zones').innerHTML = f.zones.map((z) =>
     `<a class="zone${zone && z.id === zone.id ? ' active' : ''}" href="${link(f.id, z.id)}">${esc(z.name)}</a>`).join('');
