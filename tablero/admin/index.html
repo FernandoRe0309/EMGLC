@@ -19,7 +19,7 @@
   <div class="actions">
     <span id="publishState" class="publish-state"></span>
     <button id="publishBtn" class="btn btn-primary" type="button" title="Guarda las fotos y la distribución en la carpeta de SharePoint para que se vean en el panel de lectura">Publicar</button>
-    <button id="authBtn" class="btn account" type="button">Iniciar sesión</button>
+    <button id="authBtn" class="btn account" type="button">Conectando…</button>
     <label class="btn" title="Elige la carpeta Señalización completa; se conservan las subcarpetas">
       Cargar carpeta
       <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
@@ -37,7 +37,7 @@
     <details class="menu">
       <summary class="btn" aria-label="Más opciones">Más ▾</summary>
       <div class="menu-panel">
-        <button type="button" data-action="connection">Conexión a SharePoint</button>
+        <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
         <hr>
         <button type="button" data-action="auto-place">Colocar por carpeta (nombre exacto)</button>
@@ -89,11 +89,11 @@
 
 <dialog id="connection" class="settings">
   <form method="dialog" class="settings-inner">
-    <h3>Conexión a SharePoint</h3>
-    <p class="muted">Las fotos y la distribución se guardan en esta carpeta. Para cambiarla, edita <strong>config.js</strong> (campo <code>sharepointFolderUrl</code>).</p>
+    <h3>Carpeta de SharePoint</h3>
+    <p class="muted">Las fotos y la distribución se guardan en la misma carpeta de SharePoint donde está este archivo.</p>
     <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
     <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
-    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. Solo pueden publicar las personas con permiso de edición en esa carpeta.</p>
+    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
     <p id="connResult" class="cfg-result" role="status"></p>
     <div class="settings-actions">
       <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
@@ -147,8 +147,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="../config.js"></script>
-<script src="../vendor/msal-browser.min.js"></script>
 <script src="../sharepoint.js"></script>
 <script src="admin.js"></script>
 </body>

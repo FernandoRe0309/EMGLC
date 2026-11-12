@@ -1,269 +1,212 @@
 'use strict';
 
 /* =====================================================================
-   Conexión con la carpeta de SharePoint (Microsoft Graph).
-   La usan el panel de lectura y el de administrador.
-   - Inicio de sesión con la cuenta de la empresa (MSAL, ventana emergente).
-   - Todas las rutas son relativas a la carpeta configurada en config.js.
+   Conexión con la carpeta de SharePoint (API REST del mismo sitio).
+   La página vive dentro de una carpeta de SharePoint y guarda todo en esa
+   MISMA carpeta (tablero.json y las subcarpetas <Formato>/<Área>/).
+   Usa la sesión que la persona ya tiene abierta: no hay tokens ni configuración.
    ===================================================================== */
 
 const SP = (() => {
-  const cfg = window.TABLERO_CONFIG || {};
-  const ROOT_URL = new URL('.', document.currentScript.src); // carpeta donde están config.js y auth.html
-  const GRAPH = 'https://graph.microsoft.com/v1.0';
   const DATA_FILE = 'tablero.json';
+  const JSON_ACCEPT = 'application/json;odata=nometadata';
 
-  let app = null;
+  let web = null;       // URL absoluta del sitio que contiene la carpeta
+  let rootPath = null;  // ruta de la carpeta, relativa al servidor (decodificada, sin "/" final)
   let account = null;
-  let scopes = [];
-  let root = null; // { driveId, itemId, webUrl }
+  let digest = null;
+  let digestAt = 0;
+  const knownFolders = new Set();
 
   class SPError extends Error {
     constructor(status, code, message) { super(message); this.status = status; this.code = code; }
   }
 
-  function missingConfig() {
-    const out = [];
-    if (!String(cfg.sharepointFolderUrl || '').trim()) out.push('la URL de la carpeta de SharePoint (sharepointFolderUrl)');
-    if (!String(cfg.clientId || '').trim()) out.push('el Client ID de la app (clientId)');
-    if (!String(cfg.tenantId || '').trim()) out.push('el Tenant ID (tenantId)');
-    return out;
-  }
+  function missingConfig() { return []; }
 
-  async function init(scopeList) {
-    scopes = scopeList;
-    if (!window.msal) throw new SPError(0, 'msal_missing', 'No se cargó la librería de inicio de sesión de Microsoft.');
-    app = new msal.PublicClientApplication({
-      auth: {
-        clientId: cfg.clientId.trim(),
-        authority: `https://login.microsoftonline.com/${encodeURIComponent(cfg.tenantId.trim())}`,
-        redirectUri: new URL('auth.html', ROOT_URL).href,
-      },
-      cache: { cacheLocation: 'localStorage' },
-    });
-    await app.initialize();
-    await app.handleRedirectPromise().catch(() => null);
-    account = app.getActiveAccount() || app.getAllAccounts()[0] || null;
-    if (account) app.setActiveAccount(account);
-    return account;
-  }
-
-  function currentAccount() { return account; }
-
-  // Intenta obtener un token sin mostrar nada. Lanza error si hace falta iniciar sesión.
-  async function silentToken() {
-    if (!account) throw new SPError(401, 'login_required', 'Hace falta iniciar sesión.');
-    const r = await app.acquireTokenSilent({ scopes, account });
-    return r.accessToken;
-  }
-
-  // Debe llamarse directamente desde un clic (abre una ventana emergente).
-  async function signIn() {
-    const r = await app.loginPopup({ scopes, prompt: 'select_account', redirectUri: new URL('auth.html', ROOT_URL).href });
-    account = r.account;
-    app.setActiveAccount(account);
-    return account;
-  }
-
-  async function signOut() {
-    const acc = account;
-    account = null;
-    root = null;
-    if (acc) await app.logoutPopup({ account: acc, postLogoutRedirectUri: new URL('auth.html', ROOT_URL).href }).catch(() => {});
-  }
-
-  async function token() {
-    try {
-      return await silentToken();
-    } catch (e) {
-      if (!account) throw e;
-      // Consentimiento o sesión vencida: pedir de nuevo en ventana emergente.
-      const r = await app.acquireTokenPopup({ scopes, account });
-      return r.accessToken;
+  // La carpeta de trabajo es la carpeta donde está este archivo .html.
+  function folderPathFromPage() {
+    if (!/^https?:$/.test(location.protocol)) {
+      throw new SPError(0, 'not_sharepoint', 'Abre este archivo desde su carpeta en SharePoint (no desde la computadora).');
     }
+    const path = decodeURIComponent(location.pathname);
+    return path.slice(0, path.lastIndexOf('/')).replace(/\/+$/, '');
   }
 
-  async function graph(path, { method = 'GET', body, headers = {}, json = true } = {}) {
+  const enc = (p) => String(p).split('/').map(encodeURIComponent).join('/');
+  const lit = (s) => "'" + encodeURIComponent(String(s).replace(/'/g, "''")) + "'";
+
+  async function getDigest(force = false) {
+    if (!force && digest && Date.now() - digestAt < 20 * 60 * 1000) return digest;
+    const r = await fetch(`${web}/_api/contextinfo`, { method: 'POST', headers: { Accept: JSON_ACCEPT }, credentials: 'same-origin' });
+    if (!r.ok) throw new SPError(r.status, 'digest', 'No se pudo validar la sesión de SharePoint.');
+    const d = await r.json();
+    digest = d.FormDigestValue;
+    digestAt = Date.now();
+    return digest;
+  }
+
+  async function api(path, { method = 'GET', body, headers = {}, raw = false } = {}) {
     for (let attempt = 0; ; attempt++) {
-      const t = await token();
-      const r = await fetch(path.startsWith('http') ? path : GRAPH + path, {
-        method,
-        headers: { Authorization: `Bearer ${t}`, ...headers },
-        body,
-        cache: 'no-store',
-      });
+      const h = { Accept: JSON_ACCEPT, ...headers };
+      if (method !== 'GET') h['X-RequestDigest'] = await getDigest(attempt > 0);
+      const r = await fetch(web + path, { method, headers: h, body, credentials: 'same-origin', cache: 'no-store' });
       if (r.ok) {
-        if (r.status === 204 || !json) return r;
-        return r.json();
+        if (raw || r.status === 204) return r;
+        const type = r.headers.get('content-type') || '';
+        return type.includes('json') ? r.json() : r;
       }
-      if ((r.status === 429 || r.status === 503 || r.status === 504) && attempt < 5) {
+      if ((r.status === 429 || r.status === 503) && attempt < 5) {
         const wait = Number(r.headers.get('retry-after')) || 2 ** attempt;
         await new Promise((res) => setTimeout(res, wait * 1000));
         continue;
       }
       const data = await r.json().catch(() => ({}));
-      const err = data.error || {};
-      throw new SPError(r.status, err.code || '', err.message || r.statusText);
+      const msg = (data['odata.error'] && data['odata.error'].message && data['odata.error'].message.value)
+        || (data.error && data.error.message && (data.error.message.value || data.error.message))
+        || r.statusText;
+      // Firma de seguridad vencida: renovar una vez.
+      if (r.status === 403 && method !== 'GET' && attempt === 0 && /digest|security validation/i.test(msg)) continue;
+      throw new SPError(r.status, '', msg);
     }
   }
 
-  /* ---------- Ubicar la carpeta configurada ---------- */
-  function normalizeFolderUrl(raw) {
-    const url = new URL(String(raw).trim());
-    // Dirección de la vista de carpeta: .../Forms/AllItems.aspx?id=/sites/X/Documentos/Carpeta
-    const id = url.searchParams.get('id') || url.searchParams.get('RootFolder');
-    if (id && /\.aspx$/i.test(url.pathname)) return url.origin + id;
-    url.hash = '';
-    return url.href;
+  async function init() {
+    rootPath = folderPathFromPage();
+    // Buscar el sitio (web) que contiene la carpeta, del camino más largo al más corto.
+    const segs = rootPath.split('/').filter(Boolean);
+    for (let i = segs.length; i >= 0 && !web; i--) {
+      const base = location.origin + enc('/' + segs.slice(0, i).join('/')).replace(/\/$/, '');
+      try {
+        const r = await fetch(`${base}/_api/contextinfo`, { method: 'POST', headers: { Accept: JSON_ACCEPT }, credentials: 'same-origin' });
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (!d.WebFullUrl) continue;
+        web = d.WebFullUrl.replace(/\/$/, '');
+        digest = d.FormDigestValue;
+        digestAt = Date.now();
+      } catch { /* probar el siguiente */ }
+    }
+    if (!web) throw new SPError(0, 'not_sharepoint', 'No se pudo conectar con SharePoint. Este archivo debe abrirse desde su carpeta en SharePoint.');
+    try {
+      const u = await api('/_api/web/currentuser?$select=Title,Email,LoginName');
+      account = { name: u.Title, username: u.Email || u.LoginName };
+    } catch {
+      account = { name: 'Usuario de SharePoint', username: '' };
+    }
+    return account;
   }
 
-  function shareId(u) {
-    const b64 = btoa(unescape(encodeURIComponent(u)));
-    return 'u!' + b64.replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+  const fullPath = (rel) => (rel ? `${rootPath}/${rel}` : rootPath);
+  const fileUrl = (rel) => location.origin + enc(fullPath(rel));
+
+  async function folderInfo(rel) {
+    try {
+      return await api(`/_api/web/GetFolderByServerRelativePath(DecodedUrl=@a1)?$select=Exists,Name,ItemCount&@a1=${lit(fullPath(rel))}`);
+    } catch (e) {
+      if (e.status === 404) return { Exists: false };
+      throw e;
+    }
   }
 
   async function resolveRoot() {
-    if (root) return root;
-    const raw = String(cfg.sharepointFolderUrl).trim();
-    let item = null;
-    // 1) Vínculo para compartir o URL directa de la carpeta.
-    for (const candidate of [...new Set([raw, normalizeFolderUrl(raw)])]) {
-      try {
-        item = await graph(`/shares/${shareId(candidate)}/driveItem?$select=id,name,webUrl,folder,parentReference`);
-        break;
-      } catch (e) { if (e.status === 401) throw e; }
-    }
-    // 2) Ruta del sitio: https://empresa.sharepoint.com/sites/Sitio/Biblioteca/Carpeta
-    if (!item) {
-      const url = new URL(normalizeFolderUrl(raw));
-      const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
-      const sitePath = /^(sites|teams)$/i.test(parts[0] || '') ? `/${parts[0]}/${parts[1]}` : '';
-      const site = await graph(`/sites/${url.hostname}:${sitePath || '/'}?$select=id`);
-      const drives = (await graph(`/sites/${site.id}/drives?$select=id,webUrl`)).value || [];
-      const full = decodeURIComponent(url.pathname).replace(/\/+$/, '');
-      const drive = drives
-        .map((d) => ({ d, p: decodeURIComponent(new URL(d.webUrl).pathname).replace(/\/+$/, '') }))
-        .filter(({ p }) => full === p || full.startsWith(p + '/'))
-        .sort((a, b) => b.p.length - a.p.length)[0];
-      if (!drive) throw new SPError(404, 'folder_not_found', 'No se encontró la carpeta de SharePoint configurada.');
-      const rel = full.slice(drive.p.length).replace(/^\//, '');
-      item = await graph(`/drives/${drive.d.id}/${rel ? `root:/${encPath(rel)}` : 'root'}?$select=id,name,webUrl,folder,parentReference`);
-    }
-    if (!item.folder) throw new SPError(400, 'not_a_folder', 'La URL configurada no es una carpeta.');
-    root = { driveId: item.parentReference.driveId, itemId: item.id, webUrl: item.webUrl, name: item.name };
-    return root;
-  }
-
-  /* ---------- Rutas dentro de la carpeta ---------- */
-  function encPath(p) { return String(p).split('/').map(encodeURIComponent).join('/'); }
-
-  async function itemPath(rel, suffix = '') {
-    const r = await resolveRoot();
-    return `/drives/${r.driveId}/items/${r.itemId}:/${encPath(rel)}:${suffix}`;
-  }
-
-  // Nombre válido para SharePoint (sin " * : < > ? / \ | ni espacios/puntos al final).
-  function safeName(s) {
-    let n = String(s).normalize('NFC').replace(/["*:<>?/\\|#%\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
-    n = n.replace(/^[~.\s]+/, '').replace(/[.\s]+$/, '');
-    if (/^(con|prn|aux|nul|com\d|lpt\d|desktop\.ini|_vti_)$/i.test(n) || !n) n = '_' + n;
-    return n.slice(0, 120);
-  }
-
-  async function downloadUrl(rel) {
-    try {
-      const it = await graph(await itemPath(rel, '?$select=id,@microsoft.graph.downloadUrl'));
-      return it['@microsoft.graph.downloadUrl'] || null;
-    } catch (e) {
-      if (e.status === 404) return null;
-      throw e;
-    }
+    const info = await folderInfo('');
+    if (!info.Exists) throw new SPError(404, 'folder_not_found', 'No se encontró la carpeta de este archivo en SharePoint.');
+    return { name: info.Name || rootPath.split('/').pop(), webUrl: fileUrl('') };
   }
 
   async function readJson() {
-    const url = await downloadUrl(DATA_FILE);
-    if (!url) return null;
-    const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new SPError(r.status, 'download_failed', 'No se pudo leer tablero.json.');
+    const r = await fetch(`${fileUrl(DATA_FILE)}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new SPError(r.status, 'read_failed', 'No se pudo leer tablero.json.');
     return r.json();
   }
 
-  // Lista una carpeta: Map nombre -> { id, downloadUrl, isFolder }
+  // Contenido de una subcarpeta: Map nombre -> { downloadUrl, isFolder }
   async function list(rel) {
     const out = new Map();
-    let next;
+    let d;
     try {
-      next = rel
-        ? await itemPath(rel, '/children?$select=id,name,folder,file,@microsoft.graph.downloadUrl&$top=999')
-        : `/drives/${(await resolveRoot()).driveId}/items/${root.itemId}/children?$select=id,name,folder,file,@microsoft.graph.downloadUrl&$top=999`;
-    } catch (e) { throw e; }
-    while (next) {
-      let page;
-      try { page = await graph(next); } catch (e) { if (e.status === 404) return out; throw e; }
-      for (const it of page.value || []) out.set(it.name, { id: it.id, downloadUrl: it['@microsoft.graph.downloadUrl'] || null, isFolder: !!it.folder });
-      next = page['@odata.nextLink'] || null;
+      d = await api(`/_api/web/GetFolderByServerRelativePath(DecodedUrl=@a1)?$select=Exists,Files/Name,Folders/Name&$expand=Files,Folders&@a1=${lit(fullPath(rel))}`);
+    } catch (e) {
+      if (e.status === 404) return out;
+      throw e;
     }
+    if (d.Exists === false) return out;
+    for (const f of d.Files || []) out.set(f.Name, { downloadUrl: fileUrl(rel ? `${rel}/${f.Name}` : f.Name), isFolder: false });
+    for (const f of d.Folders || []) out.set(f.Name, { downloadUrl: null, isFolder: true });
     return out;
   }
 
-  const knownFolders = new Set();
   async function ensureFolder(rel) {
-    const r = await resolveRoot();
-    const parts = String(rel).split('/').filter(Boolean);
-    let parentPath = '';
-    for (const name of parts) {
-      const path = parentPath ? `${parentPath}/${name}` : name;
-      if (!knownFolders.has(path)) {
-        const parent = parentPath ? await itemPath(parentPath, '/children') : `/drives/${r.driveId}/items/${r.itemId}/children`;
+    let path = '';
+    for (const name of String(rel).split('/').filter(Boolean)) {
+      path = path ? `${path}/${name}` : name;
+      if (knownFolders.has(path)) continue;
+      const info = await folderInfo(path);
+      if (!info.Exists) {
         try {
-          await graph(parent, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }),
-          });
+          await api(`/_api/web/Folders/AddUsingPath(DecodedUrl=@a1,Overwrite=false)?@a1=${lit(fullPath(path))}`, { method: 'POST' });
         } catch (e) {
-          if (e.status !== 409) throw e; // ya existe
+          if (!/exist/i.test(e.message)) throw e;
         }
-        knownFolders.add(path);
       }
-      parentPath = path;
+      knownFolders.add(path);
     }
   }
 
-  async function upload(rel, blob, contentType) {
-    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
+  async function upload(rel, blob) {
+    const cut = rel.lastIndexOf('/');
+    const dir = cut === -1 ? '' : rel.slice(0, cut);
+    const name = cut === -1 ? rel : rel.slice(cut + 1);
     if (dir) await ensureFolder(dir);
-    return graph(await itemPath(rel, '/content'), {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType || blob.type || 'application/octet-stream' },
+    return api(`/_api/web/GetFolderByServerRelativePath(DecodedUrl=@a1)/Files/AddUsingPath(DecodedUrl=@a2,Overwrite=true)?@a1=${lit(fullPath(dir))}&@a2=${lit(name)}`, {
+      method: 'POST',
       body: blob,
+      headers: { 'Content-Type': 'application/octet-stream' },
     });
   }
 
+  // Manda a la papelera de reciclaje un archivo o una carpeta.
   async function remove(rel) {
-    try {
-      await graph(await itemPath(rel), { method: 'DELETE', json: false });
-      knownFolders.delete(rel);
-      return true;
-    } catch (e) {
-      if (e.status === 404) return false;
-      throw e;
+    for (const kind of ['File', 'Folder']) {
+      try {
+        await api(`/_api/web/Get${kind}ByServerRelativePath(DecodedUrl=@a1)/recycle()?@a1=${lit(fullPath(rel))}`, { method: 'POST' });
+        knownFolders.delete(rel);
+        return true;
+      } catch (e) {
+        if (e.status !== 404 && e.status !== 400) throw e;
+      }
     }
+    return false;
+  }
+
+  // Nombre válido para SharePoint (sin " * : < > ? / \ | ni espacios/puntos al inicio o final).
+  function safeName(s) {
+    let n = String(s).normalize('NFC').replace(/["*:<>?/\\|#%\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
+    n = n.replace(/^[~.\s]+/, '').replace(/[.\s]+$/, '');
+    if (/^(con|prn|aux|nul|com\d|lpt\d|desktop\.ini|_vti_|forms)$/i.test(n) || !n) n = '_' + n;
+    return n.slice(0, 120);
   }
 
   function errorText(e) {
-    if (e && /popup_window_error|empty_window_error/i.test(e.errorCode || e.message || '')) return 'El navegador bloqueó la ventana para iniciar sesión. Permite ventanas emergentes para esta página.';
-    if (e && /user_cancelled/i.test(e.errorCode || '')) return 'Se canceló el inicio de sesión.';
-    if (e && /consent|AADSTS65001/i.test(e.message || '')) return 'Falta que TI apruebe los permisos de la app (consentimiento de administrador).';
     if (!(e instanceof SPError)) return 'No se pudo conectar con SharePoint. Revisa tu conexión a internet.';
-    if (e.status === 401) return 'Tu sesión venció. Vuelve a iniciar sesión.';
-    if (e.status === 403) return 'Tu cuenta no tiene permiso en la carpeta de SharePoint.';
-    if (e.status === 404) return 'No se encontró la carpeta de SharePoint configurada en config.js.';
+    if (e.status === 0) return e.message;
+    if (e.status === 401 || e.status === 403) return 'Tu cuenta no puede modificar esta carpeta de SharePoint.';
+    if (e.status === 404) return 'No se encontró la carpeta de este archivo en SharePoint.';
     return `SharePoint respondió con un error (${e.status}): ${e.message}`;
   }
 
   return {
-    config: cfg, DATA_FILE, missingConfig, init, currentAccount, silentToken, signIn, signOut,
+    folderPath: () => rootPath,
+    DATA_FILE,
+    canSignOut: false,
+    missingConfig,
+    init,
+    currentAccount: () => account,
+    silentToken: async () => true,
+    signIn: async () => account,
+    signOut: async () => {},
     resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
   };
 })();

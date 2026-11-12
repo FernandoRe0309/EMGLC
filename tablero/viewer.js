@@ -1,7 +1,7 @@
 'use strict';
 
 /* Panel de solo lectura: portada con formatos y catálogo por formato.
-   Lee tablero.json y las fotos de la carpeta de SharePoint configurada en config.js. */
+   Lee tablero.json y las fotos de la misma carpeta de SharePoint donde está este archivo. */
 
 const $ = (s) => document.querySelector(s);
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -32,11 +32,6 @@ let renderToken = 0;
 /* ---------- Inicio y sesión ---------- */
 async function start() {
   setHero({ title: DEFAULT_INTRO.title, sub: '' });
-  const missing = SP.missingConfig();
-  if (missing.length) {
-    showStatus('El manual aún no está configurado', `Falta en config.js: ${missing.join(', ')}.`);
-    return;
-  }
   try {
     await SP.init(['Files.Read.All']);
   } catch (e) {
@@ -83,6 +78,7 @@ function renderAccount() {
   const acc = SP.currentAccount();
   $('#account').hidden = !acc;
   $('#accountName').textContent = acc ? (acc.name || acc.username) : '';
+  $('#signOutWrap').hidden = !SP.canSignOut;
 }
 
 function normalize(raw) {

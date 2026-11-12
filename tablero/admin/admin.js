@@ -26,7 +26,7 @@ const DB_VERSION = 1;
 // Publicación en SharePoint: <carpeta>/<Formato>/<Área>/<foto>.jpg + tablero.json
 const MAX_SIDE = 2000;      // px del lado mayor tras optimizar
 const JPEG_QUALITY = 0.85;
-const SCOPES = ['Files.ReadWrite.All'];
+const SCOPES = [];
 
 /* ---------- Utilidades ---------- */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -832,21 +832,21 @@ let publishing = false;
 
 function configProblem() {
   const m = SP.missingConfig();
-  return m.length ? `Falta configurar en config.js: ${m.join(', ')}.` : null;
+  return m.length ? `Falta configurar: ${m.join(', ')}.` : null;
 }
 
 function renderAccount() {
   const btn = $('#authBtn');
   const acc = spReady ? SP.currentAccount() : null;
-  btn.textContent = acc ? (acc.name || acc.username) : 'Iniciar sesión';
-  btn.title = acc ? `Sesión iniciada como ${acc.username}. Clic para ver la conexión.` : 'Inicia sesión con tu cuenta de la empresa';
+  btn.textContent = acc ? (acc.name || acc.username) : 'Sin conexión';
+  btn.title = acc ? `Conectado a SharePoint como ${acc.name || acc.username}. Clic para ver la carpeta.` : 'Conectar con SharePoint';
   btn.classList.toggle('signed', !!acc);
 }
 
 async function signInFromClick() {
   const problem = configProblem();
   if (problem) { openConnection(); return false; }
-  if (!spReady) { toast('Conectando con Microsoft, intenta en un momento.'); return false; }
+  if (!spReady) { toast('No hay conexión con SharePoint. Abre este archivo desde su carpeta en SharePoint.', 6000); return false; }
   if (SP.currentAccount()) return true;
   try {
     await SP.signIn();
@@ -1141,14 +1141,14 @@ async function syncWithPublished() {
 /* ---------- Conexión ---------- */
 function openConnection() {
   const problem = configProblem();
-  $('#connFolder').textContent = SP.config.sharepointFolderUrl || '(sin configurar)';
+  $('#connFolder').textContent = (spReady && SP.folderPath()) || decodeURIComponent(location.pathname.slice(0, location.pathname.lastIndexOf('/'))) || '';
   const acc = spReady ? SP.currentAccount() : null;
   $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : 'Sin iniciar sesión';
   const res = $('#connResult');
   res.className = 'cfg-result' + (problem ? ' err' : '');
   res.textContent = problem || '';
   $('#connTest').disabled = !!problem;
-  $('#connSignOut').hidden = !acc;
+  $('#connSignOut').hidden = !acc || !SP.canSignOut;
   $('#connection').showModal();
 }
 
@@ -1164,7 +1164,7 @@ function setupConnection() {
       res.textContent = `Conexión correcta con la carpeta "${r.name}".`;
       const acc = SP.currentAccount();
       $('#connAccount').textContent = acc ? `${acc.name || ''} (${acc.username})` : '';
-      $('#connSignOut').hidden = !acc;
+      $('#connSignOut').hidden = !acc || !SP.canSignOut;
     } catch (e) {
       console.error(e);
       res.className = 'cfg-result err';
@@ -1497,7 +1497,7 @@ async function init() {
   const problem = configProblem();
   if (problem) {
     renderAccount();
-    toast(problem + ' El tablero funciona, pero no se puede publicar.', 9000);
+    toast(problem, 9000);
     return;
   }
   try {
@@ -1505,7 +1505,7 @@ async function init() {
     spReady = true;
   } catch (e) {
     console.error(e);
-    toast(SP.errorText(e), 7000);
+    toast(SP.errorText(e) + ' Puedes acomodar el tablero, pero no publicar.', 9000);
   }
   renderAccount();
   if (spReady && SP.currentAccount()) {
