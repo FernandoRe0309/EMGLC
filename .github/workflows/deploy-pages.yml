@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - claude/love-meter-interactive-7jk8ew
-      - claude/amazing-darwin-83ea8c
   workflow_dispatch:
 
 permissions:
