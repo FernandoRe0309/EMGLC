@@ -931,3 +931,24 @@ a.btn { text-decoration: none; color: inherit; }
 /* ---------- Versiones anteriores ---------- */
 .hist-list { display: grid; gap: 6px; max-height: 50vh; overflow-y: auto; }
 .hist-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+
+/* ---------- Copiar y pegar ---------- */
+.copy-btn {
+  padding: 4px 10px; border: 1px solid #9dbbf3; border-radius: 999px; background: #eef3ff; color: var(--accent);
+  font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 4px;
+}
+.copy-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.paste-btn {
+  position: relative; display: grid; gap: 2px; justify-items: center; text-align: center;
+  border: 1.5px solid #f2c94c !important; background: #fffaeb !important; color: #7a3d00 !important; font-weight: 600; padding-right: 26px;
+}
+.paste-btn strong { font-size: 13px; }
+.paste-btn small { font-weight: 400; font-size: 11px; color: #8a6d1f; }
+.paste-btn:hover { background: #fff1c2 !important; }
+.clip-clear {
+  position: absolute; top: 4px; right: 6px; width: 20px; height: 20px; display: grid; place-items: center;
+  border-radius: 50%; font-size: 14px; color: #8a6d1f;
+}
+.clip-clear:hover { background: rgba(0, 0, 0, .08); }
+.choose-dlg { width: min(520px, calc(100vw - 32px)); }
+.choose-options { justify-content: flex-end; }

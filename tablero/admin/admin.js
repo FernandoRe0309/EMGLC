@@ -272,15 +272,25 @@ function placementCounts() {
   return counts;
 }
 
-let saveTimer;
+// Guardado en este navegador: como máximo 0.3 s después de cada cambio (aunque sigas
+// trabajando) y al instante al cerrar o cambiar de pestaña.
+let saveTimer = null;
+let lastSave = 0;
+function persistNow() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  lastSave = Date.now();
+  if (!state) return Promise.resolve();
+  return idb('state', 'readwrite', (s) => s.put(state, 'board')).catch((e) => console.error(e));
+}
 function saveBoard({ dirty = true } = {}) {
   if (dirty) state.dirty = true;
   renderPublishState();
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    idb('state', 'readwrite', (s) => s.put(state, 'board')).catch((e) => console.error(e));
-  }, 250);
+  if (saveTimer) return;
+  saveTimer = setTimeout(persistNow, Math.max(0, 300 - (Date.now() - lastSave)));
 }
+window.addEventListener('pagehide', persistNow);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persistNow(); });
 
 function commit() { saveBoard(); render(); }
 
@@ -434,7 +444,7 @@ function renderZoneBar() {
     const n = z.areas.reduce((k, a) => k + a.spaces.length, 0);
     return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
       ${escapeHtml(z.name)}<small>${z.hidden ? 'Oculta en el manual' : `${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}`}</small></button>`;
-  }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>';
+  }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>' + pasteButtonHtml('zone');
 }
 
 function renderZonePanel() {
@@ -453,6 +463,7 @@ function renderZonePanel() {
         <p class="muted">Selecciona un área para acomodar su señalización.</p>
       </div>
       <div class="tools">
+        <button type="button" class="copy-btn" data-zone-action="copy" title="Copiar esta zona con todas sus áreas, notas y fotos para pegarla en otro formato">⧉ Copiar</button>
         <button type="button" class="eye-btn${zone.hidden ? ' off' : ''}" data-zone-action="toggle" title="${zone.hidden ? 'Mostrar esta zona en el manual' : 'Ocultar esta zona en el manual'}">${zone.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-zone-action="left" title="Mover zona a la izquierda" ${zi === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-zone-action="right" title="Mover zona a la derecha" ${zi === board.zones.length - 1 ? 'disabled' : ''}>→</button>
@@ -467,6 +478,7 @@ function renderZonePanel() {
           <span>${escapeHtml(a.name)}</span><small>${a.hidden ? 'oculta' : `${filled}/${a.spaces.length}`}</small></button>`;
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
+      ${pasteButtonHtml('area')}
     </div>
     ${blocksEditHtml('zone', zone.blocks, 'bottom')}
     ${area ? areaDetailHtml(zone, area) : `<p class="pick-hint">${zone.areas.length ? 'Elige un área para ver y acomodar sus espacios.' : 'Esta zona aún no tiene áreas. Usa <strong>+ Área</strong>.'}</p>`}`;
@@ -487,6 +499,7 @@ function areaDetailHtml(zone, area) {
         <label class="move-zone">Zona
           <select data-area-zone>${board.zones.map((z) => `<option value="${z.id}" ${z.id === zone.id ? 'selected' : ''}>${escapeHtml(z.name)}</option>`).join('')}</select>
         </label>
+        <button type="button" class="copy-btn" data-area-action="copy" title="Copiar esta área con sus notas y fotos para pegarla en otra zona u otro formato">⧉ Copiar</button>
         <button type="button" class="eye-btn${area.hidden ? ' off' : ''}" data-area-action="toggle" title="${area.hidden ? 'Mostrar esta área en el manual' : 'Ocultar esta área en el manual'}">${area.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-area-action="left" title="Mover área antes" ${ai === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-area-action="right" title="Mover área después" ${ai === zone.areas.length - 1 ? 'disabled' : ''}>→</button>
@@ -1988,6 +2001,118 @@ function setupFormatUI() {
   });
 }
 
+/* ---------- Copiar y pegar zonas y áreas (entre formatos) ----------
+   Lo copiado se guarda en este navegador, así que sigue disponible al cambiar de formato o recargar. */
+const CLIP_KEY = 'tablero-senalizacion:portapapeles';
+let clipMemory = null;
+
+function getClip() {
+  try { const raw = localStorage.getItem(CLIP_KEY); if (raw) return JSON.parse(raw); } catch { /* sin almacenamiento */ }
+  return clipMemory;
+}
+
+function setClip(clip) {
+  clipMemory = clip;
+  try { if (clip) localStorage.setItem(CLIP_KEY, JSON.stringify(clip)); else localStorage.removeItem(CLIP_KEY); } catch { /* solo en memoria */ }
+}
+
+function copyToClip(kind, item) {
+  const zone = kind === 'area' ? activeZone() : item;
+  setClip({ kind, from: board.name, fromZone: kind === 'area' ? zone.name : null, item: structuredClone(item), at: Date.now() });
+  render();
+  const what = kind === 'zone' ? `la zona "${item.name}"` : `el área "${item.name}"`;
+  toast(`Copiaste ${what}. Ve al formato o zona donde la quieres y presiona "📋 Pegar".`, 6000);
+}
+
+function pasteButtonHtml(kind) {
+  const c = getClip();
+  if (!c || c.kind !== kind) return '';
+  const label = kind === 'zone' ? 'Pegar zona' : 'Pegar área';
+  const from = `de ${c.from}${c.fromZone ? ' · ' + c.fromZone : ''}`;
+  return `<button type="button" class="${kind === 'zone' ? 'zone-add' : 'area-add'} paste-btn" data-paste="${kind}" title="Pegar lo que copiaste">
+      📋 ${label} <strong>${escapeHtml(c.item.name)}</strong><small>${escapeHtml(from)}</small>
+      <span class="clip-clear" data-clip-clear title="Olvidar lo copiado" role="button" aria-label="Olvidar lo copiado">×</span></button>`;
+}
+
+// Copia con identificadores nuevos (lo pegado es independiente del original).
+function withNewIds(obj) {
+  const c = structuredClone(obj);
+  const walk = (o) => {
+    if (Array.isArray(o)) o.forEach(walk);
+    else if (o && typeof o === 'object') { if ('id' in o) o.id = uid(); Object.values(o).forEach(walk); }
+  };
+  walk(c);
+  return c;
+}
+
+// Ventana con opciones; devuelve el valor elegido o null.
+function choose(title, text, options) {
+  return new Promise((resolve) => {
+    const dlg = $('#chooseDlg');
+    $('#chooseTitle').textContent = title;
+    $('#chooseText').textContent = text;
+    const box = $('#chooseOptions');
+    box.innerHTML = options.map((o, i) => `<button type="button" class="btn${i === 0 ? ' btn-primary' : ''}${o.danger ? ' danger' : ''}" data-choice="${o.value}">${escapeHtml(o.label)}</button>`).join('') +
+      '<button type="button" class="btn" data-choice="">Cancelar</button>';
+    const done = (v) => { dlg.close(); resolve(v || null); };
+    box.onclick = (e) => { const b = e.target.closest('[data-choice]'); if (b) done(b.dataset.choice); };
+    dlg.oncancel = () => resolve(null);
+    dlg.showModal();
+  });
+}
+
+async function pasteClip(kind) {
+  const c = getClip();
+  if (!c || c.kind !== kind) return;
+  const pasted = withNewIds(c.item);
+  if (kind === 'zone') {
+    const existing = board.zones.find((z) => norm(z.name) === norm(pasted.name));
+    let mode = 'new';
+    if (existing) {
+      mode = await choose(`Pegar zona "${pasted.name}" en ${board.name}`,
+        `Ya existe una zona "${existing.name}" en ${board.name}. ¿Qué quieres hacer?`,
+        [{ value: 'new', label: 'Agregar como zona nueva' }, { value: 'replace', label: `Reemplazar "${existing.name}"`, danger: true }]);
+      if (!mode) return;
+    }
+    if (mode === 'replace') {
+      if (!confirm(`Se reemplazará todo el contenido de "${existing.name}" en ${board.name} (áreas, notas y fotos) por lo copiado de ${c.from}. ¿Continuar?`)) return;
+      const i = board.zones.indexOf(existing);
+      board.zones[i] = { ...pasted, id: existing.id };
+      board.activeZoneId = existing.id;
+    } else {
+      board.zones.push(pasted);
+      board.activeZoneId = pasted.id;
+    }
+    board.activeAreaId = null;
+    commit();
+    toast(`Zona "${pasted.name}" pegada en ${board.name}. Recuerda publicar.`, 5000);
+    return;
+  }
+  // Área: se pega en la zona abierta.
+  const zone = activeZone();
+  if (!zone) { toast('Primero elige la zona donde quieres pegar el área.'); return; }
+  const found = allAreas().find(({ area }) => norm(area.name) === norm(pasted.name));
+  let mode = 'new';
+  if (found) {
+    mode = await choose(`Pegar área "${pasted.name}"`,
+      `Ya existe un área "${found.area.name}" en ${board.name} (zona ${found.zone.name}). ¿Qué quieres hacer?`,
+      [{ value: 'new', label: `Agregar como área nueva en ${zone.name}` }, { value: 'replace', label: `Reemplazar "${found.area.name}"`, danger: true }]);
+    if (!mode) return;
+  }
+  if (mode === 'replace') {
+    if (!confirm(`Se reemplazará todo el contenido de "${found.area.name}" (notas, espacios y fotos) por lo copiado de ${c.from}. ¿Continuar?`)) return;
+    const i = found.zone.areas.indexOf(found.area);
+    found.zone.areas[i] = { ...pasted, id: found.area.id };
+    board.activeZoneId = found.zone.id;
+    board.activeAreaId = found.area.id;
+  } else {
+    zone.areas.push(pasted);
+    board.activeAreaId = pasted.id;
+  }
+  commit();
+  toast(`Área "${pasted.name}" pegada en ${board.name}. Recuerda publicar.`, 5000);
+}
+
 /* ---------- Zonas, áreas y espacios: clics y edición ---------- */
 function setupBoardUI() {
   $('#bannerBox').addEventListener('click', (e) => {
@@ -1997,6 +2122,8 @@ function setupBoardUI() {
   $('#zoneBar').addEventListener('click', (e) => {
     const z = e.target.closest('[data-zone]');
     if (z) { board.activeZoneId = z.dataset.zone; board.activeAreaId = null; saveBoard({ dirty: false }); render(); return; }
+    if (e.target.closest('[data-clip-clear]')) { setClip(null); render(); toast('Se olvidó lo copiado.'); return; }
+    if (e.target.closest('[data-paste="zone"]')) { pasteClip('zone'); return; }
     if (e.target.closest('[data-zone-action="add"]')) {
       const zone = newZone('Nueva zona');
       board.zones.push(zone);
@@ -2013,9 +2140,12 @@ function setupBoardUI() {
     const areaBtn = e.target.closest('[data-area]');
     if (areaBtn) { selectArea(areaBtn.dataset.area); return; }
 
+    if (e.target.closest('[data-clip-clear]')) { setClip(null); render(); toast('Se olvidó lo copiado.'); return; }
+    if (e.target.closest('[data-paste="area"]')) { pasteClip('area'); return; }
     const za = e.target.closest('[data-zone-action]');
     if (za && zone) {
       const i = board.zones.indexOf(zone);
+      if (za.dataset.zoneAction === 'copy') { copyToClip('zone', zone); return; }
       if (za.dataset.zoneAction === 'toggle') zone.hidden = !zone.hidden;
       else if (za.dataset.zoneAction === 'left' && i > 0) [board.zones[i - 1], board.zones[i]] = [board.zones[i], board.zones[i - 1]];
       else if (za.dataset.zoneAction === 'right' && i < board.zones.length - 1) [board.zones[i + 1], board.zones[i]] = [board.zones[i], board.zones[i + 1]];
@@ -2043,6 +2173,7 @@ function setupBoardUI() {
       }
       if (!area) return;
       const i = zone.areas.indexOf(area);
+      if (aa.dataset.areaAction === 'copy') { copyToClip('area', area); return; }
       if (aa.dataset.areaAction === 'toggle') area.hidden = !area.hidden;
       else if (aa.dataset.areaAction === 'left' && i > 0) [zone.areas[i - 1], zone.areas[i]] = [zone.areas[i], zone.areas[i - 1]];
       else if (aa.dataset.areaAction === 'right' && i < zone.areas.length - 1) [zone.areas[i + 1], zone.areas[i]] = [zone.areas[i], zone.areas[i + 1]];
