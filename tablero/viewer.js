@@ -54,6 +54,30 @@ async function load() {
   }
   renderAccount();
   route();
+  startAutoRefresh();
+}
+
+// Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
+let refreshing = false;
+function startAutoRefresh() {
+  const tick = async () => {
+    if (refreshing || document.visibilityState !== 'visible' || lb.open) return;
+    refreshing = true;
+    try {
+      const raw = await SP.readJson();
+      if (raw && data && raw.updatedAt !== data.updatedAt) {
+        const y = window.scrollY;
+        data = normalize(raw);
+        route({ quiet: true });
+        window.scrollTo(0, y);
+      }
+    } catch (e) { console.warn(e); }
+    refreshing = false;
+  };
+  setInterval(tick, 60000);
+  window.addEventListener('focus', tick);
+  document.addEventListener('visibilitychange', tick);
+  SP.watchForUpdates();
 }
 
 function renderAccount() {
@@ -164,20 +188,21 @@ function showStatus(title, text) {
 }
 
 /* ---------- Rutas: #/ · #/formato · #/formato/zona · #/formato/zona/area ---------- */
-function route() {
+function route({ quiet = false } = {}) {
   if (!data) return;
   const [fid, zid, aid] = location.hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
   const fmt = fid && data.formats.find((f) => f.id === fid);
-  if (!fmt) { lastFormatId = null; renderHome(); window.scrollTo(0, 0); return; }
+  if (!fmt) { lastFormatId = null; renderHome(); if (!quiet) window.scrollTo(0, 0); return; }
   const zone = fmt.zones.find((z) => z.id === zid) || fmt.zones[0] || null;
   const area = zone && zone.areas.find((a) => a.id === aid) || null;
   const firstOpen = lastFormatId !== fmt.id;
   lastFormatId = fmt.id;
   renderFormat(fmt, zone, area);
+  if (quiet) return;
   if (firstOpen) window.scrollTo(0, 0);
   else if (area) $('#areaDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => route());
 
 const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 

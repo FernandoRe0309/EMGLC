@@ -61,6 +61,21 @@ Las páginas usan la sesión de SharePoint de quien las abre: para ver el manual
 
 Son el mismo contenido; el `.aspx` solo agrega en la primera línea la directiva de página de SharePoint (`<%@ Page Language="C#" %>`). Usa el que tu sitio de SharePoint muestre como página. Si los dos se descargan en lugar de abrirse, el administrador de SharePoint debe permitir páginas personalizadas en ese sitio.
 
+## Trabajo en equipo (varias personas en el administrador)
+
+- Cada persona edita en su navegador y sus cambios se comparten al presionar **Publicar**.
+- **Al publicar se combinan** tus cambios con lo que otra persona haya publicado mientras tanto; no se reemplaza su trabajo. Si los dos cambiaron exactamente lo mismo (por ejemplo, el mismo título), se conserva lo tuyo.
+- **Cada 20 segundos** el administrador revisa si alguien publicó y lo trae a tu pantalla (si estás escribiendo o con una ventana abierta, espera a que termines). El manual de lectura se actualiza solo cada minuto.
+- Arriba se indica quién publicó por última vez y si tienes *cambios sin publicar*.
+- **Publicar nunca borra fotos.** Para quitar de SharePoint las que ya no se usan: **Más → Limpiar fotos sin usar…** (van a la papelera de reciclaje).
+- **Más → Versiones anteriores (restaurar)…**: antes de cada publicación se guarda una copia en la carpeta `_historial` (las últimas 60).
+- Si el archivo de la página en SharePoint es más nuevo que el que tienes abierto, aparece **"Hay una versión nueva de esta página — Actualizar ahora"**, y el administrador no deja publicar hasta actualizar (así una versión vieja no puede borrar lo que no conoce).
+
+### Si se perdió algo antes de esta versión
+
+- `tablero.json` tiene **historial de versiones de SharePoint**: en la carpeta, clic en los tres puntos del archivo → **Historial de versiones** → elige una versión anterior → **Restaurar**.
+- Las fotos que la versión anterior mandó a la papelera están en la **Papelera de reciclaje** del sitio de SharePoint (se conservan 93 días) → **Restaurar**.
+
 ## Uso del panel de administrador
 
 1. **Cargar carpeta** → elige la carpeta de fotos de tu computadora (o arrástrala a la página).

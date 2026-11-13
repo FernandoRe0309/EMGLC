@@ -600,6 +600,10 @@ a.pill { text-decoration: none; }
    Usa la sesión que la persona ya tiene abierta: no hay tokens ni configuración.
    ===================================================================== */
 
+// Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
+// que el que está abierto en el navegador, se avisa para recargar.
+const APP_VERSION = '2026.11.13-1';
+
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
   const JSON_ACCEPT = 'application/json;odata=nometadata';
@@ -782,6 +786,41 @@ const SP = (() => {
     return n.slice(0, 120);
   }
 
+  /* ---------- ¿Hay una versión más nueva de esta página? ---------- */
+  let updateAvailable = false;
+
+  async function checkForUpdate() {
+    if (!/^https?:$/.test(location.protocol) || updateAvailable) return;
+    try {
+      const r = await fetch(`${location.pathname}?nocache=${Date.now()}`, { cache: 'no-store', credentials: 'same-origin' });
+      if (!r.ok) return;
+      const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+      if (m && m[1] !== APP_VERSION) { updateAvailable = true; showUpdateBanner(); }
+    } catch { /* sin conexión: se intenta después */ }
+  }
+
+  function showUpdateBanner() {
+    if (document.getElementById('spUpdateBanner')) return;
+    const bar = document.createElement('div');
+    bar.id = 'spUpdateBanner';
+    bar.setAttribute('role', 'alert');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 32px);padding:12px 16px;border-radius:12px;background:#1b2330;color:#fff;font:600 14px/1.4 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.3)';
+    bar.innerHTML = '<span>Hay una versión nueva de esta página.</span>';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Actualizar ahora';
+    btn.style.cssText = 'padding:8px 14px;border:0;border-radius:8px;background:#ffc220;color:#1b2330;font:700 14px system-ui,sans-serif;cursor:pointer';
+    btn.onclick = () => location.replace(`${location.pathname}?v=${Date.now()}${location.hash}`);
+    bar.appendChild(btn);
+    document.body.appendChild(bar);
+  }
+
+  function watchForUpdates() {
+    checkForUpdate();
+    setInterval(checkForUpdate, 5 * 60 * 1000);
+    window.addEventListener('focus', checkForUpdate);
+  }
+
   function errorText(e) {
     if (!(e instanceof SPError)) return 'No se pudo conectar con SharePoint. Revisa tu conexión a internet.';
     if (e.status === 0) return e.message;
@@ -792,6 +831,10 @@ const SP = (() => {
 
   return {
     folderPath: () => rootPath,
+    APP_VERSION,
+    updateAvailable: () => updateAvailable,
+    watchForUpdates,
+    checkForUpdate,
     DATA_FILE,
     canSignOut: false,
     missingConfig,
@@ -1007,6 +1050,30 @@ async function load() {
   }
   renderAccount();
   route();
+  startAutoRefresh();
+}
+
+// Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
+let refreshing = false;
+function startAutoRefresh() {
+  const tick = async () => {
+    if (refreshing || document.visibilityState !== 'visible' || lb.open) return;
+    refreshing = true;
+    try {
+      const raw = await SP.readJson();
+      if (raw && data && raw.updatedAt !== data.updatedAt) {
+        const y = window.scrollY;
+        data = normalize(raw);
+        route({ quiet: true });
+        window.scrollTo(0, y);
+      }
+    } catch (e) { console.warn(e); }
+    refreshing = false;
+  };
+  setInterval(tick, 60000);
+  window.addEventListener('focus', tick);
+  document.addEventListener('visibilitychange', tick);
+  SP.watchForUpdates();
 }
 
 function renderAccount() {
@@ -1117,20 +1184,21 @@ function showStatus(title, text) {
 }
 
 /* ---------- Rutas: #/ · #/formato · #/formato/zona · #/formato/zona/area ---------- */
-function route() {
+function route({ quiet = false } = {}) {
   if (!data) return;
   const [fid, zid, aid] = location.hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
   const fmt = fid && data.formats.find((f) => f.id === fid);
-  if (!fmt) { lastFormatId = null; renderHome(); window.scrollTo(0, 0); return; }
+  if (!fmt) { lastFormatId = null; renderHome(); if (!quiet) window.scrollTo(0, 0); return; }
   const zone = fmt.zones.find((z) => z.id === zid) || fmt.zones[0] || null;
   const area = zone && zone.areas.find((a) => a.id === aid) || null;
   const firstOpen = lastFormatId !== fmt.id;
   lastFormatId = fmt.id;
   renderFormat(fmt, zone, area);
+  if (quiet) return;
   if (firstOpen) window.scrollTo(0, 0);
   else if (area) $('#areaDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => route());
 
 const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 

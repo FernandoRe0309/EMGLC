@@ -997,6 +997,10 @@ a.btn { text-decoration: none; color: inherit; }
 .zone-panel { margin-bottom: 14px; }
 .blk-tools button[disabled] { opacity: .4; cursor: default; }
 
+/* ---------- Versiones anteriores ---------- */
+.hist-list { display: grid; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.hist-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -1029,6 +1033,8 @@ a.btn { text-decoration: none; color: inherit; }
       <div class="menu-panel">
         <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
+        <button type="button" data-action="history">Versiones anteriores (restaurar)…</button>
+        <button type="button" data-action="cleanup">Limpiar fotos sin usar…</button>
         <hr>
         <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
         <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
@@ -1183,6 +1189,15 @@ a.btn { text-decoration: none; color: inherit; }
   </form>
 </dialog>
 
+<dialog id="historyDlg" class="settings">
+  <form method="dialog" class="settings-inner">
+    <h3>Versiones anteriores</h3>
+    <p class="muted small">Cada vez que alguien publica se guarda una copia de la versión anterior en la carpeta <em>_historial</em> (se conservan las últimas 60). Al restaurar, la versión se carga en tu tablero; revisa y presiona <strong>Publicar</strong> para que la vean todos.</p>
+    <div id="historyList" class="hist-list"></div>
+    <div class="settings-actions"><span class="spacer"></span><button value="close" class="btn btn-primary">Cerrar</button></div>
+  </form>
+</dialog>
+
 <dialog id="introDlg" class="settings">
   <form method="dialog" class="settings-inner" id="introForm">
     <h3>Página de inicio</h3>
@@ -1214,6 +1229,10 @@ a.btn { text-decoration: none; color: inherit; }
    MISMA carpeta (tablero.json y las subcarpetas <Formato>/<Área>/).
    Usa la sesión que la persona ya tiene abierta: no hay tokens ni configuración.
    ===================================================================== */
+
+// Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
+// que el que está abierto en el navegador, se avisa para recargar.
+const APP_VERSION = '2026.11.13-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1397,6 +1416,41 @@ const SP = (() => {
     return n.slice(0, 120);
   }
 
+  /* ---------- ¿Hay una versión más nueva de esta página? ---------- */
+  let updateAvailable = false;
+
+  async function checkForUpdate() {
+    if (!/^https?:$/.test(location.protocol) || updateAvailable) return;
+    try {
+      const r = await fetch(`${location.pathname}?nocache=${Date.now()}`, { cache: 'no-store', credentials: 'same-origin' });
+      if (!r.ok) return;
+      const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+      if (m && m[1] !== APP_VERSION) { updateAvailable = true; showUpdateBanner(); }
+    } catch { /* sin conexión: se intenta después */ }
+  }
+
+  function showUpdateBanner() {
+    if (document.getElementById('spUpdateBanner')) return;
+    const bar = document.createElement('div');
+    bar.id = 'spUpdateBanner';
+    bar.setAttribute('role', 'alert');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 32px);padding:12px 16px;border-radius:12px;background:#1b2330;color:#fff;font:600 14px/1.4 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.3)';
+    bar.innerHTML = '<span>Hay una versión nueva de esta página.</span>';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Actualizar ahora';
+    btn.style.cssText = 'padding:8px 14px;border:0;border-radius:8px;background:#ffc220;color:#1b2330;font:700 14px system-ui,sans-serif;cursor:pointer';
+    btn.onclick = () => location.replace(`${location.pathname}?v=${Date.now()}${location.hash}`);
+    bar.appendChild(btn);
+    document.body.appendChild(bar);
+  }
+
+  function watchForUpdates() {
+    checkForUpdate();
+    setInterval(checkForUpdate, 5 * 60 * 1000);
+    window.addEventListener('focus', checkForUpdate);
+  }
+
   function errorText(e) {
     if (!(e instanceof SPError)) return 'No se pudo conectar con SharePoint. Revisa tu conexión a internet.';
     if (e.status === 0) return e.message;
@@ -1407,6 +1461,10 @@ const SP = (() => {
 
   return {
     folderPath: () => rootPath,
+    APP_VERSION,
+    updateAvailable: () => updateAvailable,
+    watchForUpdates,
+    checkForUpdate,
     DATA_FILE,
     canSignOut: false,
     missingConfig,
@@ -2527,15 +2585,21 @@ figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcapt
 
 function formatToJson(f) {
   return {
-    name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
+    id: f.id, name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner || null, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
     zones: f.zones.map((z) => ({
-      name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
-      areas: z.areas.map((a) => ({ name: a.name, note: a.note, hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ title: s.title, image: s.imageId, hidden: !!s.hidden, text: s.text || '' })) })),
+      id: z.id, name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
+      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '' })) })),
     })),
   };
 }
 
 function formatFromJson(f) {
+  const nf = formatFromJsonRaw(f);
+  if (f.id) nf.id = String(f.id);
+  return nf;
+}
+
+function formatFromJsonRaw(f) {
   if (!Array.isArray(f.zones)) {
     return newFormat({ name: String(f.name || 'Formato'), subtitle: String(f.subtitle || ''), color: String(f.color || '#1f4fd6'), zones: migrateSections(f.sections, (c) => c.path || c.imageId || null) });
   }
@@ -2552,6 +2616,7 @@ function formatFromJson(f) {
       const zone = newZone(String(z.name || 'Zona'), (z.areas || []).map((a) => {
         const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => {
           const sp = newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null);
+          if (s.id) sp.id = String(s.id);
           sp.hidden = !!s.hidden;
           sp.text = String(s.text || '');
           return sp;
@@ -2559,8 +2624,10 @@ function formatFromJson(f) {
         area.note = String(a.note || '');
         area.blocks = (a.blocks || []).map(normalizeBlock);
         area.hidden = !!a.hidden;
+        if (a.id) area.id = String(a.id);
         return area;
       }));
+      if (z.id) zone.id = String(z.id);
       zone.hidden = !!z.hidden;
       zone.blocks = (z.blocks || []).map(normalizeBlock);
       return zone;
@@ -2665,7 +2732,7 @@ function renderPublishState() {
     el.textContent = 'Cambios sin publicar';
   } else if (state.publishedAt) {
     el.className = 'publish-state';
-    el.textContent = 'Publicado ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    el.textContent = 'Publicado ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) + (state.publishedBy ? ` por ${state.publishedBy}` : '');
   } else {
     el.className = 'publish-state';
     el.textContent = '';
@@ -2673,8 +2740,10 @@ function renderPublishState() {
 }
 
 // Carpetas en SharePoint: <Formato>/<Zona>/<Área>/<Espacio>.jpg y <Formato>/Portada.jpg
-async function buildPlan() {
+async function buildPlan(pubRefs = new Map()) {
   const files = new Map(); // ruta -> img
+  // Si una foto publicada (por otra persona) no está en esta computadora, se conserva tal cual.
+  const keepRef = (id) => (id && pubRefs.get(id)) || null;
   const uniq = (set, name) => { let n = name, k = 2; while (set.has(n.toLowerCase())) n = `${name} (${k++})`; set.add(n.toLowerCase()); return n; };
   const ref = async (img, file) => {
     if (!img.hash) img.hash = await sha1(img.blob);
@@ -2683,16 +2752,16 @@ async function buildPlan() {
   };
   // Foto de portada de la página de inicio: <carpeta>/Portada inicio.jpg
   const homeImg = state.intro.banner && images.get(state.intro.banner);
-  const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : null };
+  const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : keepRef(state.intro.banner) };
   const logoFiles = new Set(); // los logos se publican en PNG para conservar la transparencia
   const fmtNames = new Set();
   const formats = [];
   for (const f of state.formats) {
     const fname = uniq(fmtNames, SP.safeName(f.name) || 'Formato');
     const bannerImg = f.banner && images.get(f.banner);
-    const banner = bannerImg ? await ref(bannerImg, `${fname}/Portada.${expectedExt(bannerImg)}`) : null;
+    const banner = bannerImg ? await ref(bannerImg, `${fname}/Portada.${expectedExt(bannerImg)}`) : keepRef(f.banner);
     const logoImg = f.logo && images.get(f.logo);
-    let logo = null;
+    let logo = keepRef(f.logo);
     if (logoImg) {
       logo = await ref(logoImg, `${fname}/Logo.${logoExt(logoImg)}`);
       logoFiles.add(logo.file);
@@ -2710,7 +2779,7 @@ async function buildPlan() {
         const spaces = [];
         for (const s of a.spaces) {
           const img = s.imageId && images.get(s.imageId);
-          let image = null;
+          let image = img ? null : keepRef(s.imageId);
           if (img) {
             const ext = expectedExt(img);
             const base = SP.safeName(s.title) || 'Señalización';
@@ -2719,13 +2788,13 @@ async function buildPlan() {
             used.add(name.toLowerCase());
             image = await ref(img, `${folder}/${name}`);
           }
-          spaces.push({ title: s.title, hidden: !!s.hidden, text: s.text || '', image });
+          spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', image });
         }
-        areas.push({ name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
+        areas.push({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
-      zones.push({ name: z.name, hidden: !!z.hidden, blocks: (z.blocks || []).map(normalizeBlock), areas });
+      zones.push({ id: z.id, name: z.name, hidden: !!z.hidden, blocks: (z.blocks || []).map(normalizeBlock), areas });
     }
-    formats.push({ name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, blocks: (f.blocks || []).map(normalizeBlock), banner, logo, zones });
+    formats.push({ id: f.id, name: f.name, subtitle: f.subtitle, color: f.color, hidden: !!f.hidden, panel: f.panel, blocks: (f.blocks || []).map(normalizeBlock), banner, logo, zones });
   }
   return { files, formats, intro, logoFiles };
 }
@@ -2750,88 +2819,170 @@ const parentDirs = (file) => {
   return out;
 };
 
-async function publish() {
-  if (publishing || !ensureConnected()) return;
-  const missing = state.formats.flatMap((f) => allSpaces(f)).filter((s) => s.imageId && !images.has(s.imageId)).length;
-  if (missing && !confirm(`${plural(missing, 'espacio tiene', 'espacios tienen')} una foto que no está en la biblioteca y se publicará sin foto. ¿Continuar?`)) return;
-  if (!confirm(`Se publicarán los ${state.formats.length} formatos en esta carpeta de SharePoint. Todos los que abran el manual verán estos cambios. ¿Publicar?`)) return;
+/* ---------- Trabajo en equipo ----------
+   Cada persona edita en su navegador. Para no perder lo de nadie:
+   - Al publicar se COMBINAN los cambios con lo que otra persona haya publicado
+     (combinación de tres vías: lo último que viste, lo tuyo y lo publicado).
+   - Cada 20 s se revisa si alguien publicó, y se trae a tu pantalla.
+   - Antes de guardar se respalda la versión anterior en _historial/.
+   - Publicar nunca borra fotos; hay una opción aparte para limpiar las que ya no se usan. */
+const SCHEMA = 5;              // versión del formato de tablero.json
+const HISTORY_DIR = '_historial';
+const HISTORY_KEEP = 60;
 
-  publishing = true;
-  const btn = $('#publishBtn');
-  btn.disabled = true;
-  try {
-    setPublishProgress('Conectando con SharePoint…');
-    await SP.resolveRoot();
-    const prev = await SP.readJson();
-    const prevFiles = new Map(publishedRefs(prev).map((r) => [r.file, r.hash]));
+const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+const stable = (v) => JSON.stringify(v, (k, x) => (isObj(x) ? Object.keys(x).sort().reduce((o, kk) => { o[kk] = x[kk]; return o; }, {}) : x));
+const same = (a, b) => stable(a) === stable(b);
+const isKeyed = (...arrs) => arrs.some((x) => Array.isArray(x) && x.length && isObj(x[0]) && 'id' in x[0]);
 
-    setPublishProgress('Preparando…');
-    const plan = await buildPlan();
-    const uploads = [...plan.files].filter(([file, img]) => prevFiles.get(file) !== img.hash);
-
-    let done = 0;
-    const queue = uploads.slice();
-    const worker = async () => {
-      while (queue.length) {
-        const [file, img] = queue.shift();
-        const { blob } = img.published ? { blob: img.blob } : plan.logoFiles.has(file) ? await optimizeLogo(img.blob) : await optimizeImage(img.blob);
-        await SP.upload(file, blob);
-        setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
-      }
-    };
-    await Promise.all([worker(), worker(), worker()]);
-
-    // Mandar a la papelera las fotos que ya no se usan (solo las que publicó esta app).
-    const stale = [...prevFiles.keys()].filter((f) => !plan.files.has(f));
-    let k = 0;
-    for (const file of stale) {
-      setPublishProgress(`Retirando fotos ${++k} de ${stale.length}…`);
-      await SP.remove(file);
+// Combina dos versiones a partir de la versión base que ambos tenían.
+function merge3(base, mine, theirs, conflicts) {
+  if (same(mine, theirs)) return structuredClone(mine);
+  if (base !== undefined && same(mine, base)) return structuredClone(theirs);
+  if (base !== undefined && same(theirs, base)) return structuredClone(mine);
+  if (Array.isArray(mine) && Array.isArray(theirs) && isKeyed(base, mine, theirs)) return mergeList(Array.isArray(base) ? base : [], mine, theirs, conflicts);
+  if (isObj(mine) && isObj(theirs)) {
+    const out = {};
+    const bo = isObj(base) ? base : {};
+    for (const k of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+      if (!(k in mine)) out[k] = structuredClone(theirs[k]);
+      else if (!(k in theirs)) out[k] = structuredClone(mine[k]);
+      else out[k] = merge3(bo[k], mine[k], theirs[k], conflicts);
     }
-
-    const updatedAt = new Date().toISOString();
-    const acc = SP.currentAccount();
-    const data = { app: 'tablero-senalizacion', version: 4, updatedAt, updatedBy: acc ? acc.name || acc.username : null, intro: plan.intro, formats: plan.formats };
-    setPublishProgress('Guardando tablero.json…');
-    await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-
-    // Quitar carpetas que quedaron vacías (de la más profunda a la más alta).
-    const keepDirs = new Set([...plan.files.keys()].flatMap(parentDirs));
-    const staleDirs = [...new Set(stale.flatMap(parentDirs))].filter((d) => !keepDirs.has(d)).sort((a, b) => b.split('/').length - a.split('/').length);
-    for (const dir of staleDirs) {
-      const children = await SP.list(dir);
-      if (!children.size) await SP.remove(dir);
-    }
-
-    state.dirty = false;
-    state.publishedAt = updatedAt;
-    publishing = false;
-    saveBoard({ dirty: false });
-    toast(`Publicado: ${plural(uploads.length, 'foto subida', 'fotos subidas')}${stale.length ? `, ${plural(stale.length, 'foto retirada', 'fotos retiradas')}` : ''}.`, 6000);
-  } catch (e) {
-    console.error(e);
-    publishing = false;
-    toast('No se publicó. ' + SP.errorText(e), 8000);
-  } finally {
-    publishing = false;
-    btn.disabled = false;
-    renderPublishState();
+    return out;
   }
+  conflicts.push(stable(mine).slice(0, 80));
+  // Los dos cambiaron lo mismo: gana lo tuyo. Si no se sabe qué tenías antes (copia de la
+  // versión anterior del administrador), gana lo publicado para no deshacer el trabajo de otros.
+  return structuredClone(base === undefined ? theirs : mine);
 }
 
-/* ---------- Cargar lo publicado ---------- */
-async function fetchPublished() {
-  const data = await SP.readJson();
-  return data && Array.isArray(data.formats) ? data : null;
+// Clave por nombre para reconocer el mismo elemento aunque tenga otro identificador
+// (pasa con datos publicados por la versión anterior, que no traían identificadores).
+function sameThingKey(x) {
+  if (!isObj(x)) return null;
+  if (x.name != null) return 'n:' + norm(x.name);
+  if (x.type != null) return `b:${x.type}|${norm(x.label || x.title || '')}|${norm(x.text || '').slice(0, 40)}`;
+  if (x.title != null) return 't:' + norm(x.title);
+  return null;
 }
 
-async function loadPublished(data) {
+function mergeList(base, mine, theirs, conflicts) {
+  // Alinear identificadores: lo tuyo que no está en lo publicado pero tiene el mismo nombre
+  // que algo nuevo de lo publicado es el mismo elemento.
+  const mineIds = new Set(mine.map((x) => x.id));
+  const baseIds = new Set(base.map((x) => x.id));
+  const theirIds = new Set(theirs.map((x) => x.id));
+  const free = theirs.filter((t) => !mineIds.has(t.id) && !baseIds.has(t.id));
+  const used = new Set();
+  base = base.slice();
+  mine = mine.map((m) => {
+    if (theirIds.has(m.id)) return m;
+    const k = sameThingKey(m);
+    const t = k && free.find((x) => !used.has(x.id) && sameThingKey(x) === k);
+    if (!t) return m;
+    used.add(t.id);
+    const bi = base.findIndex((x) => x.id === m.id);
+    if (bi !== -1) base[bi] = { ...base[bi], id: t.id };
+    return { ...m, id: t.id };
+  });
+  const B = new Map(base.map((x) => [x.id, x]));
+  const M = new Map(mine.map((x) => [x.id, x]));
+  const T = new Map(theirs.map((x) => [x.id, x]));
+  const out = [];
+  for (const m of mine) {
+    if (T.has(m.id)) out.push(merge3(B.get(m.id), m, T.get(m.id), conflicts));
+    else if (!B.has(m.id) || !same(m, B.get(m.id))) out.push(structuredClone(m)); // nuevo tuyo, o lo cambiaste aunque el otro lo borró
+  }
+  theirs.forEach((t, i) => {
+    if (M.has(t.id)) return;
+    if (B.has(t.id) && same(t, B.get(t.id))) return; // lo borraste tú y el otro no lo tocó
+    let pos = 0; // se inserta después de su vecino anterior
+    for (let j = i - 1; j >= 0; j--) {
+      const k = out.findIndex((x) => x.id === theirs[j].id);
+      if (k !== -1) { pos = k + 1; break; }
+    }
+    out.splice(pos, 0, structuredClone(t));
+  });
+  return out;
+}
+
+// Versiones publicadas por administradores anteriores no traían identificadores: se asignan por nombre.
+function adoptIds(doc, ref) {
+  const nk = (x) => norm(x.name || '');
+  const bk = (x) => `${x.type}|${norm(x.title || '')}|${norm(x.text || '').slice(0, 40)}`;
+  const adopt = (items, refItems, key, recurse) => {
+    if (!Array.isArray(items)) return;
+    const refs = refItems || [];
+    const used = new Set(items.filter((x) => x && x.id).map((x) => x.id));
+    for (const it of items) {
+      let match = it.id ? refs.find((r) => r.id === it.id) || null : null;
+      if (!it.id) {
+        match = refs.find((r) => !used.has(r.id) && key(r) === key(it)) || null;
+        if (match) { it.id = match.id; used.add(match.id); }
+      }
+      if (recurse) recurse(it, match);
+    }
+  };
+  adopt(doc.formats, ref && ref.formats, nk, (f, rf) => {
+    adopt(f.blocks, rf && rf.blocks, bk);
+    adopt(f.panel && f.panel.buttons, rf && rf.panel && rf.panel.buttons, (x) => `${x.type}|${norm(x.label || '')}`);
+    adopt(f.zones, rf && rf.zones, nk, (z, rz) => {
+      adopt(z.blocks, rz && rz.blocks, bk);
+      adopt(z.areas, rz && rz.areas, nk, (ar, ra) => {
+        adopt(ar.blocks, ra && ra.blocks, bk);
+        adopt(ar.spaces, ra && ra.spaces, (x) => norm(x.title || ''));
+      });
+    });
+  });
+}
+
+// Estado local → documento comparable.
+function toDoc(st = state) {
+  return { intro: structuredClone(st.intro), formats: st.formats.map((f) => structuredClone(formatToJson(f))) };
+}
+
+// tablero.json publicado → documento comparable (fotos por su ruta original).
+function docFromPublished(data, ref) {
+  const intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+  intro.banner = data.intro && data.intro.banner && data.intro.banner.path ? data.intro.banner.path : null;
+  const raw = {
+    intro,
+    formats: (data.formats || []).map((f) => (Array.isArray(f.zones) ? {
+      ...f,
+      banner: f.banner && f.banner.path ? f.banner.path : null,
+      logo: f.logo && f.logo.path ? f.logo.path : null,
+      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => ({ id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', image: x.image && x.image.path ? x.image.path : null })) })) })),
+    } : f)),
+  };
+  adoptIds(raw, ref);
+  return { intro: raw.intro, formats: raw.formats.map((f) => formatToJson(formatFromJson(f))) };
+}
+
+// Aplica un documento al estado local conservando qué formato, zona y área tenías abiertos.
+function applyDoc(doc) {
+  const keepFmt = board && board.id;
+  const actives = new Map(state.formats.map((f) => [f.id, { z: f.activeZoneId, a: f.activeAreaId }]));
+  state.intro = { ...structuredClone(DEFAULT_INTRO), ...structuredClone(doc.intro) };
+  state.formats = doc.formats.map((f) => {
+    const nf = formatFromJson(f);
+    const act = actives.get(nf.id);
+    if (act) { nf.activeZoneId = act.z; nf.activeAreaId = act.a; }
+    return nf;
+  });
+  if (!state.formats.length) state.formats = defaultState().formats;
+  setActiveFormat(state.formats.some((f) => f.id === keepFmt) ? keepFmt : state.formats[0].id);
+  if (!findArea(board.activeAreaId)) board.activeAreaId = null;
+}
+
+// Descarga las fotos publicadas que no tienes en este navegador.
+async function downloadPublishedImages(data, { quiet = false } = {}) {
   const refs = publishedRefs(data).filter((r) => r.path && r.file);
   const need = [...new Map(refs.filter((r) => images.get(r.path)?.hash !== r.hash).map((r) => [r.path, r])).values()];
   const fetched = [];
   let done = 0;
   for (const r of need) {
-    toast(`Descargando fotos publicadas… ${++done}/${need.length}`, 60000);
+    if (!quiet) toast(`Descargando fotos publicadas… ${++done}/${need.length}`, 60000);
     try {
       const res = await fetch(`${SP.fileUrl(r.file)}?v=${encodeURIComponent(r.hash || '')}`, { credentials: 'same-origin' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2851,25 +3002,146 @@ async function loadPublished(data) {
       console.warn('No se pudo descargar', r.file, e);
     }
   }
-  if (fetched.length) await idb('images', 'readwrite', (s) => { fetched.forEach((x) => s.put(x)); }).catch(console.error);
+  if (fetched.length) await idb('images', 'readwrite', (st) => { fetched.forEach((x) => st.put(x)); }).catch(console.error);
+}
 
-  const prevActive = board && board.name;
-  const toLocal = (f) => {
-    if (Array.isArray(f.zones)) {
-      return formatFromJson({
-        ...f,
-        banner: f.banner ? f.banner.path : null,
-        logo: f.logo ? f.logo.path : null,
-        zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((a) => ({ ...a, spaces: (a.spaces || []).map((s) => ({ title: s.title, hidden: !!s.hidden, text: s.text || '', image: s.image ? s.image.path : null })) })) })),
-      });
+function publishedByText(data) {
+  const who = data && data.updatedBy ? data.updatedBy : 'Otra persona';
+  const when = data && data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+  return { who, when };
+}
+
+// Trae lo publicado y lo combina con tus cambios sin publicar (si los hay).
+async function mergeFromPublished(data, { quiet = false } = {}) {
+  await downloadPublishedImages(data, { quiet });
+  const theirs = docFromPublished(data, state.base || toDoc());
+  const conflicts = [];
+  if (!state.dirty) {
+    applyDoc(theirs);
+  } else {
+    applyDoc(merge3(state.base, toDoc(), theirs, conflicts));
+  }
+  state.base = theirs;
+  state.publishedAt = data.updatedAt || null;
+  state.publishedBy = data.updatedBy || null;
+  state.dirty = !same(toDoc(), theirs);
+  saveBoard({ dirty: false });
+  render();
+  return conflicts;
+}
+
+function versionProblem(data) {
+  if (SP.updateAvailable()) return 'Hay una versión nueva de esta página. Presiona "Actualizar ahora" (abajo) antes de publicar.';
+  if (data && (data.schema || 0) > SCHEMA) return 'Lo publicado se hizo con una versión más nueva del administrador. Actualiza esta página (Ctrl+F5) antes de publicar para no borrar nada.';
+  return null;
+}
+
+async function saveHistoryCopy(prev) {
+  if (!prev || !prev.updatedAt) return;
+  const stamp = prev.updatedAt.replace('T', ' ').slice(0, 19).replace(/:/g, '-');
+  const name = SP.safeName(`tablero ${stamp}${prev.updatedBy ? ' ' + prev.updatedBy : ''}`) + '.json';
+  await SP.upload(`${HISTORY_DIR}/${name}`, new Blob([JSON.stringify(prev, null, 2)], { type: 'application/json' }));
+  // Conservar solo las más recientes.
+  const files = [...(await SP.list(HISTORY_DIR)).keys()].filter((n) => /\.json$/i.test(n)).sort();
+  for (const old of files.slice(0, Math.max(0, files.length - HISTORY_KEEP))) await SP.remove(`${HISTORY_DIR}/${old}`).catch(() => {});
+}
+
+async function publish() {
+  if (publishing || !ensureConnected()) return;
+  const problem = versionProblem(null);
+  if (problem) { toast(problem, 8000); return; }
+  if (!confirm(`Se publicarán tus cambios en esta carpeta de SharePoint. Si otra persona publicó mientras tanto, sus cambios se conservan y se combinan con los tuyos. ¿Publicar?`)) return;
+
+  publishing = true;
+  const btn = $('#publishBtn');
+  btn.disabled = true;
+  try {
+    setPublishProgress('Conectando con SharePoint…');
+    await SP.resolveRoot();
+    let prev = await SP.readJson();
+    let merged = 0;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const vp = versionProblem(prev);
+      if (vp) throw new SP.SPError(0, 'version', vp);
+      // 1) Si alguien publicó después de lo último que viste, combinar primero.
+      if (prev && prev.updatedAt !== state.publishedAt) {
+        setPublishProgress('Combinando con los cambios de otra persona…');
+        const conflicts = await mergeFromPublished(prev, { quiet: true });
+        merged++;
+        state.dirty = true;
+        if (conflicts.length) console.warn('Cambios en el mismo lugar (se conservó lo tuyo):', conflicts);
+      }
+      // 2) Subir fotos nuevas o cambiadas.
+      setPublishProgress('Preparando…');
+      const pubRefs = new Map(publishedRefs(prev).map((r) => [r.path, r]));
+      const prevFiles = new Map(publishedRefs(prev).map((r) => [r.file, r.hash]));
+      const plan = await buildPlan(pubRefs);
+      const uploads = [...plan.files].filter(([file, img]) => prevFiles.get(file) !== img.hash);
+      let done = 0;
+      const queue = uploads.slice();
+      const worker = async () => {
+        while (queue.length) {
+          const [file, img] = queue.shift();
+          const { blob } = img.published ? { blob: img.blob } : plan.logoFiles.has(file) ? await optimizeLogo(img.blob) : await optimizeImage(img.blob);
+          await SP.upload(file, blob);
+          setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+
+      // 3) Justo antes de guardar, revisar que nadie haya publicado en este momento.
+      const check = await SP.readJson();
+      if ((check && check.updatedAt) !== (prev && prev.updatedAt)) { prev = check; continue; }
+
+      // 4) Respaldo de la versión anterior y guardado.
+      setPublishProgress('Guardando…');
+      await saveHistoryCopy(prev).catch((e) => console.warn('No se pudo guardar el historial', e));
+      const updatedAt = new Date().toISOString();
+      const acc = SP.currentAccount();
+      const data = {
+        app: 'tablero-senalizacion', version: SCHEMA, schema: SCHEMA, appVersion: SP.APP_VERSION,
+        updatedAt, updatedBy: acc ? acc.name || acc.username : null,
+        intro: plan.intro, formats: plan.formats,
+      };
+      await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+
+      state.base = docFromPublished(data, toDoc());
+      state.dirty = false;
+      state.publishedAt = updatedAt;
+      state.publishedBy = data.updatedBy;
+      publishing = false;
+      saveBoard({ dirty: false });
+      render();
+      toast(`Publicado${merged ? ' (combinado con los cambios de otra persona)' : ''}: ${plural(uploads.length, 'foto subida', 'fotos subidas')}.`, 6000);
+      return;
     }
-    return formatFromJson(f);
-  };
-  const intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
-  intro.banner = data.intro && data.intro.banner && data.intro.banner.path ? data.intro.banner.path : null;
-  state = { dirty: false, publishedAt: data.updatedAt || null, intro, formats: data.formats.map(toLocal) };
-  if (!state.formats.length) state.formats = defaultState().formats;
-  setActiveFormat((state.formats.find((f) => f.name === prevActive) || state.formats[0]).id);
+    throw new SP.SPError(0, 'busy', 'Otra persona está publicando al mismo tiempo. Espera unos segundos e intenta de nuevo.');
+  } catch (e) {
+    console.error(e);
+    publishing = false;
+    toast('No se publicó. ' + SP.errorText(e), 9000);
+  } finally {
+    publishing = false;
+    btn.disabled = false;
+    renderPublishState();
+  }
+}
+
+/* ---------- Cargar lo publicado ---------- */
+async function fetchPublished() {
+  const data = await SP.readJson();
+  return data && Array.isArray(data.formats) ? data : null;
+}
+
+// Reemplaza lo local por lo publicado (descarta cambios sin publicar).
+async function loadPublished(data) {
+  await downloadPublishedImages(data);
+  const doc = docFromPublished(data, state && state.base);
+  applyDoc(doc);
+  state.base = doc;
+  state.dirty = false;
+  state.publishedAt = data.updatedAt || null;
+  state.publishedBy = data.updatedBy || null;
   saveBoard({ dirty: false });
   render();
   toast('Se cargó la versión publicada.');
@@ -2888,13 +3160,111 @@ async function loadPublishedAction() {
   }
 }
 
-async function syncWithPublished() {
+async function syncWithPublished({ quiet = false } = {}) {
   let published = null;
-  try { published = await fetchPublished(); } catch (e) { console.warn(e); toast(SP.errorText(e), 7000); return; }
-  if (!published) return;
-  if (!state.dirty && published.updatedAt !== state.publishedAt) { await loadPublished(published); return; }
-  if (state.dirty && state.publishedAt && published.updatedAt > state.publishedAt) {
-    toast('Hay una versión publicada más reciente que tus cambios locales. Usa Más → Cargar lo publicado si quieres verla.', 7000);
+  try { published = await fetchPublished(); } catch (e) { console.warn(e); if (!quiet) toast(SP.errorText(e), 7000); return; }
+  if (!published || published.updatedAt === state.publishedAt) return;
+  const hadChanges = state.dirty;
+  const conflicts = await mergeFromPublished(published, { quiet });
+  const { who, when } = publishedByText(published);
+  toast(hadChanges
+    ? `${who} publicó cambios a las ${when}. Se combinaron con los tuyos; recuerda publicar.${conflicts.length ? ' En lo que ambos cambiaron se conservó lo tuyo.' : ''}`
+    : `${who} publicó cambios a las ${when}. Ya los ves aquí.`, 7000);
+}
+
+// Revisión periódica: sin interrumpir si estás escribiendo, arrastrando o con una ventana abierta.
+function isBusyEditing() {
+  const a = document.activeElement;
+  return !!(drag || publishing || document.querySelector('dialog[open]') || (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))));
+}
+
+function startPolling() {
+  const tick = async () => {
+    if (!spReady || document.visibilityState !== 'visible' || isBusyEditing()) return;
+    await syncWithPublished({ quiet: true });
+  };
+  setInterval(tick, 20000);
+  window.addEventListener('focus', tick);
+  document.addEventListener('visibilitychange', tick);
+}
+
+/* ---------- Versiones anteriores ---------- */
+async function openHistory() {
+  if (!ensureConnected()) return;
+  const dlg = $('#historyDlg');
+  const list = $('#historyList');
+  list.innerHTML = '<p class="muted">Cargando…</p>';
+  dlg.showModal();
+  try {
+    const files = [...(await SP.list(HISTORY_DIR)).entries()].filter(([n]) => /\.json$/i.test(n)).sort((a, b) => b[0].localeCompare(a[0]));
+    if (!files.length) { list.innerHTML = '<p class="muted">Todavía no hay versiones anteriores. Se guarda una cada vez que alguien publica.</p>'; return; }
+    list.innerHTML = files.map(([n, f]) => {
+      const m = n.match(/^tablero (\d{4}-\d{2}-\d{2}) (\d{2})-(\d{2})-(\d{2})\s*(.*)\.json$/i);
+      const label = m ? `${m[1]} ${m[2]}:${m[3]}${m[5] ? ' · ' + m[5] : ''}` : n;
+      return `<div class="hist-row"><span>${escapeHtml(label)}</span><button type="button" class="btn" data-hist-url="${escapeHtml(f.downloadUrl)}">Restaurar</button></div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<p class="cfg-result err">${escapeHtml(SP.errorText(e))}</p>`;
+  }
+}
+
+function setupHistory() {
+  const dlg = $('#historyDlg');
+  $('#historyList').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-hist-url]');
+    if (!b) return;
+    if (!confirm('Se cargará esa versión en tu tablero (no se publica todavía). Tus cambios sin publicar se reemplazarán. Revísala y presiona Publicar para restaurarla para todos. ¿Continuar?')) return;
+    try {
+      const r = await fetch(`${b.dataset.histUrl}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
+      const data = await r.json();
+      await downloadPublishedImages(data);
+      applyDoc(docFromPublished(data, toDoc()));
+      state.dirty = true;
+      saveBoard();
+      render();
+      dlg.close();
+      toast('Versión anterior cargada. Revísala y presiona Publicar para restaurarla.', 7000);
+    } catch (err) {
+      console.error(err);
+      toast('No se pudo abrir esa versión.', 5000);
+    }
+  });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+}
+
+/* ---------- Limpiar fotos que ya no se usan ---------- */
+async function cleanupUnusedPhotos() {
+  if (!ensureConnected()) return;
+  try {
+    toast('Buscando fotos que ya no se usan…', 60000);
+    const data = await SP.readJson();
+    const used = new Set(publishedRefs(data).map((r) => r.file));
+    const files = [];
+    const dirs = [];
+    const walk = async (dir) => {
+      for (const [name, it] of await SP.list(dir)) {
+        const rel = dir ? `${dir}/${name}` : name;
+        if (it.isFolder) {
+          if (!dir && (name === HISTORY_DIR || name === 'Forms')) continue;
+          dirs.push(rel);
+          await walk(rel);
+        } else if (dir && /\.(jpe?g|png|svg|gif|webp)$/i.test(name)) files.push(rel);
+      }
+    };
+    await walk('');
+    const unused = files.filter((f) => !used.has(f));
+    if (!unused.length) { toast('No hay fotos sin usar.'); return; }
+    if (!confirm(`Hay ${plural(unused.length, 'foto', 'fotos')} en las carpetas que ya no aparecen en el manual publicado. Se mandarán a la papelera de reciclaje de SharePoint (se pueden recuperar desde ahí). ¿Continuar?`)) { toast('No se borró nada.'); return; }
+    let k = 0;
+    for (const f of unused) { toast(`Enviando a la papelera ${++k}/${unused.length}…`, 60000); await SP.remove(f); }
+    for (const d of dirs.sort((x, y) => y.split('/').length - x.split('/').length)) {
+      const kids = await SP.list(d);
+      if (!kids.size) await SP.remove(d);
+    }
+    toast(`${plural(unused.length, 'foto enviada', 'fotos enviadas')} a la papelera de reciclaje.`, 5000);
+  } catch (e) {
+    console.error(e);
+    toast('No se pudo limpiar. ' + SP.errorText(e), 7000);
   }
 }
 
@@ -3583,6 +3953,8 @@ function handleMenu(action) {
   switch (action) {
     case 'connection': return openConnection();
     case 'load-published': return loadPublishedAction();
+    case 'history': return openHistory();
+    case 'cleanup': return cleanupUnusedPhotos();
     case 'auto-place': return autoPlace();
     case 'areas-from-folders': return areasFromFolders();
     case 'clear-board':
@@ -3657,6 +4029,7 @@ function setupEvents() {
   setupFormatUI();
   setupBoardUI();
   setupBlockEditor();
+  setupHistory();
 }
 
 /* ---------- Inicio ---------- */
@@ -3701,7 +4074,11 @@ async function init() {
     toast(SP.errorText(e) + ' Puedes acomodar el tablero, pero no publicar.', 9000);
   }
   renderAccount();
-  if (spReady) await syncWithPublished();
+  SP.watchForUpdates();
+  if (spReady) {
+    await syncWithPublished();
+    startPolling();
+  }
 }
 
 init();

@@ -40,6 +40,8 @@
       <div class="menu-panel">
         <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
+        <button type="button" data-action="history">Versiones anteriores (restaurar)…</button>
+        <button type="button" data-action="cleanup">Limpiar fotos sin usar…</button>
         <hr>
         <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
         <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
@@ -191,6 +193,15 @@
       <button value="cancel" class="btn" formnovalidate>Cancelar</button>
       <button type="submit" class="btn btn-primary" value="save">Guardar</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="historyDlg" class="settings">
+  <form method="dialog" class="settings-inner">
+    <h3>Versiones anteriores</h3>
+    <p class="muted small">Cada vez que alguien publica se guarda una copia de la versión anterior en la carpeta <em>_historial</em> (se conservan las últimas 60). Al restaurar, la versión se carga en tu tablero; revisa y presiona <strong>Publicar</strong> para que la vean todos.</p>
+    <div id="historyList" class="hist-list"></div>
+    <div class="settings-actions"><span class="spacer"></span><button value="close" class="btn btn-primary">Cerrar</button></div>
   </form>
 </dialog>
 
