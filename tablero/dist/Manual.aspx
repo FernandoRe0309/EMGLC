@@ -413,6 +413,16 @@ a.pill { text-decoration: none; }
 .frame-btn img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .15s; }
 .frame-btn:hover img { transform: scale(1.03); }
 .pending { color: #8a94a6; font-size: 14px; text-align: center; }
+.group-title {
+  grid-column: 1 / -1;
+  margin: 10px 0 -4px;
+  padding: 0 0 8px;
+  border-bottom: 3px solid var(--brand-yellow);
+  color: #1e3a9a;
+  font-size: 19px;
+  font-weight: 800;
+}
+.spaces > .group-title:first-child { margin-top: 0; }
 .space-text {
   margin: 0;
   padding: 10px 12px;
@@ -603,7 +613,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.13-2';
+const APP_VERSION = '2026.11.16-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1129,14 +1139,16 @@ function normalize(raw) {
           name: String(z.name || 'Zona'),
           blocks: (z.blocks || []).map(normalizeBlock),
           areas: (z.areas || []).filter((a) => !a.hidden).map((a) => {
-            const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => ({ title: String(sp.title || ''), text: String(sp.text || '').trim(), src: imgSrc(sp.image) }));
+            const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => (sp.kind === 'title'
+              ? { kind: 'title', title: String(sp.title || '') }
+              : { title: String(sp.title || ''), text: String(sp.text || '').trim(), src: imgSrc(sp.image) }));
             return {
               id: uniqueId(areaIds, a.name || 'area'),
               name: String(a.name || 'Área'),
               blocks: (a.blocks || []).map(normalizeBlock),
               note: panel.showNotes ? (String(a.note || '') || defaultNote(String(a.name || 'esta área'))) : '',
               checklist: all,                                          // el checklist incluye todos los espacios visibles
-              spaces: panel.showEmpty ? all : all.filter((sp) => sp.src), // el panel puede ocultar los pendientes
+              spaces: panel.showEmpty ? all : all.filter((sp) => sp.kind === 'title' || sp.src), // el panel puede ocultar los pendientes
             };
           }),
         };
@@ -1298,6 +1310,11 @@ function renderFormat(f, zone, area) {
     return;
   }
   for (const sp of area.spaces) {
+    if (sp.kind === 'title') {
+      // Título que agrupa los recuadros que van debajo (ej. Licencias, Letreros).
+      grid.insertAdjacentHTML('beforeend', `<h4 class="group-title">${esc(sp.title)}</h4>`);
+      continue;
+    }
     const card = document.createElement('article');
     card.className = 'space';
     card.innerHTML = `<h4>${esc(sp.title)}</h4><div class="frame">${sp.src
@@ -1341,10 +1358,12 @@ function openChecklist(f) {
       <table>
         <thead><tr><th colspan="5">${esc(a.name)}</th></tr>
           <tr><th class="n">#</th><th class="ph">Referencia</th><th>Señalización</th><th class="c">Cumple</th><th class="c">No cumple</th></tr></thead>
-        <tbody>${a.checklist.length ? a.checklist.map((s, i) => `<tr>
-          <td class="n">${i + 1}</td>
+        <tbody>${a.checklist.length ? (() => { let n = 0; return a.checklist.map((s) => (s.kind === 'title'
+          ? `<tr class="gt"><td colspan="5">${esc(s.title)}</td></tr>`
+          : `<tr>
+          <td class="n">${++n}</td>
           <td class="ph">${s.src ? `<img alt="" src="${esc(s.src)}">` : '<span>—</span>'}</td>
-          <td>${esc(s.title)}${s.text ? `<div class="t">${esc(s.text)}</div>` : ''}</td><td class="c"><span class="box"></span></td><td class="c"><span class="box"></span></td></tr>`).join('')
+          <td>${esc(s.title)}${s.text ? `<div class="t">${esc(s.text)}</div>` : ''}</td><td class="c"><span class="box"></span></td><td class="c"><span class="box"></span></td></tr>`)).join(''); })()
         : '<tr><td colspan="5" class="empty">Sin señalización registrada</td></tr>'}</tbody>
       </table>`).join('')}`).join('');
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
@@ -1360,7 +1379,7 @@ th,td{border:1px solid #c9d1de;padding:5px 8px;text-align:left;vertical-align:mi
 thead tr:first-child th{background:#eef3ff;color:#1e3a9a;font-size:14px}
 tr{break-inside:avoid}.n{width:26px;text-align:center}.c{width:70px;text-align:center}.ph{width:64px}
 .ph img{width:56px;height:56px;object-fit:contain;display:block}.box{display:inline-block;width:14px;height:14px;border:1.5px solid #1b2330;border-radius:2px}
-.empty{color:#7a8596;text-align:center}.t{margin-top:3px;font-size:11.5px;color:#5d6878;white-space:pre-line}.obs{margin-top:16px}.obs div{border-bottom:1px solid #8a94a6;height:26px}
+.empty{color:#7a8596;text-align:center}.gt td{background:#fffbeb;color:#1e3a9a;font-weight:800;border-left:4px solid #ffc220}.t{margin-top:3px;font-size:11.5px;color:#5d6878;white-space:pre-line}.obs{margin-top:16px}.obs div{border-bottom:1px solid #8a94a6;height:26px}
 .actions{margin:14px 0}.actions button{padding:8px 16px;border:0;border-radius:8px;background:#1f4fd6;color:#fff;font-weight:700;cursor:pointer}
 @media print{.actions{display:none}body{margin:0}}
 </style></head><body>

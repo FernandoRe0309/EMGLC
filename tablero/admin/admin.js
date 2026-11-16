@@ -242,7 +242,11 @@ function setActiveFormat(id) {
 const activeZone = () => board.zones.find((z) => z.id === board.activeZoneId) || null;
 const activeArea = () => { const z = activeZone(); return (z && z.areas.find((a) => a.id === board.activeAreaId)) || null; };
 const allAreas = (f = board) => f.zones.flatMap((z) => z.areas.map((area) => ({ zone: z, area })));
-const allSpaces = (f = board) => f.zones.flatMap((z) => z.areas.flatMap((a) => a.spaces));
+// Los títulos (kind: 'title') van entre los recuadros para agruparlos; no son señalización.
+const isTitle = (s) => s && s.kind === 'title';
+const signsOf = (a) => a.spaces.filter((s) => !isTitle(s));
+const allSpaces = (f = board) => f.zones.flatMap((z) => z.areas.flatMap((a) => signsOf(a)));
+const newTitle = (title = 'Nuevo título') => ({ id: uid(), kind: 'title', title, imageId: null, hidden: false, text: '' });
 
 function findArea(areaId, f = board) {
   for (const zone of f.zones) {
@@ -441,7 +445,7 @@ function renderBanner() {
 
 function renderZoneBar() {
   $('#zoneBar').innerHTML = board.zones.map((z) => {
-    const n = z.areas.reduce((k, a) => k + a.spaces.length, 0);
+    const n = z.areas.reduce((k, a) => k + signsOf(a).length, 0);
     return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
       ${escapeHtml(z.name)}<small>${z.hidden ? 'Oculta en el manual' : `${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}`}</small></button>`;
   }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>' + pasteButtonHtml('zone');
@@ -474,8 +478,9 @@ function renderZonePanel() {
     <div class="area-grid">
       ${zone.areas.map((a) => {
         const filled = a.spaces.filter((s) => s.imageId).length;
+        const total = signsOf(a).length;
         return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}${a.hidden ? ' is-hidden' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
-          <span>${escapeHtml(a.name)}</span><small>${a.hidden ? 'oculta' : `${filled}/${a.spaces.length}`}</small></button>`;
+          <span>${escapeHtml(a.name)}</span><small>${a.hidden ? 'oculta' : `${filled}/${total}`}</small></button>`;
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
       ${pasteButtonHtml('area')}
@@ -485,7 +490,8 @@ function renderZonePanel() {
 
   if (area) {
     const dz = panel.querySelector('.dropzone');
-    for (const sp of area.spaces) dz.insertBefore(spaceEl(sp), dz.lastElementChild);
+    const addBtn = dz.querySelector('.space-add');
+    for (const sp of area.spaces) dz.insertBefore(spaceEl(sp), addBtn);
   }
 }
 
@@ -510,6 +516,7 @@ function areaDetailHtml(zone, area) {
     ${blocksEditHtml('area', area.blocks, 'top')}
     <div class="dropzone" data-area-id="${area.id}">
       <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
+      <button type="button" class="title-add" data-space-action="add-title">+ Título<small>para agrupar la señalización (ej. Licencias, Letreros). Después arrástralo a su lugar.</small></button>
     </div>
     ${blocksEditHtml('area', area.blocks, 'bottom')}`;
 }
@@ -540,6 +547,18 @@ function blocksEditHtml(owner, blocks, pos) {
 }
 
 function spaceEl(sp) {
+  if (isTitle(sp)) {
+    const el = document.createElement('article');
+    el.className = 'card space title-card' + (sp.hidden ? ' is-hidden' : '');
+    el.dataset.cardId = sp.id;
+    el.innerHTML = `
+      <span class="grip" title="Arrastra para mover el título">⋮⋮</span>
+      <div class="title-text" contenteditable="true" spellcheck="true" data-space-title>${escapeHtml(sp.title)}</div>
+      <span class="title-tag">Título</span>
+      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este título en el manual' : 'Ocultar este título en el manual'}">${sp.hidden ? '🚫' : '👁'}</button>
+      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar título">🗑</button>`;
+    return el;
+  }
   const img = sp.imageId && images.get(sp.imageId);
   const el = document.createElement('article');
   el.className = 'card space' + (sp.hidden ? ' is-hidden' : '');
@@ -583,7 +602,7 @@ function render() {
 /* ---------- Operaciones ---------- */
 function assignImage(spaceId, imageId) {
   const f = findSpace(spaceId);
-  if (!f || !images.has(imageId)) return;
+  if (!f || isTitle(f.space) || !images.has(imageId)) return;
   f.space.imageId = imageId;
   commit();
 }
@@ -697,10 +716,7 @@ function startDrag() {
 
   drag.placeholder = document.createElement('div');
   drag.placeholder.className = 'placeholder';
-  if (drag.kind === 'card') {
-    drag.src.parentNode.insertBefore(drag.placeholder, drag.src);
-    drag.src.classList.add('drag-source');
-  }
+  if (drag.kind === 'card') drag.src.classList.add('drag-source'); // queda atenuado en su lugar
   if (navigator.vibrate && drag.touch) navigator.vibrate(12);
   moveGhost();
   updateTarget();
@@ -710,6 +726,24 @@ function startDrag() {
 function moveGhost() {
   drag.ghost.style.left = drag.x + 'px';
   drag.ghost.style.top = drag.y + 'px';
+}
+
+function showDropMarker(el) {
+  if (!el) return hideDropMarker();
+  if (!drag.marker) {
+    drag.marker = document.createElement('div');
+    drag.marker.className = 'drop-marker';
+    document.body.appendChild(drag.marker);
+  }
+  const r = el.getBoundingClientRect();
+  drag.marker.style.left = `${r.left - 9}px`;
+  drag.marker.style.top = `${r.top}px`;
+  drag.marker.style.height = `${r.height}px`;
+  drag.marker.hidden = false;
+}
+
+function hideDropMarker() {
+  if (drag && drag.marker) drag.marker.hidden = true;
 }
 
 function setHover(el, cls = 'drop-hover') {
@@ -731,6 +765,7 @@ function updateTarget() {
   const lib = el && el.closest('#library');
 
   if (slot) {
+    hideDropMarker();
     drag.placeholder.remove();
     setHover(slot);
     drag.target = { assign: slot.dataset.slot };
@@ -751,19 +786,19 @@ function updateTarget() {
     return;
   }
   if (zone) {
+    // Mover un recuadro o un título: nada se reacomoda; una barra azul marca dónde caerá.
     setHover(zone);
-    const cards = [...zone.querySelectorAll('.card:not(.drag-source)')];
     let before = null;
-    for (const c of cards) {
+    for (const c of zone.querySelectorAll('.card:not(.drag-source)')) {
       const r = c.getBoundingClientRect();
       if (drag.y < r.top || (drag.y <= r.bottom && drag.x < r.left + r.width / 2)) { before = c; break; }
     }
-    const anchor = before || zone.querySelector('.space-add');
-    if (drag.placeholder.nextSibling !== anchor) zone.insertBefore(drag.placeholder, anchor);
-    drag.target = { areaId: zone.dataset.areaId, zone };
+    showDropMarker(before || zone.querySelector('.space-add'));
+    drag.target = { areaId: zone.dataset.areaId, zone, before };
     return;
   }
 
+  hideDropMarker();
   drag.placeholder.remove();
   if (areaBtn) {
     setHover(areaBtn);
@@ -799,6 +834,7 @@ function cleanupDrag() {
   cancelAnimationFrame(drag.raf);
   if (drag.hoverEl) drag.hoverEl.classList.remove(drag.hoverCls);
   drag.ghost?.remove();
+  drag.marker?.remove();
   drag.placeholder?.remove();
   drag.src.classList.remove('drag-source');
   document.body.classList.remove('dragging');
@@ -817,18 +853,15 @@ function onPointerUp(e) {
     cleanupDrag();
     if (e.target.closest('.lib-item, .card') !== d.src) return;
     if (d.kind === 'lib') openViewer('lib', d.id);
-    else if (findSpace(d.id)?.space.imageId) openViewer('card', d.id);
+    else if (findSpace(d.id)?.space.imageId && !isTitle(findSpace(d.id).space)) openViewer('card', d.id);
     return;
   }
 
   let index = null;
   const t = d.target;
-  if (t && t.zone && d.placeholder.parentNode === t.zone) {
-    index = 0;
-    for (const n of t.zone.children) {
-      if (n === d.placeholder) break;
-      if (n.classList.contains('card') && !n.classList.contains('drag-source')) index++;
-    }
+  if (t && t.zone && d.kind === 'card') {
+    const cards = [...t.zone.querySelectorAll('.card:not(.drag-source)')];
+    index = t.before ? cards.indexOf(t.before) : cards.length;
   }
   cleanupDrag();
   if (!t) return;
@@ -945,6 +978,7 @@ async function exportCatalog() {
     for (const a of z.areas) {
       body += `<section><h3>${escapeHtml(a.name)}</h3><p class="note">${escapeHtml(a.note || defaultNote(a.name))}</p><div class="g">`;
       for (const s of a.spaces) {
+        if (isTitle(s)) { if (!s.hidden) body += `<h4 class="gt">${escapeHtml(s.title)}</h4>`; continue; }
         const src = await dataUrl(s.imageId);
         body += `<figure><figcaption>${escapeHtml(s.title)}</figcaption><div class="f">${src ? `<img alt="" src="${src}">` : '<span>Imagen pendiente</span>'}</div></figure>`;
       }
@@ -965,6 +999,7 @@ h3{margin:0 0 8px;color:#1e3a9a}.note{margin:0 0 12px;padding:10px 14px;backgrou
 figure{margin:0;border:1px solid #dde2ea;border-radius:10px;padding:10px}figcaption{font-weight:600;margin-bottom:8px}
 .f{border:2px dashed #cfd6e2;border-radius:8px;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;color:#7a8596;text-align:center}
 .f img{max-width:100%;max-height:100%;object-fit:contain}
+.gt{grid-column:1/-1;margin:10px 0 0;padding-bottom:6px;border-bottom:2px solid #ffc220;color:#1e3a9a;font-size:16px}
 </style></head><body><header><h1>${escapeHtml(state.intro.title)} · ${escapeHtml(board.name)}</h1><p>Generado el ${escapeHtml(date)}</p></header><main>${body}</main></body></html>`;
   download(`Señalización ${SP.safeName(board.name)}.html`, new Blob([html], { type: 'text/html' }));
   toast('Catálogo exportado.', 4000);
@@ -975,7 +1010,7 @@ function formatToJson(f) {
     id: f.id, name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner || null, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
     zones: f.zones.map((z) => ({
       id: z.id, name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
-      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => ({ id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '' })) })),
+      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => (isTitle(s) ? { id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden } : { id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '' })) })),
     })),
   };
 }
@@ -1004,6 +1039,7 @@ function formatFromJsonRaw(f) {
         const area = newArea(String(a.name || 'Área'), (a.spaces || []).map((s) => {
           const sp = newSpace(String(s.title || 'Espacio'), s.image ? String(s.image) : null);
           if (s.id) sp.id = String(s.id);
+          if (s.kind === 'title') { sp.kind = 'title'; sp.imageId = null; }
           sp.hidden = !!s.hidden;
           sp.text = String(s.text || '');
           return sp;
@@ -1165,6 +1201,7 @@ async function buildPlan(pubRefs = new Map()) {
         const used = new Set();
         const spaces = [];
         for (const s of a.spaces) {
+          if (isTitle(s)) { spaces.push({ id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden }); continue; }
           const img = s.imageId && images.get(s.imageId);
           let image = img ? null : keepRef(s.imageId);
           if (img) {
@@ -1339,7 +1376,7 @@ function docFromPublished(data, ref) {
       ...f,
       banner: f.banner && f.banner.path ? f.banner.path : null,
       logo: f.logo && f.logo.path ? f.logo.path : null,
-      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => ({ id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', image: x.image && x.image.path ? x.image.path : null })) })) })),
+      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => (x.kind === 'title' ? { id: x.id, kind: 'title', title: x.title, hidden: !!x.hidden } : { id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', image: x.image && x.image.path ? x.image.path : null })) })) })),
     } : f)),
   };
   adoptIds(raw, ref);
@@ -1759,7 +1796,7 @@ function renderPanelZones() {
           <div class="pe-row pe-area${a.hidden ? ' off' : ''}" data-pe-area="${a.id}">
             <label class="pe-check" title="Mostrar esta área"><input type="checkbox" data-area-field="visible" ${a.hidden ? '' : 'checked'}></label>
             <div class="pe-main"><input data-area-field="name" value="${escapeHtml(a.name)}" maxlength="80" aria-label="Nombre del área"></div>
-            <span class="pe-count">${plural(a.spaces.length, 'espacio', 'espacios')}</span>
+            <span class="pe-count">${plural(signsOf(a).length, 'espacio', 'espacios')}</span>
             <button type="button" class="icon-btn" data-area-move="-1" ${ai === 0 ? 'disabled' : ''} title="Subir">↑</button>
             <button type="button" class="icon-btn" data-area-move="1" ${ai === z.areas.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
             <button type="button" class="icon-btn danger" data-area-remove title="Eliminar área">🗑</button>
@@ -2189,6 +2226,15 @@ function setupBoardUI() {
     const sa = e.target.closest('[data-space-action]');
     if (sa) {
       const area = activeArea();
+      if (sa.dataset.spaceAction === 'add-title' && area) {
+        area.spaces.push(newTitle());
+        commit();
+        const titles = panel.querySelectorAll('.title-card [data-space-title]');
+        const last = titles[titles.length - 1];
+        if (last) { last.scrollIntoView({ block: 'center' }); last.focus(); document.getSelection().selectAllChildren(last); }
+        toast('Escribe el título y luego arrástralo arriba de los recuadros que agrupa.', 5000);
+        return;
+      }
       if (sa.dataset.spaceAction === 'add' && area) {
         addSpace(area.id, { title: 'Nuevo espacio' });
         const cards = panel.querySelectorAll('.space [data-space-title]');
@@ -2202,7 +2248,7 @@ function setupBoardUI() {
       else if (sa.dataset.spaceAction === 'toggle') { const f = findSpace(spaceId); if (f) { f.space.hidden = !f.space.hidden; commit(); } }
       else if (sa.dataset.spaceAction === 'delete') {
         const f = findSpace(spaceId);
-        if (f && confirm(`¿Eliminar el espacio "${f.space.title}"?`)) { f.area.spaces.splice(f.index, 1); commit(); }
+        if (f && confirm(`¿Eliminar ${isTitle(f.space) ? 'el título' : 'el espacio'} "${f.space.title}"?${isTitle(f.space) ? ' (los recuadros no se borran)' : ''}`)) { f.area.spaces.splice(f.index, 1); commit(); }
       }
     }
   });
@@ -2425,7 +2471,7 @@ function autoPlace() {
   plan.sort((a, b) => collator.compare(a[1].name, b[1].name));
   for (const [area, img] of plan) {
     const title = titleFromName(img.name);
-    const empty = area.spaces.find((s) => !s.imageId && norm(s.title) === norm(title));
+    const empty = area.spaces.find((s) => !isTitle(s) && !s.imageId && norm(s.title) === norm(title));
     if (empty) empty.imageId = img.id;
     else area.spaces.push(newSpace(title, img.id));
   }
