@@ -40,6 +40,7 @@
       <div class="menu-panel">
         <button type="button" data-action="connection">Carpeta de SharePoint</button>
         <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
+        <button type="button" data-action="readlog">Registro de lectura (quién abrió el manual)…</button>
         <button type="button" data-action="history">Versiones anteriores (restaurar)…</button>
         <button type="button" data-action="cleanup">Limpiar fotos sin usar…</button>
         <hr>
@@ -192,6 +193,25 @@
       <span class="spacer"></span>
       <button value="cancel" class="btn" formnovalidate>Cancelar</button>
       <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDlg" class="settings log-dlg">
+  <form method="dialog" class="settings-inner">
+    <h3>Registro de lectura</h3>
+    <p class="muted small">Quién abrió el manual y quién confirmó las Consideraciones Importantes. Se guarda en una lista de SharePoint de este mismo sitio.</p>
+    <div id="logBody"></div>
+    <p id="logResult" class="cfg-result" role="status"></p>
+    <div class="settings-actions">
+      <span id="logActions" class="log-actions" hidden>
+        <button type="button" id="logRefresh" class="btn">Actualizar</button>
+        <button type="button" id="logCsv" class="btn">Descargar para Excel</button>
+        <a id="logOpen" class="btn" target="_blank" rel="noopener">Abrir la lista en SharePoint</a>
+        <button type="button" id="logGrant" class="btn">Dar permiso a las tiendas</button>
+      </span>
+      <span class="spacer"></span>
+      <button value="close" class="btn btn-primary">Cerrar</button>
     </div>
   </form>
 </dialog>

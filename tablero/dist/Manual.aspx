@@ -759,7 +759,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.17-2';
+const APP_VERSION = '2026.11.17-3';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -978,6 +978,131 @@ const SP = (() => {
     window.addEventListener('focus', checkForUpdate);
   }
 
+  /* ---------- Registro de lectura (lista de SharePoint) ----------
+     Una fila por persona: quién abrió el manual, cuándo y si confirmó las consideraciones.
+     La lista la crea el administrador; las tiendas solo agregan/actualizan su propia fila. */
+  const LOG_LIST = 'Registro Manual Señalización';
+  const VERBOSE = 'application/json;odata=verbose';
+  const LOG_FIELDS = [
+    '<Field Type="Text" DisplayName="Correo" Name="Correo" StaticName="Correo" />',
+    '<Field Type="DateTime" DisplayName="Primera apertura" Name="PrimeraApertura" StaticName="PrimeraApertura" Format="DateTime" />',
+    '<Field Type="DateTime" DisplayName="Última apertura" Name="UltimaApertura" StaticName="UltimaApertura" Format="DateTime" />',
+    '<Field Type="Number" DisplayName="Aperturas" Name="Aperturas" StaticName="Aperturas" Decimals="0" />',
+    '<Field Type="Boolean" DisplayName="Confirmó" Name="Confirmo" StaticName="Confirmo"><Default>0</Default></Field>',
+    '<Field Type="DateTime" DisplayName="Fecha de confirmación" Name="FechaConfirmacion" StaticName="FechaConfirmacion" Format="DateTime" />',
+    '<Field Type="Text" DisplayName="Versión confirmada" Name="VersionConfirmada" StaticName="VersionConfirmada" />',
+  ];
+  const verbose = (extra = {}) => ({ Accept: VERBOSE, 'Content-Type': VERBOSE, ...extra });
+  const logPath = () => `/_api/web/lists/GetByTitle('${encodeURIComponent(LOG_LIST.replace(/'/g, "''"))}')`;
+  let logInfo = null;
+  let logDisabled = false;
+  let me = null;
+
+  async function getLogInfo(force = false) {
+    if (logInfo && !force) return logInfo;
+    logInfo = await api(`${logPath()}?$select=Id,ItemCount,ListItemEntityTypeFullName,RootFolder/ServerRelativeUrl&$expand=RootFolder`);
+    return logInfo;
+  }
+
+  async function getMe() {
+    if (!me) me = await api('/_api/web/currentuser?$select=Id,Title,Email,LoginName');
+    return me;
+  }
+
+  async function logListExists() {
+    try { await getLogInfo(true); return true; } catch (e) { if (e.status === 404) return false; throw e; }
+  }
+
+  // Crea la lista con sus columnas. Cada quien solo ve y edita su propia fila
+  // (quienes administran el sitio ven todas).
+  async function createLogList() {
+    await api('/_api/web/lists', {
+      method: 'POST',
+      headers: verbose(),
+      body: JSON.stringify({
+        __metadata: { type: 'SP.List' }, BaseTemplate: 100, Title: LOG_LIST,
+        Description: 'Quién abrió el Manual de Señalización y quién confirmó las Consideraciones Importantes. La llena el manual automáticamente.',
+        AllowContentTypes: false, ContentTypesEnabled: false,
+      }),
+    });
+    for (const xml of LOG_FIELDS) {
+      await api(`${logPath()}/fields/CreateFieldAsXml`, {
+        method: 'POST',
+        headers: verbose(),
+        body: JSON.stringify({ parameters: { __metadata: { type: 'SP.XmlSchemaFieldCreationInformation' }, SchemaXml: xml, Options: 24 } }),
+      });
+    }
+    await api(logPath(), {
+      method: 'POST',
+      headers: verbose({ 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' }),
+      body: JSON.stringify({ __metadata: { type: 'SP.List' }, ReadSecurity: 2, WriteSecurity: 2 }),
+    });
+    logDisabled = false;
+    return getLogInfo(true);
+  }
+
+  // Da "Colaborar" en la lista (solo en ella) al grupo de visitantes del sitio, que es donde
+  // normalmente están las tiendas. Requiere poder administrar permisos del sitio.
+  async function grantLogPermissions() {
+    const info = await getLogInfo(true);
+    const visitors = await api('/_api/web/AssociatedVisitorGroup?$select=Id,Title');
+    const role = await api('/_api/web/RoleDefinitions/GetByType(3)?$select=Id,Name');
+    const lp = `/_api/web/lists(guid'${info.Id}')`;
+    await api(`${lp}/breakroleinheritance(copyRoleAssignments=true,clearSubscopes=true)`, { method: 'POST' });
+    await api(`${lp}/roleassignments/addroleassignment(principalid=${visitors.Id},roledefid=${role.Id})`, { method: 'POST' });
+    return { group: visitors.Title, role: role.Name };
+  }
+
+  async function myLogRow() {
+    const info = await getLogInfo();
+    const u = await getMe();
+    const d = await api(`/_api/web/lists(guid'${info.Id}')/items?$select=Id,Aperturas,PrimeraApertura,Confirmo,VersionConfirmada&$filter=AuthorId eq ${u.Id}&$top=1`);
+    return (d.value || [])[0] || null;
+  }
+
+  async function writeVisit({ confirmed = false, version = '' } = {}) {
+    if (logDisabled || !web) return;
+    let info;
+    try { info = await getLogInfo(); } catch (e) { if (e.status === 404 || e.status === 403) { logDisabled = true; return; } throw e; }
+    const u = await getMe();
+    const row = await myLogRow();
+    const now = new Date().toISOString();
+    const body = { __metadata: { type: info.ListItemEntityTypeFullName }, Title: u.Title || u.LoginName || 'Usuario', Correo: u.Email || '', UltimaApertura: now };
+    if (confirmed) Object.assign(body, { Confirmo: true, FechaConfirmacion: now, VersionConfirmada: String(version) });
+    const items = `/_api/web/lists(guid'${info.Id}')/items`;
+    try {
+      if (row) {
+        if (!confirmed) body.Aperturas = (Number(row.Aperturas) || 0) + 1;
+        await api(`${items}(${row.Id})`, { method: 'POST', headers: verbose({ 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' }), body: JSON.stringify(body) });
+      } else {
+        Object.assign(body, { PrimeraApertura: now, Aperturas: 1 });
+        await api(items, { method: 'POST', headers: verbose(), body: JSON.stringify(body) });
+      }
+    } catch (e) {
+      if (e.status === 403 || e.status === 401) logDisabled = true; // sin permiso para escribir: no insistir
+      throw e;
+    }
+  }
+
+  // Las escrituras van en fila, una tras otra; nunca interrumpen el uso del manual.
+  let visitChain = Promise.resolve();
+  function registerVisit(opts) {
+    visitChain = visitChain.then(() => writeVisit(opts)).catch((e) => console.warn('Registro de lectura:', e && e.message));
+    return visitChain;
+  }
+
+  // ¿Esta persona ya confirmó esta versión (en cualquier computadora)?
+  async function hasConfirmed(version) {
+    if (logDisabled || !web) return false;
+    try { const row = await myLogRow(); return !!(row && row.Confirmo && row.VersionConfirmada === String(version)); } catch { return false; }
+  }
+
+  async function readLog() {
+    const info = await getLogInfo(true);
+    const d = await api(`/_api/web/lists(guid'${info.Id}')/items?$select=Id,Title,Correo,PrimeraApertura,UltimaApertura,Aperturas,Confirmo,FechaConfirmacion,VersionConfirmada&$orderby=UltimaApertura desc&$top=5000`);
+    return { rows: d.value || [], listUrl: location.origin + enc(info.RootFolder.ServerRelativeUrl) };
+  }
+
   function errorText(e) {
     if (!(e instanceof SPError)) return 'No se pudo conectar con SharePoint. Revisa tu conexión a internet.';
     if (e.status === 0) return e.message;
@@ -1001,6 +1126,7 @@ const SP = (() => {
     signIn: async () => account,
     signOut: async () => {},
     fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    LOG_LIST, logListExists, createLogList, grantLogPermissions, registerVisit, hasConfirmed, readLog,
   };
 })();
 
@@ -1227,6 +1353,7 @@ async function load() {
   renderAccount();
   route();
   startAutoRefresh();
+  SP.registerVisit({});   // registro de lectura: quién abrió el manual (una vez por visita)
   checkConsiderations();
 }
 
@@ -1270,11 +1397,19 @@ function openConsiderations({ mandatory = false } = {}) {
   dlg.querySelector('.cn-body').scrollTop = 0;
 }
 
-function checkConsiderations() {
+let checkingConsiderations = false;
+async function checkConsiderations() {
   if (!data || !considerationsHaveContent() || data.intro.considerations.enabled === false) return;
-  if (readAck() === considerationsHash()) return;
-  if (lb.open) return;
-  openConsiderations({ mandatory: true });
+  const hash = considerationsHash();
+  if (readAck() === hash || checkingConsiderations) return;
+  checkingConsiderations = true;
+  try {
+    // Si ya confirmó esta versión en otra computadora, no se vuelve a pedir.
+    if (await SP.hasConfirmed(hash)) { writeAck(hash); return; }
+    if (!lb.open && readAck() !== hash) openConsiderations({ mandatory: true });
+  } finally {
+    checkingConsiderations = false;
+  }
 }
 
 // Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
@@ -1711,8 +1846,10 @@ stage.addEventListener('touchend', (e) => {
 
 // Botones de la tarjeta de consideraciones.
 $('#cnAccept').addEventListener('click', () => {
-  writeAck(considerationsHash());
+  const hash = considerationsHash();
+  writeAck(hash);
   $('#considerDlg').close();
+  SP.registerVisit({ confirmed: true, version: hash });   // queda registrado quién y cuándo
 });
 $('#cnClose').addEventListener('click', () => $('#considerDlg').close());
 $('#considerDlg').addEventListener('cancel', (e) => { if ($('#considerDlg').dataset.mandatory) e.preventDefault(); });

@@ -1682,6 +1682,118 @@ function setupHistory() {
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
+/* ---------- Registro de lectura (quién abrió el manual y quién confirmó) ---------- */
+// Mismo cálculo que el manual para saber qué versión de las consideraciones se confirmó.
+function considerationsHashOf(intro) {
+  const c = { ...DEFAULT_CONSIDERATIONS, ...((intro && intro.considerations) || {}) };
+  const str = JSON.stringify([c.title, c.intro, c.items, c.confirmText, c.notes, c.buttonLabel]);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+let logRows = [];
+const fmtDate = (v) => (v ? new Date(v).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '');
+
+async function openReadLog() {
+  if (!ensureConnected()) return;
+  $('#logDlg').showModal();
+  await renderReadLog();
+}
+
+async function renderReadLog() {
+  const box = $('#logBody');
+  const res = $('#logResult');
+  res.className = 'cfg-result'; res.textContent = '';
+  box.innerHTML = '<p class="muted">Cargando…</p>';
+  $('#logActions').hidden = true;
+  try {
+    if (!(await SP.logListExists())) {
+      box.innerHTML = `<p>Todavía no existe la lista <strong>${escapeHtml(SP.LOG_LIST)}</strong> en este sitio de SharePoint.</p>
+        <p class="muted small">Al crearla, el manual empezará a registrar automáticamente quién lo abre (primera y última vez, cuántas veces) y quién confirma las Consideraciones Importantes. Cada persona solo puede ver su propia fila; quienes administran el sitio ven todas.</p>
+        <button type="button" class="btn btn-primary" id="logCreate">Crear la lista y dar permiso a las tiendas</button>`;
+      return;
+    }
+    const { rows, listUrl } = await SP.readLog();
+    logRows = rows;
+    const current = considerationsHashOf(state.intro);
+    const confirmed = rows.filter((r) => r.Confirmo);
+    const confirmedCurrent = confirmed.filter((r) => r.VersionConfirmada === current);
+    $('#logOpen').href = listUrl;
+    $('#logActions').hidden = false;
+    box.innerHTML = `
+      <div class="log-stats">
+        <div><strong>${rows.length}</strong><span>${rows.length === 1 ? 'persona abrió' : 'personas abrieron'} el manual</span></div>
+        <div><strong>${confirmed.length}</strong><span>confirmaron</span></div>
+        <div><strong>${confirmedCurrent.length}</strong><span>confirmaron el texto actual</span></div>
+      </div>
+      ${rows.length ? `<div class="log-table-wrap"><table class="log-table">
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Primera vez</th><th>Última vez</th><th>Veces</th><th>Confirmó</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <td>${escapeHtml(r.Title || '')}</td><td>${escapeHtml(r.Correo || '')}</td>
+          <td>${escapeHtml(fmtDate(r.PrimeraApertura))}</td><td>${escapeHtml(fmtDate(r.UltimaApertura))}</td>
+          <td class="num">${Number(r.Aperturas) || 0}</td>
+          <td>${r.Confirmo ? `<span class="ok">Sí</span> ${escapeHtml(fmtDate(r.FechaConfirmacion))}${r.VersionConfirmada !== current ? ' <span class="old">(texto anterior)</span>' : ''}` : '<span class="no">No</span>'}</td>
+        </tr>`).join('')}</tbody></table></div>`
+      : '<p class="muted">Todavía nadie ha abierto el manual desde que se creó la lista.</p>'}
+      <p class="muted small">Si no aparece nadie aunque ya lo abrieron, las tiendas no tienen permiso para escribir en la lista: usa <em>Dar permiso a las tiendas</em>.</p>`;
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = `<p class="cfg-result err">${escapeHtml(SP.errorText(e))}</p>`;
+  }
+}
+
+async function grantReadLogPermissions() {
+  const res = $('#logResult');
+  res.className = 'cfg-result'; res.textContent = 'Dando permiso…';
+  try {
+    const r = await SP.grantLogPermissions();
+    res.className = 'cfg-result ok';
+    res.textContent = `Listo: el grupo "${r.group}" puede registrar su lectura en la lista ("${r.role}" solo en esa lista; cada quien solo ve su fila).`;
+  } catch (e) {
+    console.error(e);
+    res.className = 'cfg-result err';
+    res.textContent = 'Tu cuenta no puede cambiar permisos en este sitio. Pide a la persona dueña del sitio de SharePoint que, en la lista "' + SP.LOG_LIST
+      + '", vaya a Configuración de la lista → Permisos de esta lista → Dejar de heredar permisos, y conceda "Colaborar" al grupo de visitantes del sitio (o a "Todos excepto usuarios externos").';
+  }
+}
+
+function downloadReadLog() {
+  const head = ['Nombre', 'Correo', 'Primera apertura', 'Última apertura', 'Aperturas', 'Confirmó', 'Fecha de confirmación', 'Confirmó el texto actual'];
+  const current = considerationsHashOf(state.intro);
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [head.map(q).join(',')].concat(logRows.map((r) => [
+    r.Title, r.Correo, fmtDate(r.PrimeraApertura), fmtDate(r.UltimaApertura), Number(r.Aperturas) || 0,
+    r.Confirmo ? 'Sí' : 'No', fmtDate(r.FechaConfirmacion), r.Confirmo ? (r.VersionConfirmada === current ? 'Sí' : 'No') : '',
+  ].map(q).join(',')));
+  download(`Registro de lectura ${new Date().toISOString().slice(0, 10)}.csv`, new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+}
+
+function setupReadLog() {
+  const dlg = $('#logDlg');
+  $('#logBody').addEventListener('click', async (e) => {
+    if (!e.target.closest('#logCreate')) return;
+    const res = $('#logResult');
+    res.className = 'cfg-result'; res.textContent = 'Creando la lista…';
+    try {
+      await SP.createLogList();
+      await grantReadLogPermissions();
+      const msg = res.textContent;
+      await renderReadLog();
+      res.className = /no puede/.test(msg) ? 'cfg-result err' : 'cfg-result ok';
+      res.textContent = 'Lista creada. ' + msg;
+    } catch (err) {
+      console.error(err);
+      res.className = 'cfg-result err';
+      res.textContent = 'No se pudo crear la lista. ' + SP.errorText(err);
+    }
+  });
+  $('#logRefresh').addEventListener('click', renderReadLog);
+  $('#logGrant').addEventListener('click', grantReadLogPermissions);
+  $('#logCsv').addEventListener('click', downloadReadLog);
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+}
+
 /* ---------- Limpiar fotos que ya no se usan ---------- */
 async function cleanupUnusedPhotos() {
   if (!ensureConnected()) return;
@@ -2548,6 +2660,7 @@ function handleMenu(action) {
     case 'connection': return openConnection();
     case 'load-published': return loadPublishedAction();
     case 'history': return openHistory();
+    case 'readlog': return openReadLog();
     case 'cleanup': return cleanupUnusedPhotos();
     case 'auto-place': return autoPlace();
     case 'areas-from-folders': return areasFromFolders();
@@ -2624,6 +2737,7 @@ function setupEvents() {
   setupBoardUI();
   setupBlockEditor();
   setupHistory();
+  setupReadLog();
 }
 
 /* ---------- Inicio ---------- */

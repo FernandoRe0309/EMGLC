@@ -74,6 +74,7 @@ async function load() {
   renderAccount();
   route();
   startAutoRefresh();
+  SP.registerVisit({});   // registro de lectura: quién abrió el manual (una vez por visita)
   checkConsiderations();
 }
 
@@ -117,11 +118,19 @@ function openConsiderations({ mandatory = false } = {}) {
   dlg.querySelector('.cn-body').scrollTop = 0;
 }
 
-function checkConsiderations() {
+let checkingConsiderations = false;
+async function checkConsiderations() {
   if (!data || !considerationsHaveContent() || data.intro.considerations.enabled === false) return;
-  if (readAck() === considerationsHash()) return;
-  if (lb.open) return;
-  openConsiderations({ mandatory: true });
+  const hash = considerationsHash();
+  if (readAck() === hash || checkingConsiderations) return;
+  checkingConsiderations = true;
+  try {
+    // Si ya confirmó esta versión en otra computadora, no se vuelve a pedir.
+    if (await SP.hasConfirmed(hash)) { writeAck(hash); return; }
+    if (!lb.open && readAck() !== hash) openConsiderations({ mandatory: true });
+  } finally {
+    checkingConsiderations = false;
+  }
 }
 
 // Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
@@ -558,8 +567,10 @@ stage.addEventListener('touchend', (e) => {
 
 // Botones de la tarjeta de consideraciones.
 $('#cnAccept').addEventListener('click', () => {
-  writeAck(considerationsHash());
+  const hash = considerationsHash();
+  writeAck(hash);
   $('#considerDlg').close();
+  SP.registerVisit({ confirmed: true, version: hash });   // queda registrado quién y cuándo
 });
 $('#cnClose').addEventListener('click', () => $('#considerDlg').close());
 $('#considerDlg').addEventListener('cancel', (e) => { if ($('#considerDlg').dataset.mandatory) e.preventDefault(); });

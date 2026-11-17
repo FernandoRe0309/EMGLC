@@ -999,3 +999,21 @@ a.btn { text-decoration: none; color: inherit; }
 .ico { width: 16px; height: 16px; display: block; }
 .icon-btn .ico { margin: auto; }
 .blk-tools .ico { width: 14px; height: 14px; }
+
+/* ---------- Registro de lectura ---------- */
+.log-dlg { width: min(980px, calc(100vw - 32px)); }
+.log-dlg .settings-inner { max-height: calc(100vh - 60px); overflow-y: auto; }
+.log-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 12px; }
+.log-stats div { display: grid; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.log-stats strong { font-size: 24px; color: var(--accent); }
+.log-stats span { font-size: 12px; color: var(--muted); }
+.log-table-wrap { max-height: 46vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th, .log-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.log-table th { position: sticky; top: 0; background: var(--surface); font-size: 12px; color: var(--muted); }
+.log-table .num { text-align: right; }
+.log-table .ok { color: #15803d; font-weight: 700; }
+.log-table .no { color: var(--danger); font-weight: 700; }
+.log-table .old { color: #b45309; font-size: 11px; }
+.log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) { .log-stats { grid-template-columns: 1fr; } }
