@@ -1203,7 +1203,7 @@ async function buildPlan(pubRefs = new Map()) {
   const homeImg = state.intro.banner && images.get(state.intro.banner);
   const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : keepRef(state.intro.banner) };
   const logoFiles = new Set(); // los logos se publican en PNG para conservar la transparencia
-  const fmtNames = new Set();
+  const fmtNames = new Set(['public', '_historial', 'forms']); // nombres reservados de la carpeta
   const formats = [];
   for (const f of state.formats) {
     const fname = uniq(fmtNames, SP.safeName(f.name) || 'Formato');
@@ -1807,7 +1807,7 @@ async function cleanupUnusedPhotos() {
       for (const [name, it] of await SP.list(dir)) {
         const rel = dir ? `${dir}/${name}` : name;
         if (it.isFolder) {
-          if (!dir && (name === HISTORY_DIR || name === 'Forms')) continue;
+          if (!dir && (name === HISTORY_DIR || name === 'Forms' || name === 'public')) continue;
           dirs.push(rel);
           await walk(rel);
         } else if (dir && /\.(jpe?g|png|svg|gif|webp)$/i.test(name)) files.push(rel);

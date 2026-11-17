@@ -9,7 +9,7 @@
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.17-3';
+const APP_VERSION = '2026.11.17-4';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -201,8 +201,9 @@ const SP = (() => {
     try {
       const r = await fetch(`${location.pathname}?nocache=${Date.now()}`, { cache: 'no-store', credentials: 'same-origin' });
       if (!r.ok) return;
-      const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
-      if (m && m[1] !== APP_VERSION) { updateAvailable = true; showUpdateBanner(); }
+      const text = await r.text();
+      const m = text.match(/<meta name="app-version" content="([^"]+)"/) || text.match(/const APP_VERSION = '([^']+)'/);
+      if (m && m[1] !== 'dev' && m[1] !== APP_VERSION) { updateAvailable = true; showUpdateBanner(); }
     } catch { /* sin conexión: se intenta después */ }
   }
 

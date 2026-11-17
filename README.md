@@ -32,4 +32,4 @@ Luego visita `http://localhost:8000`.
 
 # 🗂️ Tablero de Señalización
 
-En [`tablero/`](tablero/) está el tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando. Se entrega como dos HTML autónomos (`tablero/dist/Manual.html` y `tablero/dist/Admin.html`) que se suben juntos a una carpeta de SharePoint y guardan ahí mismo las fotos. Instrucciones en [`tablero/README.md`](tablero/README.md).
+En [`tablero/`](tablero/) está el tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando. Se entrega en `tablero/dist/Manual-senalizacion/` (dos páginas HTML y su carpeta `public/` con CSS y JS), que se sube a una carpeta de SharePoint y guarda ahí mismo las fotos. Instrucciones en [`tablero/README.md`](tablero/README.md).

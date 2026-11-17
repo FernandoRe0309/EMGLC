@@ -1,11 +1,11 @@
 # Manual de Señalización
 
-Dos archivos autónomos (cada uno con todo su CSS y JavaScript adentro) que se suben **juntos a una misma carpeta de SharePoint**. Todo se guarda en esa misma carpeta; no hay que configurar URLs, tokens ni registrar apps.
+Dos páginas (con su CSS y JavaScript en la carpeta `public/`) que se suben **juntas a una misma carpeta de SharePoint**. Todo se guarda en esa misma carpeta; no hay que configurar URLs, tokens ni registrar apps.
 
 | Archivo | Para quién | Qué hace |
 |---|---|---|
-| `dist/Manual.aspx` (o `.html`) | Todos (solo lectura) | Portada con la guía, los avisos y los formatos. Dentro de cada formato: foto de portada, zonas (Frente de Tienda, Piso de Venta, Trastienda, Protección Civil), áreas y los espacios de señalización con su foto. Clic en una foto para verla en grande. Botón **Descarga Checklist** para imprimir o guardar en PDF. |
-| `dist/Admin.aspx` (o `.html`) | Quien acomoda y publica | Misma estructura, pero editable: arrastrar fotos a cada espacio, crear o renombrar zonas, áreas y espacios, y **Publicar**. |
+| `Manual.html` (o `.aspx`) | Todos (solo lectura) | Portada con la guía, los avisos y los formatos. Dentro de cada formato: foto de portada, zonas (Frente de Tienda, Piso de Venta, Trastienda, Protección Civil), áreas y los espacios de señalización con su foto. Clic en una foto para verla en grande. Botón **Descarga Checklist** para imprimir o guardar en PDF. |
+| `Admin.html` (o `.aspx`) | Quien acomoda y publica | Misma estructura, pero editable: arrastrar fotos a cada espacio, crear o renombrar zonas, áreas y espacios, y **Publicar**. |
 
 No hay ningún enlace entre los dos archivos: comparte cada uno solo con quien corresponda.
 
@@ -24,7 +24,7 @@ Cada formato empieza con las mismas zonas y áreas; todo se puede renombrar, agr
 ## Instalación
 
 1. Crea (o elige) una carpeta en SharePoint, por ejemplo `Documentos compartidos/Manual señalización`.
-2. Sube ahí `Manual.aspx` y `Admin.aspx` (o las versiones `.html`).
+2. Sube ahí el contenido de `dist/Manual-senalizacion/` (las dos páginas y la carpeta `public/`).
 3. Abre `Admin.aspx` desde SharePoint, carga tus fotos, acomódalas y presiona **Publicar**.
 4. Comparte el enlace de `Manual.aspx` con las tiendas.
 
@@ -106,21 +106,42 @@ Más cosas:
 - Al abrir el administrador, si no tienes cambios pendientes, se carga la última versión publicada (por ejemplo, la que publicó otra persona). **Más → Cargar lo publicado** la trae a mano.
 - **Exportar catálogo** descarga un HTML del formato actual con las fotos incrustadas. **Guardar / Abrir tablero** hace un respaldo `.json` sin fotos.
 
+## Organización de los archivos
+
+Lo que se sube a la carpeta de SharePoint (`dist/Manual-senalizacion/`):
+
+```
+Manual-senalizacion/
+├── Admin.html            ← panel de administrador (solo HTML)
+├── Manual.html           ← manual de lectura (solo HTML)
+└── public/
+    ├── css/
+    │   ├── blocks.css    ← estilos de las notas (los usan los dos paneles)
+    │   ├── manual.css    ← estilos del manual
+    │   └── admin.css     ← estilos del administrador
+    └── js/
+        ├── sharepoint.js ← conexión con la carpeta de SharePoint (los dos paneles)
+        ├── blocks.js     ← notas (los dos paneles)
+        ├── manual.js     ← funciones del manual
+        └── admin.js      ← funciones del administrador
+```
+
+Se sube la carpeta completa, con `public/`. Al publicar, junto a esto se crean `tablero.json`, `_historial/` y las carpetas de fotos por formato. La app nunca toca `public/`, y un formato no puede llamarse así.
+
+Cada HTML pide su CSS y su JS con `?v=<versión>`, para que el navegador no mezcle un HTML nuevo con archivos viejos guardados en caché. Si el HTML en SharePoint es más nuevo que el abierto, aparece el aviso "Hay una versión nueva de esta página".
+
 ## Desarrollo
 
-El código fuente está separado para poder editarlo con calma:
-
-| Archivo | Contenido |
-|---|---|
-| `index.html`, `viewer.css`, `viewer.js` | Panel de lectura |
-| `admin/index.html`, `admin/styles.css`, `admin/admin.js` | Panel de administrador |
-| `sharepoint.js` | Conexión con la carpeta de SharePoint (API REST del sitio) |
-| `blocks.js`, `blocks.css` | Notas (bloques de contenido); las usan los dos paneles |
-
-Después de cualquier cambio, genera los dos HTML finales:
+El código fuente tiene la misma organización: `Manual.html`, `Admin.html` y `public/css`, `public/js`. Después de cualquier cambio, sube el número de `APP_VERSION` en `public/js/sharepoint.js` y ejecuta:
 
 ```bash
 python3 build.py
 ```
 
-y vuelve a subir `dist/Manual.aspx` y `dist/Admin.aspx` (o los `.html`) a la carpeta de SharePoint.
+Genera en `dist/`:
+
+| Carpeta | Para qué |
+|---|---|
+| `Manual-senalizacion/` | La que se sube normalmente (HTML + `public/`). |
+| `Manual-senalizacion-aspx/` | Lo mismo con `Admin.aspx` y `Manual.aspx`, si el sitio descarga los `.html` en lugar de abrirlos. |
+| `un-archivo/` | Cada página con todo su CSS y JS adentro (alternativa de un solo archivo). |

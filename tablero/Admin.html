@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin de Señalización</title>
+<meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
+<meta name="robots" content="noindex">
+<meta name="app-version" content="dev">
+<link rel="stylesheet" href="public/css/blocks.css">
+<link rel="stylesheet" href="public/css/admin.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>Señalización en tu tienda <span class="tag">Administrador</span></h1>
+    <p id="stats" class="stats">Sin imágenes cargadas</p>
+  </div>
+  <div class="actions">
+    <span id="publishState" class="publish-state"></span>
+    <button id="publishBtn" class="btn btn-primary" type="button" title="Guarda las fotos y la distribución en la carpeta de SharePoint para que se vean en el panel de lectura">Publicar</button>
+    <button id="authBtn" class="btn account" type="button">Conectando…</button>
+    <label class="btn" title="Elige la carpeta Señalización completa; se conservan las subcarpetas">
+      Cargar carpeta
+      <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
+    </label>
+    <label class="btn" title="Elige una o varias imágenes sueltas">
+      Cargar imágenes
+      <input id="filesInput" type="file" accept="image/*" multiple hidden>
+    </label>
+    <button id="exportHtmlBtn" class="btn" type="button" title="Descarga un catálogo HTML con las imágenes incrustadas">Exportar catálogo</button>
+    <button id="saveJsonBtn" class="btn" type="button" title="Guarda la distribución (sin imágenes) en un archivo .json">Guardar tablero</button>
+    <label class="btn" title="Abre un tablero guardado (.json)">
+      Abrir tablero
+      <input id="openJsonInput" type="file" accept="application/json,.json" hidden>
+    </label>
+    <details class="menu">
+      <summary class="btn" aria-label="Más opciones">Más ▾</summary>
+      <div class="menu-panel">
+        <button type="button" data-action="connection">Carpeta de SharePoint</button>
+        <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
+        <button type="button" data-action="readlog">Registro de lectura (quién abrió el manual)…</button>
+        <button type="button" data-action="history">Versiones anteriores (restaurar)…</button>
+        <button type="button" data-action="cleanup">Limpiar fotos sin usar…</button>
+        <hr>
+        <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
+        <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
+        <hr>
+        <button type="button" data-action="clear-board">Quitar todas las fotos de este formato</button>
+        <button type="button" data-action="reset-structure">Restablecer zonas y áreas de este formato</button>
+        <button type="button" data-action="clear-library" class="danger">Borrar biblioteca de imágenes</button>
+      </div>
+    </details>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="library" class="library" aria-label="Biblioteca de imágenes">
+    <div class="library-head">
+      <h2>Biblioteca</h2>
+      <input id="searchInput" type="search" placeholder="Buscar imagen o carpeta…" autocomplete="off">
+      <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar en este formato</label>
+    </div>
+    <div id="libraryList" class="library-list"></div>
+    <p class="library-foot">Arrastra una foto a un espacio, a la lista de espacios o al botón de un área. Suelta aquí un espacio para quitarle la foto.</p>
+  </aside>
+
+  <main class="board-wrap">
+    <div id="formatTabs" class="format-tabs" role="tablist" aria-label="Formatos"></div>
+    <div id="bannerBox" class="banner-box" title="Foto de portada del formato"></div>
+    <div id="formatNotesTop" class="format-notes"></div>
+    <div id="zoneBar" class="zone-bar" aria-label="Zonas"></div>
+    <section id="zonePanel" class="zone-panel"></section>
+    <div id="formatNotesBottom" class="format-notes"></div>
+  </main>
+</div>
+
+<dialog id="viewer" class="viewer">
+  <form method="dialog" class="viewer-inner">
+    <button class="viewer-close" value="close" aria-label="Cerrar">×</button>
+    <div class="viewer-img"><img id="viewerImg" alt=""></div>
+    <div class="viewer-info">
+      <h3 id="viewerTitle"></h3>
+      <p id="viewerPath" class="muted mono"></p>
+      <div class="viewer-actions">
+        <select id="viewerSection" aria-label="Área"></select>
+        <button id="viewerPrimary" class="btn btn-primary" type="button">Agregar</button>
+        <button id="viewerRemove" class="btn danger" type="button">Quitar foto del espacio</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="connection" class="settings">
+  <form method="dialog" class="settings-inner">
+    <h3>Carpeta de SharePoint</h3>
+    <p class="muted">Las fotos y la distribución se guardan en la misma carpeta de SharePoint donde está este archivo.</p>
+    <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
+    <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
+    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Zona/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
+    <p id="connResult" class="cfg-result" role="status"></p>
+    <div class="settings-actions">
+      <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
+      <span class="spacer"></span>
+      <button type="button" id="connTest" class="btn">Probar conexión</button>
+      <button value="close" class="btn btn-primary">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="formatDlg" class="settings panel-editor">
+  <form method="dialog" class="settings-inner" id="formatForm">
+    <h3 id="formatDlgTitle">Personalizar panel</h3>
+    <nav class="pe-tabs" aria-label="Partes del panel">
+      <button type="button" data-pe-tab="datos">Datos</button>
+      <button type="button" data-pe-tab="botones">Botones</button>
+      <button type="button" data-pe-tab="secciones">Secciones</button>
+      <button type="button" data-pe-tab="zonas">Zonas y áreas</button>
+    </nav>
+
+    <div class="pe-page" data-pe-page="datos">
+      <div class="fmt-grid">
+        <div class="fmt-fields">
+          <label>Nombre<input id="fmtName" maxlength="40" autocomplete="off" placeholder="W2"></label>
+          <label>Subtítulo<input id="fmtSubtitle" maxlength="80" autocomplete="off" placeholder="Señalización Walmart"></label>
+          <label>Color<input id="fmtColor" type="color" value="#1f4fd6"></label>
+          <label>Logo (opcional)<select id="fmtLogo"></select></label>
+          <p class="muted small">Aparece en la tarjeta del formato en la página de inicio. De preferencia un PNG con fondo transparente.</p>
+          <label>Foto de portada (opcional)<select id="fmtBanner"></select></label>
+          <div id="fmtBannerPreview" class="fmt-banner-preview"></div>
+          <label class="pe-toggle"><input type="checkbox" id="fmtShowHome"> Mostrar este formato en la página de inicio</label>
+        </div>
+        <div>
+          <p class="muted small">Así se verá en la página de inicio:</p>
+          <div id="fmtPreview" class="fmt-preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pe-page" data-pe-page="botones" hidden>
+      <p class="muted small">Botones de la barra que aparece arriba del panel del formato. Desmarca la casilla para ocultar un botón, cambia su texto o agrega botones con enlace (por ejemplo a un PDF o a otra página).</p>
+      <div id="peButtons" class="pe-list"></div>
+      <div class="pe-actions">
+        <button type="button" id="peAddButton" class="btn">+ Agregar botón con enlace</button>
+        <span id="peRestoreButtons"></span>
+      </div>
+    </div>
+
+    <div class="pe-page" data-pe-page="secciones" hidden>
+      <p class="muted small">Elige qué partes se muestran en el panel de este formato.</p>
+      <label class="pe-toggle"><input type="checkbox" id="peShowBanner"> Foto de portada del formato</label>
+      <label class="pe-toggle"><input type="checkbox" id="peShowNotes"> Texto azul de cada área ("En … solo deberás contar con la siguiente señalización")</label>
+      <label class="pe-toggle"><input type="checkbox" id="peShowEmpty"> Espacios que aún no tienen foto ("Imagen pendiente")</label>
+    </div>
+
+    <div class="pe-page" data-pe-page="zonas" hidden>
+      <p class="muted small">Las zonas son los botones grandes (Frente de Tienda, Piso de Venta…) y las áreas, los botones de cada zona. Desmarca para ocultar sin borrar; los espacios y fotos de cada área se acomodan en el tablero.</p>
+      <div id="peZones" class="pe-list"></div>
+      <div class="pe-actions"><button type="button" id="peAddZone" class="btn">+ Agregar zona</button></div>
+    </div>
+
+    <div class="settings-actions">
+      <button type="button" id="fmtDelete" class="btn danger">Eliminar formato</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="blockDlg" class="settings block-editor">
+  <form method="dialog" class="settings-inner" id="blockForm">
+    <h3 id="blockDlgTitle">Nota</h3>
+    <div class="be-grid">
+      <div class="be-fields">
+        <label>Tipo de nota<select id="blkType"></select></label>
+        <label>Ubicación<select id="blkPos"></select></label>
+        <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
+        <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
+        <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
+        <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
+        <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
+        <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
+      </div>
+      <div class="be-preview-col">
+        <p class="muted small">Vista previa</p>
+        <div id="blkPreview" class="blk-preview"></div>
+      </div>
+    </div>
+    <div class="settings-actions">
+      <button type="button" id="blkDelete" class="btn danger">Eliminar nota</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDlg" class="settings log-dlg">
+  <form method="dialog" class="settings-inner">
+    <h3>Registro de lectura</h3>
+    <p class="muted small">Quién abrió el manual y quién confirmó las Consideraciones Importantes. Se guarda en una lista de SharePoint de este mismo sitio.</p>
+    <div id="logBody"></div>
+    <p id="logResult" class="cfg-result" role="status"></p>
+    <div class="settings-actions">
+      <span id="logActions" class="log-actions" hidden>
+        <button type="button" id="logRefresh" class="btn">Actualizar</button>
+        <button type="button" id="logCsv" class="btn">Descargar para Excel</button>
+        <a id="logOpen" class="btn" target="_blank" rel="noopener">Abrir la lista en SharePoint</a>
+        <button type="button" id="logGrant" class="btn">Dar permiso a las tiendas</button>
+      </span>
+      <span class="spacer"></span>
+      <button value="close" class="btn btn-primary">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="historyDlg" class="settings">
+  <form method="dialog" class="settings-inner">
+    <h3>Versiones anteriores</h3>
+    <p class="muted small">Cada vez que alguien publica se guarda una copia de la versión anterior en la carpeta <em>_historial</em> (se conservan las últimas 60). Al restaurar, la versión se carga en tu tablero; revisa y presiona <strong>Publicar</strong> para que la vean todos.</p>
+    <div id="historyList" class="hist-list"></div>
+    <div class="settings-actions"><span class="spacer"></span><button value="close" class="btn btn-primary">Cerrar</button></div>
+  </form>
+</dialog>
+
+<dialog id="chooseDlg" class="settings choose-dlg">
+  <div class="settings-inner">
+    <h3 id="chooseTitle"></h3>
+    <p id="chooseText"></p>
+    <div id="chooseOptions" class="settings-actions choose-options"></div>
+  </div>
+</dialog>
+
+<dialog id="introDlg" class="settings intro-dlg">
+  <form method="dialog" class="settings-inner" id="introForm">
+    <h3>Página de inicio</h3>
+    <label>Foto de portada (opcional)<select id="inBanner"></select></label>
+    <div id="inBannerPreview" class="fmt-banner-preview"></div>
+    <label>Título<input id="inTitle" maxlength="80" autocomplete="off"></label>
+    <label>Subtítulo<input id="inSubtitle" maxlength="120" autocomplete="off"></label>
+    <label>Título del aviso azul<input id="inGuideTitle" maxlength="80" autocomplete="off"></label>
+    <label>Texto del aviso azul<textarea id="inGuide" rows="3"></textarea></label>
+    <label>Título del aviso amarillo<input id="inImportantTitle" maxlength="80" autocomplete="off"></label>
+    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón; déjalo vacío para no mostrarlo)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <fieldset class="cn-fields">
+      <legend>Consideraciones Importantes</legend>
+      <p class="muted small">Tarjeta que aparece al abrir el manual y que la tienda debe confirmar. También queda un botón en la página principal para volver a verla. Si cambias el texto, se vuelve a pedir la confirmación.</p>
+      <label class="pe-toggle"><input type="checkbox" id="cnEnabled"> Mostrar al abrir el manual y pedir confirmación</label>
+      <label>Título<input id="cnTitle" maxlength="80" autocomplete="off"></label>
+      <label>Introducción<textarea id="cnIntro" rows="3"></textarea></label>
+      <label>Puntos numerados <span class="muted">(uno por renglón)</span><textarea id="cnItems" rows="6"></textarea></label>
+      <label>Frase para confirmar<input id="cnConfirm" maxlength="200" autocomplete="off"></label>
+      <label>Notas finales <span class="muted">(un párrafo por renglón)</span><textarea id="cnNotes" rows="4"></textarea></label>
+      <label>Texto del botón<input id="cnButton" maxlength="60" autocomplete="off"></label>
+    </fieldset>
+    <div class="settings-actions">
+      <button type="button" id="introReset" class="btn">Restablecer textos</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn" formnovalidate>Cancelar</button>
+      <button type="submit" class="btn btn-primary" value="save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="public/js/sharepoint.js"></script>
+<script src="public/js/blocks.js"></script>
+<script src="public/js/admin.js"></script>
+</body>
+</html>
