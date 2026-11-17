@@ -213,7 +213,7 @@
   </div>
 </dialog>
 
-<dialog id="introDlg" class="settings">
+<dialog id="introDlg" class="settings intro-dlg">
   <form method="dialog" class="settings-inner" id="introForm">
     <h3>Página de inicio</h3>
     <label>Foto de portada (opcional)<select id="inBanner"></select></label>
@@ -223,7 +223,18 @@
     <label>Título del aviso azul<input id="inGuideTitle" maxlength="80" autocomplete="off"></label>
     <label>Texto del aviso azul<textarea id="inGuide" rows="3"></textarea></label>
     <label>Título del aviso amarillo<input id="inImportantTitle" maxlength="80" autocomplete="off"></label>
-    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón; déjalo vacío para no mostrarlo)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <fieldset class="cn-fields">
+      <legend>⭐ Consideraciones Importantes</legend>
+      <p class="muted small">Tarjeta que aparece al abrir el manual y que la tienda debe confirmar. También queda un botón en la página principal para volver a verla. Si cambias el texto, se vuelve a pedir la confirmación.</p>
+      <label class="pe-toggle"><input type="checkbox" id="cnEnabled"> Mostrar al abrir el manual y pedir confirmación</label>
+      <label>Título<input id="cnTitle" maxlength="80" autocomplete="off"></label>
+      <label>Introducción<textarea id="cnIntro" rows="3"></textarea></label>
+      <label>Puntos numerados <span class="muted">(uno por renglón)</span><textarea id="cnItems" rows="6"></textarea></label>
+      <label>Frase para confirmar<input id="cnConfirm" maxlength="200" autocomplete="off"></label>
+      <label>Notas finales <span class="muted">(un párrafo por renglón)</span><textarea id="cnNotes" rows="4"></textarea></label>
+      <label>Texto del botón<input id="cnButton" maxlength="60" autocomplete="off"></label>
+    </fieldset>
     <div class="settings-actions">
       <button type="button" id="introReset" class="btn">Restablecer textos</button>
       <span class="spacer"></span>

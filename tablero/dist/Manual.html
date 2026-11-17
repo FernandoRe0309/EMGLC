@@ -434,6 +434,130 @@ a.pill { text-decoration: none; }
   white-space: pre-line;
 }
 
+/* ---------- Consideraciones Importantes ---------- */
+.consider-btn {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px auto 0;
+  padding: 14px 26px;
+  border: 2px solid #f2c94c;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffdf2, #fff3c4);
+  color: #7a3d00;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(245, 180, 0, .25);
+  transition: transform .12s, box-shadow .12s;
+}
+.consider-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 180, 0, .32); }
+.consider-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.consider-btn .star { font-size: 20px; }
+
+.consider-dlg {
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  overflow: visible;
+}
+.consider-dlg::backdrop { background: rgba(10, 18, 40, .62); backdrop-filter: blur(2px); }
+.cn-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  border-radius: 18px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+.cn-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px;
+  background: var(--brand);
+  color: #fff;
+  border-bottom: 4px solid var(--brand-yellow);
+}
+.cn-head h2 { flex: 1; margin: 0; font-size: 22px; font-weight: 800; }
+.cn-head .star { font-size: 24px; }
+.cn-close {
+  width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .16); color: #fff; font-size: 20px; cursor: pointer;
+}
+.cn-close:hover { background: rgba(255, 255, 255, .3); }
+.cn-body { overflow-y: auto; padding: 20px 24px 8px; color: #2b3445; font-size: 15.5px; line-height: 1.55; }
+.cn-intro { margin: 0 0 16px; }
+.cn-items { counter-reset: cn; list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.cn-items li {
+  counter-increment: cn;
+  position: relative;
+  padding: 10px 14px 10px 52px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8faff;
+}
+.cn-items li::before {
+  content: counter(cn);
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+}
+.cn-confirm { margin: 0 0 16px; font-weight: 700; color: #1e3a9a; }
+.cn-notes { display: grid; gap: 10px; margin-bottom: 8px; }
+.cn-notes p {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 4px solid #f2c94c;
+  border-radius: 8px;
+  background: #fffaeb;
+  font-size: 14px;
+  color: #4a3b12;
+}
+.cn-foot { padding: 14px 24px 20px; border-top: 1px solid var(--border); background: var(--surface); }
+.cn-accept {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #15803d;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(21, 128, 61, .3);
+}
+.cn-accept:hover { filter: brightness(1.08); }
+.cn-accept:focus-visible { outline: 3px solid var(--brand-yellow); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .cn-head { padding: 14px 16px; }
+  .cn-head h2 { font-size: 19px; }
+  .cn-body { padding: 16px 16px 6px; font-size: 15px; }
+  .cn-foot { padding: 12px 16px 16px; }
+  .cn-accept { font-size: 15px; }
+  .consider-btn { width: 100%; justify-content: center; }
+}
+
 /* ---------- Lightbox ---------- */
 .lightbox {
   width: 100vw;
@@ -566,6 +690,10 @@ a.pill { text-decoration: none; }
     <ul id="impList"></ul>
   </section>
 
+  <button type="button" id="considerBtn" class="consider-btn" hidden>
+    <span class="star" aria-hidden="true">⭐</span> <span id="considerBtnLabel">Consideraciones Importantes</span>
+  </button>
+
   <div id="formats" class="formats"></div>
   <p id="updatedHome" class="updated"></p>
 </main>
@@ -582,6 +710,25 @@ a.pill { text-decoration: none; }
 <div id="status" class="status" hidden></div>
 
 <footer class="foot"><span id="account" hidden><span id="accountName"></span><span id="signOutWrap"> · <button type="button" id="signOut" class="link-btn">Cerrar sesión</button></span></span></footer>
+
+<dialog id="considerDlg" class="consider-dlg" aria-labelledby="cnTitle">
+  <div class="cn-card">
+    <header class="cn-head">
+      <span class="star" aria-hidden="true">⭐</span>
+      <h2 id="cnTitle">Consideraciones Importantes</h2>
+      <button type="button" id="cnClose" class="cn-close" aria-label="Cerrar">×</button>
+    </header>
+    <div class="cn-body">
+      <p id="cnIntro" class="cn-intro"></p>
+      <ol id="cnItems" class="cn-items"></ol>
+      <p id="cnConfirm" class="cn-confirm"></p>
+      <div id="cnNotes" class="cn-notes"></div>
+    </div>
+    <footer class="cn-foot">
+      <button type="button" id="cnAccept" class="cn-accept"><span aria-hidden="true">✅</span> <span id="cnButtonLabel">CONFIRMO DE LEÍDO Y ENTERADO</span></button>
+    </footer>
+  </div>
+</dialog>
 
 <dialog id="lightbox" class="lightbox" aria-label="Imagen ampliada">
   <div class="lb-top">
@@ -612,7 +759,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.16-1';
+const APP_VERSION = '2026.11.17-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1017,6 +1164,25 @@ const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#1f4fd6');
 const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
 const defaultNote = (area) => `En ${area} solo deberás contar con la siguiente señalización`;
 
+const DEFAULT_CONSIDERATIONS = {
+  enabled: true,
+  title: 'Consideraciones Importantes',
+  intro: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
+  items: [
+    'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+    'Evita duplicidades: coloca máximo una señalización por departamento.',
+    'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+    'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+    'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+  ],
+  confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
+  notes: [
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+  ],
+  buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
+};
+
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
   subtitle: 'Selecciona tu formato para continuar',
@@ -1061,6 +1227,54 @@ async function load() {
   renderAccount();
   route();
   startAutoRefresh();
+  checkConsiderations();
+}
+
+/* ---------- Consideraciones Importantes ----------
+   Se muestran al abrir el manual hasta que la persona confirma. La confirmación se guarda en
+   este navegador; si el texto cambia, se vuelve a pedir. */
+const ACK_KEY = 'tablero-senalizacion:consideraciones';
+
+function considerationsHaveContent() {
+  const c = data && data.intro.considerations;
+  return !!(c && (c.intro || (c.items && c.items.length) || (c.notes && c.notes.length)));
+}
+
+function considerationsHash() {
+  const c = data.intro.considerations;
+  const str = JSON.stringify([c.title, c.intro, c.items, c.confirmText, c.notes, c.buttonLabel]);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+function readAck() { try { return localStorage.getItem(ACK_KEY); } catch { return null; } }
+function writeAck(v) { try { localStorage.setItem(ACK_KEY, v); } catch { /* sin almacenamiento: se volverá a mostrar */ } }
+
+function openConsiderations({ mandatory = false } = {}) {
+  const c = data.intro.considerations;
+  const dlg = $('#considerDlg');
+  $('#cnTitle').textContent = c.title;
+  $('#cnIntro').textContent = c.intro;
+  $('#cnIntro').hidden = !c.intro;
+  $('#cnItems').innerHTML = (c.items || []).map((x) => `<li>${esc(x)}</li>`).join('');
+  $('#cnItems').hidden = !(c.items || []).length;
+  $('#cnConfirm').textContent = c.confirmText;
+  $('#cnConfirm').hidden = !c.confirmText;
+  $('#cnNotes').innerHTML = (c.notes || []).map((x) => `<p>${esc(x)}</p>`).join('');
+  $('#cnNotes').hidden = !(c.notes || []).length;
+  $('#cnButtonLabel').textContent = c.buttonLabel;
+  $('#cnClose').hidden = mandatory;
+  dlg.dataset.mandatory = mandatory ? '1' : '';
+  if (!dlg.open) dlg.showModal();
+  dlg.querySelector('.cn-body').scrollTop = 0;
+}
+
+function checkConsiderations() {
+  if (!data || !considerationsHaveContent() || data.intro.considerations.enabled === false) return;
+  if (readAck() === considerationsHash()) return;
+  if (lb.open) return;
+  openConsiderations({ mandatory: true });
 }
 
 // Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
@@ -1076,6 +1290,7 @@ function startAutoRefresh() {
         data = normalize(raw);
         route({ quiet: true });
         window.scrollTo(0, y);
+        checkConsiderations();
       }
     } catch (e) { console.warn(e); }
     refreshing = false;
@@ -1156,6 +1371,7 @@ function normalize(raw) {
   });
   const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
   intro.banner = imgSrc(raw.intro && raw.intro.banner);
+  intro.considerations = { ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) };
   return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 
@@ -1249,6 +1465,8 @@ function renderHome() {
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');
   $('#updatedHome').textContent = updatedText();
+  $('#considerBtn').hidden = !considerationsHaveContent();
+  $('#considerBtnLabel').textContent = data.intro.considerations.title;
 }
 
 function renderFormat(f, zone, area) {
@@ -1490,6 +1708,15 @@ stage.addEventListener('touchend', (e) => {
   touchStart = null;
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
 });
+
+// Botones de la tarjeta de consideraciones.
+$('#cnAccept').addEventListener('click', () => {
+  writeAck(considerationsHash());
+  $('#considerDlg').close();
+});
+$('#cnClose').addEventListener('click', () => $('#considerDlg').close());
+$('#considerDlg').addEventListener('cancel', (e) => { if ($('#considerDlg').dataset.mandatory) e.preventDefault(); });
+$('#considerBtn').addEventListener('click', () => openConsiderations({ mandatory: false }));
 
 start();
 

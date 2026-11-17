@@ -11,6 +11,25 @@ const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#1f4fd6');
 const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
 const defaultNote = (area) => `En ${area} solo deberás contar con la siguiente señalización`;
 
+const DEFAULT_CONSIDERATIONS = {
+  enabled: true,
+  title: 'Consideraciones Importantes',
+  intro: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
+  items: [
+    'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+    'Evita duplicidades: coloca máximo una señalización por departamento.',
+    'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+    'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+    'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+  ],
+  confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
+  notes: [
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+  ],
+  buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
+};
+
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
   subtitle: 'Selecciona tu formato para continuar',
@@ -55,6 +74,54 @@ async function load() {
   renderAccount();
   route();
   startAutoRefresh();
+  checkConsiderations();
+}
+
+/* ---------- Consideraciones Importantes ----------
+   Se muestran al abrir el manual hasta que la persona confirma. La confirmación se guarda en
+   este navegador; si el texto cambia, se vuelve a pedir. */
+const ACK_KEY = 'tablero-senalizacion:consideraciones';
+
+function considerationsHaveContent() {
+  const c = data && data.intro.considerations;
+  return !!(c && (c.intro || (c.items && c.items.length) || (c.notes && c.notes.length)));
+}
+
+function considerationsHash() {
+  const c = data.intro.considerations;
+  const str = JSON.stringify([c.title, c.intro, c.items, c.confirmText, c.notes, c.buttonLabel]);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+function readAck() { try { return localStorage.getItem(ACK_KEY); } catch { return null; } }
+function writeAck(v) { try { localStorage.setItem(ACK_KEY, v); } catch { /* sin almacenamiento: se volverá a mostrar */ } }
+
+function openConsiderations({ mandatory = false } = {}) {
+  const c = data.intro.considerations;
+  const dlg = $('#considerDlg');
+  $('#cnTitle').textContent = c.title;
+  $('#cnIntro').textContent = c.intro;
+  $('#cnIntro').hidden = !c.intro;
+  $('#cnItems').innerHTML = (c.items || []).map((x) => `<li>${esc(x)}</li>`).join('');
+  $('#cnItems').hidden = !(c.items || []).length;
+  $('#cnConfirm').textContent = c.confirmText;
+  $('#cnConfirm').hidden = !c.confirmText;
+  $('#cnNotes').innerHTML = (c.notes || []).map((x) => `<p>${esc(x)}</p>`).join('');
+  $('#cnNotes').hidden = !(c.notes || []).length;
+  $('#cnButtonLabel').textContent = c.buttonLabel;
+  $('#cnClose').hidden = mandatory;
+  dlg.dataset.mandatory = mandatory ? '1' : '';
+  if (!dlg.open) dlg.showModal();
+  dlg.querySelector('.cn-body').scrollTop = 0;
+}
+
+function checkConsiderations() {
+  if (!data || !considerationsHaveContent() || data.intro.considerations.enabled === false) return;
+  if (readAck() === considerationsHash()) return;
+  if (lb.open) return;
+  openConsiderations({ mandatory: true });
 }
 
 // Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
@@ -70,6 +137,7 @@ function startAutoRefresh() {
         data = normalize(raw);
         route({ quiet: true });
         window.scrollTo(0, y);
+        checkConsiderations();
       }
     } catch (e) { console.warn(e); }
     refreshing = false;
@@ -150,6 +218,7 @@ function normalize(raw) {
   });
   const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
   intro.banner = imgSrc(raw.intro && raw.intro.banner);
+  intro.considerations = { ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) };
   return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 
@@ -243,6 +312,8 @@ function renderHome() {
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');
   $('#updatedHome').textContent = updatedText();
+  $('#considerBtn').hidden = !considerationsHaveContent();
+  $('#considerBtnLabel').textContent = data.intro.considerations.title;
 }
 
 function renderFormat(f, zone, area) {
@@ -484,5 +555,14 @@ stage.addEventListener('touchend', (e) => {
   touchStart = null;
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
 });
+
+// Botones de la tarjeta de consideraciones.
+$('#cnAccept').addEventListener('click', () => {
+  writeAck(considerationsHash());
+  $('#considerDlg').close();
+});
+$('#cnClose').addEventListener('click', () => $('#considerDlg').close());
+$('#considerDlg').addEventListener('cancel', (e) => { if ($('#considerDlg').dataset.mandatory) e.preventDefault(); });
+$('#considerBtn').addEventListener('click', () => openConsiderations({ mandatory: false }));
 
 start();

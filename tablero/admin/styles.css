@@ -988,3 +988,9 @@ a.btn { text-decoration: none; color: inherit; }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); pointer-events: none;
 }
 .drop-marker[hidden] { display: none; }
+
+/* ---------- Página de inicio: consideraciones ---------- */
+.intro-dlg { width: min(720px, calc(100vw - 32px)); }
+.intro-dlg .settings-inner { max-height: calc(100vh - 60px); overflow-y: auto; }
+.cn-fields { display: grid; gap: 10px; margin: 6px 0 0; padding: 12px 14px; border: 1.5px solid #f2c94c; border-radius: 12px; background: #fffdf5; }
+.cn-fields legend { padding: 0 6px; font-weight: 800; color: #7a3d00; }

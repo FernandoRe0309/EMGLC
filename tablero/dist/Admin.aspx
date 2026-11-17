@@ -1058,6 +1058,12 @@ a.btn { text-decoration: none; color: inherit; }
 }
 .drop-marker[hidden] { display: none; }
 
+/* ---------- Página de inicio: consideraciones ---------- */
+.intro-dlg { width: min(720px, calc(100vw - 32px)); }
+.intro-dlg .settings-inner { max-height: calc(100vh - 60px); overflow-y: auto; }
+.cn-fields { display: grid; gap: 10px; margin: 6px 0 0; padding: 12px 14px; border: 1.5px solid #f2c94c; border-radius: 12px; background: #fffdf5; }
+.cn-fields legend { padding: 0 6px; font-weight: 800; color: #7a3d00; }
+
 </style>
 </head>
 <body>
@@ -1263,7 +1269,7 @@ a.btn { text-decoration: none; color: inherit; }
   </div>
 </dialog>
 
-<dialog id="introDlg" class="settings">
+<dialog id="introDlg" class="settings intro-dlg">
   <form method="dialog" class="settings-inner" id="introForm">
     <h3>Página de inicio</h3>
     <label>Foto de portada (opcional)<select id="inBanner"></select></label>
@@ -1273,7 +1279,18 @@ a.btn { text-decoration: none; color: inherit; }
     <label>Título del aviso azul<input id="inGuideTitle" maxlength="80" autocomplete="off"></label>
     <label>Texto del aviso azul<textarea id="inGuide" rows="3"></textarea></label>
     <label>Título del aviso amarillo<input id="inImportantTitle" maxlength="80" autocomplete="off"></label>
-    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <label>Puntos del aviso amarillo <span class="muted">(uno por renglón; déjalo vacío para no mostrarlo)</span><textarea id="inImportant" rows="4"></textarea></label>
+    <fieldset class="cn-fields">
+      <legend>⭐ Consideraciones Importantes</legend>
+      <p class="muted small">Tarjeta que aparece al abrir el manual y que la tienda debe confirmar. También queda un botón en la página principal para volver a verla. Si cambias el texto, se vuelve a pedir la confirmación.</p>
+      <label class="pe-toggle"><input type="checkbox" id="cnEnabled"> Mostrar al abrir el manual y pedir confirmación</label>
+      <label>Título<input id="cnTitle" maxlength="80" autocomplete="off"></label>
+      <label>Introducción<textarea id="cnIntro" rows="3"></textarea></label>
+      <label>Puntos numerados <span class="muted">(uno por renglón)</span><textarea id="cnItems" rows="6"></textarea></label>
+      <label>Frase para confirmar<input id="cnConfirm" maxlength="200" autocomplete="off"></label>
+      <label>Notas finales <span class="muted">(un párrafo por renglón)</span><textarea id="cnNotes" rows="4"></textarea></label>
+      <label>Texto del botón<input id="cnButton" maxlength="60" autocomplete="off"></label>
+    </fieldset>
     <div class="settings-actions">
       <button type="button" id="introReset" class="btn">Restablecer textos</button>
       <span class="spacer"></span>
@@ -1297,7 +1314,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.16-1';
+const APP_VERSION = '2026.11.17-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1744,6 +1761,26 @@ const DEFAULT_FORMATS = [
   { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
 ];
 
+// Tarjeta "Consideraciones Importantes" que el manual muestra al abrirse y que se debe confirmar.
+const DEFAULT_CONSIDERATIONS = {
+  enabled: true,
+  title: 'Consideraciones Importantes',
+  intro: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
+  items: [
+    'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+    'Evita duplicidades: coloca máximo una señalización por departamento.',
+    'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+    'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+    'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+  ],
+  confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
+  notes: [
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+  ],
+  buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
+};
+
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
   subtitle: 'Selecciona tu formato para continuar',
@@ -1755,6 +1792,7 @@ const DEFAULT_INTRO = {
     'Mantén únicamente la señalización autorizada en tienda.',
     'Coloca máximo una señalización por departamento.',
   ],
+  considerations: DEFAULT_CONSIDERATIONS,
 };
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
@@ -3661,6 +3699,14 @@ function openIntroDialog() {
   $('#inGuide').value = t.guide;
   $('#inImportantTitle').value = t.importantTitle;
   $('#inImportant').value = (t.important || []).join('\n');
+  const c = { ...DEFAULT_CONSIDERATIONS, ...(t.considerations || {}) };
+  $('#cnEnabled').checked = c.enabled !== false;
+  $('#cnTitle').value = c.title;
+  $('#cnIntro').value = c.intro;
+  $('#cnItems').value = (c.items || []).join('\n');
+  $('#cnConfirm').value = c.confirmText;
+  $('#cnNotes').value = (c.notes || []).join('\n');
+  $('#cnButton').value = c.buttonLabel;
   $('#inBanner').innerHTML = bannerOptions(t.banner || null);
   renderIntroBannerPreview();
   $('#introDlg').showModal();
@@ -3711,6 +3757,15 @@ function setupFormatUI() {
       importantTitle: $('#inImportantTitle').value.trim(),
       important: $('#inImportant').value.split('\n').map((x) => x.trim()).filter(Boolean),
       banner: $('#inBanner').value || null,
+      considerations: {
+        enabled: $('#cnEnabled').checked,
+        title: $('#cnTitle').value.trim() || DEFAULT_CONSIDERATIONS.title,
+        intro: $('#cnIntro').value.trim(),
+        items: $('#cnItems').value.split('\n').map((x) => x.trim()).filter(Boolean),
+        confirmText: $('#cnConfirm').value.trim(),
+        notes: $('#cnNotes').value.split('\n').map((x) => x.trim()).filter(Boolean),
+        buttonLabel: $('#cnButton').value.trim() || DEFAULT_CONSIDERATIONS.buttonLabel,
+      },
     };
     commit();
     toast('Página de inicio actualizada. Publica para que se vea.');

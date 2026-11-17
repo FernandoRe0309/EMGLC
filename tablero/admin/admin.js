@@ -53,6 +53,26 @@ const DEFAULT_FORMATS = [
   { name: 'BAE', subtitle: 'Señalización Bodega Aurrera', color: '#2e7d32' },
 ];
 
+// Tarjeta "Consideraciones Importantes" que el manual muestra al abrirse y que se debe confirmar.
+const DEFAULT_CONSIDERATIONS = {
+  enabled: true,
+  title: 'Consideraciones Importantes',
+  intro: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
+  items: [
+    'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+    'Evita duplicidades: coloca máximo una señalización por departamento.',
+    'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+    'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+    'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+  ],
+  confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
+  notes: [
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+  ],
+  buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
+};
+
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
   subtitle: 'Selecciona tu formato para continuar',
@@ -64,6 +84,7 @@ const DEFAULT_INTRO = {
     'Mantén únicamente la señalización autorizada en tienda.',
     'Coloca máximo una señalización por departamento.',
   ],
+  considerations: DEFAULT_CONSIDERATIONS,
 };
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
@@ -1970,6 +1991,14 @@ function openIntroDialog() {
   $('#inGuide').value = t.guide;
   $('#inImportantTitle').value = t.importantTitle;
   $('#inImportant').value = (t.important || []).join('\n');
+  const c = { ...DEFAULT_CONSIDERATIONS, ...(t.considerations || {}) };
+  $('#cnEnabled').checked = c.enabled !== false;
+  $('#cnTitle').value = c.title;
+  $('#cnIntro').value = c.intro;
+  $('#cnItems').value = (c.items || []).join('\n');
+  $('#cnConfirm').value = c.confirmText;
+  $('#cnNotes').value = (c.notes || []).join('\n');
+  $('#cnButton').value = c.buttonLabel;
   $('#inBanner').innerHTML = bannerOptions(t.banner || null);
   renderIntroBannerPreview();
   $('#introDlg').showModal();
@@ -2020,6 +2049,15 @@ function setupFormatUI() {
       importantTitle: $('#inImportantTitle').value.trim(),
       important: $('#inImportant').value.split('\n').map((x) => x.trim()).filter(Boolean),
       banner: $('#inBanner').value || null,
+      considerations: {
+        enabled: $('#cnEnabled').checked,
+        title: $('#cnTitle').value.trim() || DEFAULT_CONSIDERATIONS.title,
+        intro: $('#cnIntro').value.trim(),
+        items: $('#cnItems').value.split('\n').map((x) => x.trim()).filter(Boolean),
+        confirmText: $('#cnConfirm').value.trim(),
+        notes: $('#cnNotes').value.split('\n').map((x) => x.trim()).filter(Boolean),
+        buttonLabel: $('#cnButton').value.trim() || DEFAULT_CONSIDERATIONS.buttonLabel,
+      },
     };
     commit();
     toast('Página de inicio actualizada. Publica para que se vea.');
