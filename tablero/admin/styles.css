@@ -994,3 +994,8 @@ a.btn { text-decoration: none; color: inherit; }
 .intro-dlg .settings-inner { max-height: calc(100vh - 60px); overflow-y: auto; }
 .cn-fields { display: grid; gap: 10px; margin: 6px 0 0; padding: 12px 14px; border: 1.5px solid #f2c94c; border-radius: 12px; background: #fffdf5; }
 .cn-fields legend { padding: 0 6px; font-weight: 800; color: #7a3d00; }
+
+/* Íconos de línea */
+.ico { width: 16px; height: 16px; display: block; }
+.icon-btn .ico { margin: auto; }
+.blk-tools .ico { width: 14px; height: 14px; }

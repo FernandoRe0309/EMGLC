@@ -1063,6 +1063,11 @@ a.btn { text-decoration: none; color: inherit; }
 .cn-fields { display: grid; gap: 10px; margin: 6px 0 0; padding: 12px 14px; border: 1.5px solid #f2c94c; border-radius: 12px; background: #fffdf5; }
 .cn-fields legend { padding: 0 6px; font-weight: 800; color: #7a3d00; }
 
+/* Íconos de línea */
+.ico { width: 16px; height: 16px; display: block; }
+.icon-btn .ico { margin: auto; }
+.blk-tools .ico { width: 14px; height: 14px; }
+
 </style>
 </head>
 <body>
@@ -1280,7 +1285,7 @@ a.btn { text-decoration: none; color: inherit; }
     <label>Título del aviso amarillo<input id="inImportantTitle" maxlength="80" autocomplete="off"></label>
     <label>Puntos del aviso amarillo <span class="muted">(uno por renglón; déjalo vacío para no mostrarlo)</span><textarea id="inImportant" rows="4"></textarea></label>
     <fieldset class="cn-fields">
-      <legend>⭐ Consideraciones Importantes</legend>
+      <legend>Consideraciones Importantes</legend>
       <p class="muted small">Tarjeta que aparece al abrir el manual y que la tienda debe confirmar. También queda un botón en la página principal para volver a verla. Si cambias el texto, se vuelve a pedir la confirmación.</p>
       <label class="pe-toggle"><input type="checkbox" id="cnEnabled"> Mostrar al abrir el manual y pedir confirmación</label>
       <label>Título<input id="cnTitle" maxlength="80" autocomplete="off"></label>
@@ -1313,7 +1318,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.17-1';
+const APP_VERSION = '2026.11.17-2';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1801,6 +1806,11 @@ const MAX_SIDE = 2000;      // px del lado mayor tras optimizar
 const JPEG_QUALITY = 0.85;
 
 /* ---------- Utilidades ---------- */
+// Íconos de línea (sin emojis).
+const ICON_TRASH = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_EYE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const ICON_EYE_OFF = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7c2 0 3.7.7 5.1 1.6M22 12s-3.6 7-10 7c-2 0-3.7-.7-5.1-1.6M3 3l18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -2157,9 +2167,9 @@ function renderFormatTabs() {
       <span class="ftab-mark">${f.logo && images.get(f.logo) ? `<img alt="" src="${urlFor(images.get(f.logo))}">` : escapeHtml(f.name.slice(0, 3))}</span>
       <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${f.hidden ? 'Oculto en la portada' : `${filled}/${spaces.length} con foto`}</small></span>
     </button>`;
-  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">⚙ Personalizar panel</button>
+  }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">Personalizar panel</button>
     <button type="button" class="ftab-tool" data-format-action="add">+ Formato</button>
-    <button type="button" class="ftab-tool" data-format-action="intro" title="Foto y textos de la página de inicio">✎ Página de inicio</button>`;
+    <button type="button" class="ftab-tool" data-format-action="intro" title="Foto y textos de la página de inicio">Página de inicio</button>`;
 }
 
 function renderBanner() {
@@ -2195,11 +2205,11 @@ function renderZonePanel() {
         <p class="muted">Selecciona un área para acomodar su señalización.</p>
       </div>
       <div class="tools">
-        <button type="button" class="copy-btn" data-zone-action="copy" title="Copiar esta zona con todas sus áreas, notas y fotos para pegarla en otro formato">⧉ Copiar</button>
+        <button type="button" class="copy-btn" data-zone-action="copy" title="Copiar esta zona con todas sus áreas, notas y fotos para pegarla en otro formato">Copiar</button>
         <button type="button" class="eye-btn${zone.hidden ? ' off' : ''}" data-zone-action="toggle" title="${zone.hidden ? 'Mostrar esta zona en el manual' : 'Ocultar esta zona en el manual'}">${zone.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-zone-action="left" title="Mover zona a la izquierda" ${zi === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-zone-action="right" title="Mover zona a la derecha" ${zi === board.zones.length - 1 ? 'disabled' : ''}>→</button>
-        <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">🗑</button>
+        <button type="button" class="icon-btn danger" data-zone-action="delete" title="Eliminar zona">${ICON_TRASH}</button>
       </div>
     </div>
     ${blocksEditHtml('zone', zone.blocks, 'top')}
@@ -2233,11 +2243,11 @@ function areaDetailHtml(zone, area) {
         <label class="move-zone">Zona
           <select data-area-zone>${board.zones.map((z) => `<option value="${z.id}" ${z.id === zone.id ? 'selected' : ''}>${escapeHtml(z.name)}</option>`).join('')}</select>
         </label>
-        <button type="button" class="copy-btn" data-area-action="copy" title="Copiar esta área con sus notas y fotos para pegarla en otra zona u otro formato">⧉ Copiar</button>
+        <button type="button" class="copy-btn" data-area-action="copy" title="Copiar esta área con sus notas y fotos para pegarla en otra zona u otro formato">Copiar</button>
         <button type="button" class="eye-btn${area.hidden ? ' off' : ''}" data-area-action="toggle" title="${area.hidden ? 'Mostrar esta área en el manual' : 'Ocultar esta área en el manual'}">${area.hidden ? 'Oculta' : 'Visible'}</button>
         <button type="button" class="icon-btn" data-area-action="left" title="Mover área antes" ${ai === 0 ? 'disabled' : ''}>←</button>
         <button type="button" class="icon-btn" data-area-action="right" title="Mover área después" ${ai === zone.areas.length - 1 ? 'disabled' : ''}>→</button>
-        <button type="button" class="icon-btn danger" data-area-action="delete" title="Eliminar área">🗑</button>
+        <button type="button" class="icon-btn danger" data-area-action="delete" title="Eliminar área">${ICON_TRASH}</button>
       </div>
     </div>
     <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
@@ -2263,11 +2273,11 @@ function blocksEditHtml(owner, blocks, pos) {
       ${blockHtml(b)}
       <div class="blk-tools">
         <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
-        <button type="button" data-block-action="edit">✎ Editar</button>
+        <button type="button" data-block-action="edit">Editar</button>
         <button type="button" data-block-action="up" title="Subir" ${i === 0 ? 'disabled' : ''}>↑</button>
         <button type="button" data-block-action="down" title="Bajar" ${i === list.length - 1 ? 'disabled' : ''}>↓</button>
-        <button type="button" data-block-action="flip" title="Pasar ${other} de ${where}">⇅ Pasar ${other}</button>
-        <button type="button" data-block-action="delete" class="danger" title="Eliminar nota">🗑</button>
+        <button type="button" data-block-action="flip" title="Pasar ${other} de ${where}">Pasar ${other}</button>
+        <button type="button" data-block-action="delete" class="danger" title="Eliminar nota">${ICON_TRASH}</button>
       </div>
     </div>`).join('')}</div>` : '';
   // Arriba: primero las notas y luego el botón; abajo: igual, para que el botón quede junto a su lugar.
@@ -2283,8 +2293,8 @@ function spaceEl(sp) {
       <span class="grip" title="Arrastra para mover el título">⋮⋮</span>
       <div class="title-text" contenteditable="true" spellcheck="true" data-space-title>${escapeHtml(sp.title)}</div>
       <span class="title-tag">Título</span>
-      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este título en el manual' : 'Ocultar este título en el manual'}">${sp.hidden ? '🚫' : '👁'}</button>
-      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar título">🗑</button>`;
+      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este título en el manual' : 'Ocultar este título en el manual'}">${sp.hidden ? ICON_EYE_OFF : ICON_EYE}</button>
+      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar título">${ICON_TRASH}</button>`;
     return el;
   }
   const img = sp.imageId && images.get(sp.imageId);
@@ -2294,8 +2304,8 @@ function spaceEl(sp) {
   el.innerHTML = `
     <div class="space-head">
       <div class="space-title" contenteditable="true" spellcheck="false" data-space-title>${escapeHtml(sp.title)}</div>
-      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este espacio en el manual' : 'Ocultar este espacio en el manual'}">${sp.hidden ? '🚫' : '👁'}</button>
-      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">🗑</button>
+      <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este espacio en el manual' : 'Ocultar este espacio en el manual'}">${sp.hidden ? ICON_EYE_OFF : ICON_EYE}</button>
+      <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">${ICON_TRASH}</button>
     </div>
     <div class="slot${img ? ' filled' : ''}" data-slot="${sp.id}">
       ${img ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
@@ -3501,7 +3511,7 @@ function renderPanelButtons() {
       </div>
       <button type="button" class="icon-btn" data-btn-move="-1" ${i === 0 ? 'disabled' : ''} title="Subir">↑</button>
       <button type="button" class="icon-btn" data-btn-move="1" ${i === list.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
-      <button type="button" class="icon-btn danger" data-btn-remove title="Quitar botón">🗑</button>
+      <button type="button" class="icon-btn danger" data-btn-remove title="Quitar botón">${ICON_TRASH}</button>
     </div>`).join('') : '<p class="muted small">No hay botones. La barra no se mostrará.</p>';
   const missing = ['back', 'checklist'].filter((t) => !list.some((b) => b.type === t));
   $('#peRestoreButtons').innerHTML = missing.map((t) => `<button type="button" class="btn" data-btn-restore="${t}">+ ${t === 'back' ? 'Cambiar formato' : 'Descarga Checklist'}</button>`).join('');
@@ -3517,7 +3527,7 @@ function renderPanelZones() {
         <span class="pe-count">${plural(z.areas.length, 'área', 'áreas')}</span>
         <button type="button" class="icon-btn" data-zone-move="-1" ${zi === 0 ? 'disabled' : ''} title="Mover antes">↑</button>
         <button type="button" class="icon-btn" data-zone-move="1" ${zi === zones.length - 1 ? 'disabled' : ''} title="Mover después">↓</button>
-        <button type="button" class="icon-btn danger" data-zone-remove title="Eliminar zona">🗑</button>
+        <button type="button" class="icon-btn danger" data-zone-remove title="Eliminar zona">${ICON_TRASH}</button>
       </div>
       <div class="pe-areas">
         ${z.areas.map((a, ai) => `
@@ -3527,7 +3537,7 @@ function renderPanelZones() {
             <span class="pe-count">${plural(signsOf(a).length, 'espacio', 'espacios')}</span>
             <button type="button" class="icon-btn" data-area-move="-1" ${ai === 0 ? 'disabled' : ''} title="Subir">↑</button>
             <button type="button" class="icon-btn" data-area-move="1" ${ai === z.areas.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
-            <button type="button" class="icon-btn danger" data-area-remove title="Eliminar área">🗑</button>
+            <button type="button" class="icon-btn danger" data-area-remove title="Eliminar área">${ICON_TRASH}</button>
           </div>`).join('')}
         <button type="button" class="pe-add" data-area-add>+ Agregar área a ${escapeHtml(z.name)}</button>
       </div>
@@ -3803,7 +3813,7 @@ function copyToClip(kind, item) {
   setClip({ kind, from: board.name, fromZone: kind === 'area' ? zone.name : null, item: structuredClone(item), at: Date.now() });
   render();
   const what = kind === 'zone' ? `la zona "${item.name}"` : `el área "${item.name}"`;
-  toast(`Copiaste ${what}. Ve al formato o zona donde la quieres y presiona "📋 Pegar".`, 6000);
+  toast(`Copiaste ${what}. Ve al formato o zona donde la quieres y presiona "Pegar".`, 6000);
 }
 
 function pasteButtonHtml(kind) {
@@ -3812,7 +3822,7 @@ function pasteButtonHtml(kind) {
   const label = kind === 'zone' ? 'Pegar zona' : 'Pegar área';
   const from = `de ${c.from}${c.fromZone ? ' · ' + c.fromZone : ''}`;
   return `<button type="button" class="${kind === 'zone' ? 'zone-add' : 'area-add'} paste-btn" data-paste="${kind}" title="Pegar lo que copiaste">
-      📋 ${label} <strong>${escapeHtml(c.item.name)}</strong><small>${escapeHtml(from)}</small>
+      ${label} <strong>${escapeHtml(c.item.name)}</strong><small>${escapeHtml(from)}</small>
       <span class="clip-clear" data-clip-clear title="Olvidar lo copiado" role="button" aria-label="Olvidar lo copiado">×</span></button>`;
 }
 

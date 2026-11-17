@@ -692,7 +692,7 @@ a.pill { text-decoration: none; }
   </section>
 
   <button type="button" id="considerBtn" class="consider-btn" hidden>
-    <span class="star" aria-hidden="true">⭐</span> <span id="considerBtnLabel">Consideraciones Importantes</span>
+    <span id="considerBtnLabel">Consideraciones Importantes</span>
   </button>
 
   <div id="formats" class="formats"></div>
@@ -715,7 +715,6 @@ a.pill { text-decoration: none; }
 <dialog id="considerDlg" class="consider-dlg" aria-labelledby="cnTitle">
   <div class="cn-card">
     <header class="cn-head">
-      <span class="star" aria-hidden="true">⭐</span>
       <h2 id="cnTitle">Consideraciones Importantes</h2>
       <button type="button" id="cnClose" class="cn-close" aria-label="Cerrar">×</button>
     </header>
@@ -726,7 +725,7 @@ a.pill { text-decoration: none; }
       <div id="cnNotes" class="cn-notes"></div>
     </div>
     <footer class="cn-foot">
-      <button type="button" id="cnAccept" class="cn-accept"><span aria-hidden="true">✅</span> <span id="cnButtonLabel">CONFIRMO DE LEÍDO Y ENTERADO</span></button>
+      <button type="button" id="cnAccept" class="cn-accept"><span id="cnButtonLabel">CONFIRMO DE LEÍDO Y ENTERADO</span></button>
     </footer>
   </div>
 </dialog>
@@ -760,7 +759,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.17-1';
+const APP_VERSION = '2026.11.17-2';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
