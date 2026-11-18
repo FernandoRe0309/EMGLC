@@ -21,14 +21,31 @@ const DEFAULT_CONSIDERATIONS = {
     'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
     'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
     'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+    'Señalización de Precios, Liquidaciones y Aisle Locator, Bin Locator se mantiene en su totalidad.',
+    'Señalización de Protección Civil como los ejemplos adjuntos se mantienen en su totalidad.',
+    'Señalización de stickers de las máquinas y áreas de Perecederos se mantiene en su totalidad.',
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
   ],
   confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
-  notes: [
-    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
-    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
-  ],
+  notes: [],
   buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
 };
+
+// Textos anteriores de la tarjeta. Si lo publicado sigue igual a esto (nadie lo cambió a mano),
+// se reemplaza por la versión nueva, donde los avisos amarillos pasaron a la lista numerada.
+const OLD_CONSIDERATION_ITEMS = DEFAULT_CONSIDERATIONS.items.slice(0, 5);
+const OLD_CONSIDERATION_NOTES = [
+  'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+  'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+];
+function upgradeConsiderations(c) {
+  if (!c) return c;
+  const same = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => x === b[i]);
+  if (same(c.items, OLD_CONSIDERATION_ITEMS) && same(c.notes, OLD_CONSIDERATION_NOTES)) {
+    return { ...c, items: DEFAULT_CONSIDERATIONS.items.slice(), notes: [] };
+  }
+  return c;
+}
 
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
@@ -227,7 +244,7 @@ function normalize(raw) {
   });
   const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
   intro.banner = imgSrc(raw.intro && raw.intro.banner);
-  intro.considerations = { ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) };
+  intro.considerations = upgradeConsiderations({ ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) });
   return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 

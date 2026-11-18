@@ -7,7 +7,7 @@
 <title>Señalización en tu tienda</title>
 <meta name="description" content="Manual de señalización autorizada por formato y área de tienda (solo lectura).">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231f4fd6%22/><rect x=%226%22 y=%2224%22 width=%2220%22 height=%223%22 rx=%221.5%22 fill=%22%23ffc220%22/><rect x=%228%22 y=%227%22 width=%2216%22 height=%2213%22 rx=%222%22 fill=%22%23fff%22/></svg>">
-<meta name="app-version" content="2026.11.17-4">
+<meta name="app-version" content="2026.11.18-1">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -760,7 +760,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.17-4';
+const APP_VERSION = '2026.11.18-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1302,14 +1302,31 @@ const DEFAULT_CONSIDERATIONS = {
     'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
     'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
     'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+    'Señalización de Precios, Liquidaciones y Aisle Locator, Bin Locator se mantiene en su totalidad.',
+    'Señalización de Protección Civil como los ejemplos adjuntos se mantienen en su totalidad.',
+    'Señalización de stickers de las máquinas y áreas de Perecederos se mantiene en su totalidad.',
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
   ],
   confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
-  notes: [
-    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
-    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
-  ],
+  notes: [],
   buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
 };
+
+// Textos anteriores de la tarjeta. Si lo publicado sigue igual a esto (nadie lo cambió a mano),
+// se reemplaza por la versión nueva, donde los avisos amarillos pasaron a la lista numerada.
+const OLD_CONSIDERATION_ITEMS = DEFAULT_CONSIDERATIONS.items.slice(0, 5);
+const OLD_CONSIDERATION_NOTES = [
+  'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+  'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+];
+function upgradeConsiderations(c) {
+  if (!c) return c;
+  const same = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => x === b[i]);
+  if (same(c.items, OLD_CONSIDERATION_ITEMS) && same(c.notes, OLD_CONSIDERATION_NOTES)) {
+    return { ...c, items: DEFAULT_CONSIDERATIONS.items.slice(), notes: [] };
+  }
+  return c;
+}
 
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
@@ -1508,7 +1525,7 @@ function normalize(raw) {
   });
   const intro = { ...DEFAULT_INTRO, ...(raw.intro || {}) };
   intro.banner = imgSrc(raw.intro && raw.intro.banner);
-  intro.considerations = { ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) };
+  intro.considerations = upgradeConsiderations({ ...DEFAULT_CONSIDERATIONS, ...((raw.intro && raw.intro.considerations) || {}) });
   return { intro, formats, updatedAt: raw.updatedAt || null };
 }
 

@@ -64,14 +64,31 @@ const DEFAULT_CONSIDERATIONS = {
     'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
     'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
     'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+    'Señalización de Precios, Liquidaciones y Aisle Locator, Bin Locator se mantiene en su totalidad.',
+    'Señalización de Protección Civil como los ejemplos adjuntos se mantienen en su totalidad.',
+    'Señalización de stickers de las máquinas y áreas de Perecederos se mantiene en su totalidad.',
+    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
   ],
   confirmText: 'Confirma que has leído, comprendido y considerado estos puntos.',
-  notes: [
-    'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
-    'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
-  ],
+  notes: [],
   buttonLabel: 'CONFIRMO DE LEÍDO Y ENTERADO',
 };
+
+// Textos anteriores de la tarjeta. Si lo publicado sigue igual a esto (nadie lo cambió a mano),
+// se reemplaza por la versión nueva, donde los avisos amarillos pasaron a la lista numerada.
+const OLD_CONSIDERATION_ITEMS = DEFAULT_CONSIDERATIONS.items.slice(0, 5);
+const OLD_CONSIDERATION_NOTES = [
+  'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
+  'Mantén todos los stickers ubicados en las máquinas del área de Perecederos.',
+];
+function upgradeConsiderations(c) {
+  if (!c) return c;
+  const same = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => x === b[i]);
+  if (same(c.items, OLD_CONSIDERATION_ITEMS) && same(c.notes, OLD_CONSIDERATION_NOTES)) {
+    return { ...c, items: DEFAULT_CONSIDERATIONS.items.slice(), notes: [] };
+  }
+  return c;
+}
 
 const DEFAULT_INTRO = {
   title: 'Señalización en tu tienda',
@@ -86,6 +103,12 @@ const DEFAULT_INTRO = {
   ],
   considerations: DEFAULT_CONSIDERATIONS,
 };
+
+function introWithDefaults(intro) {
+  const out = { ...structuredClone(DEFAULT_INTRO), ...(intro || {}) };
+  out.considerations = upgradeConsiderations({ ...structuredClone(DEFAULT_CONSIDERATIONS), ...(out.considerations || {}) });
+  return out;
+}
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
 const DB_NAME = 'tablero-senalizacion';
@@ -249,7 +272,7 @@ function migrateSections(sections, cardImage) {
 
 function normalizeState(saved) {
   if (!saved || !Array.isArray(saved.formats) || !saved.formats.length) return null;
-  saved.intro = { ...structuredClone(DEFAULT_INTRO), ...(saved.intro || {}) };
+  saved.intro = introWithDefaults(saved.intro);
   saved.formats = saved.formats.map((f) => {
     if (Array.isArray(f.zones)) return ensureFormatShape(f);
     const nf = newFormat({ name: f.name, subtitle: f.subtitle, color: f.color, zones: migrateSections(f.sections, (c) => c.imageId) });
@@ -1097,7 +1120,7 @@ async function openJson(file) {
   if (!data || (!Array.isArray(data.formats) && !Array.isArray(data.sections))) { toast('El archivo no parece un respaldo del tablero.'); return; }
   if (!confirm('Esto reemplaza todos los formatos por los del archivo. ¿Continuar?')) return;
   const formats = Array.isArray(data.formats) ? data.formats : [{ ...DEFAULT_FORMATS[0], sections: data.sections }];
-  state.intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+  state.intro = introWithDefaults(data.intro);
   state.formats = formats.map((f) => formatFromJson(f));
   if (!state.formats.length) state.formats = defaultState().formats;
   setActiveFormat(state.formats[0].id);
@@ -1394,7 +1417,7 @@ function toDoc(st = state) {
 
 // tablero.json publicado → documento comparable (fotos por su ruta original).
 function docFromPublished(data, ref) {
-  const intro = { ...structuredClone(DEFAULT_INTRO), ...(data.intro || {}) };
+  const intro = introWithDefaults(data.intro);
   intro.banner = data.intro && data.intro.banner && data.intro.banner.path ? data.intro.banner.path : null;
   const raw = {
     intro,
@@ -1413,7 +1436,7 @@ function docFromPublished(data, ref) {
 function applyDoc(doc) {
   const keepFmt = board && board.id;
   const actives = new Map(state.formats.map((f) => [f.id, { z: f.activeZoneId, a: f.activeAreaId }]));
-  state.intro = { ...structuredClone(DEFAULT_INTRO), ...structuredClone(doc.intro) };
+  state.intro = introWithDefaults(structuredClone(doc.intro));
   state.formats = doc.formats.map((f) => {
     const nf = formatFromJson(f);
     const act = actives.get(nf.id);
@@ -1685,7 +1708,7 @@ function setupHistory() {
 /* ---------- Registro de lectura (quién abrió el manual y quién confirmó) ---------- */
 // Mismo cálculo que el manual para saber qué versión de las consideraciones se confirmó.
 function considerationsHashOf(intro) {
-  const c = { ...DEFAULT_CONSIDERATIONS, ...((intro && intro.considerations) || {}) };
+  const c = upgradeConsiderations({ ...DEFAULT_CONSIDERATIONS, ...((intro && intro.considerations) || {}) });
   const str = JSON.stringify([c.title, c.intro, c.items, c.confirmText, c.notes, c.buttonLabel]);
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;

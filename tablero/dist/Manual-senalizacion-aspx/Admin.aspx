@@ -8,9 +8,9 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.17-4">
-<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.17-4">
-<link rel="stylesheet" href="public/css/admin.css?v=2026.11.17-4">
+<meta name="app-version" content="2026.11.18-1">
+<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.18-1">
+<link rel="stylesheet" href="public/css/admin.css?v=2026.11.18-1">
 </head>
 <body>
 
@@ -268,8 +268,8 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="public/js/sharepoint.js?v=2026.11.17-4"></script>
-<script src="public/js/blocks.js?v=2026.11.17-4"></script>
-<script src="public/js/admin.js?v=2026.11.17-4"></script>
+<script src="public/js/sharepoint.js?v=2026.11.18-1"></script>
+<script src="public/js/blocks.js?v=2026.11.18-1"></script>
+<script src="public/js/admin.js?v=2026.11.18-1"></script>
 </body>
 </html>
