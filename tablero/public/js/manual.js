@@ -342,6 +342,10 @@ function renderHome() {
   $('#considerBtnLabel').textContent = data.intro.considerations.title;
 }
 
+function noteHtml(b) {
+  return blockHtml(b, { considerLabel: considerationsHaveContent() ? data.intro.considerations.title : '' });
+}
+
 function renderFormat(f, zone, area) {
   document.title = `${data.intro.title} · ${f.name}`;
   setHero({ title: `${data.intro.title} · ${f.name}`, sub: '', color: f.color });
@@ -356,7 +360,7 @@ function renderFormat(f, zone, area) {
 
   const formatNotes = (pos) => {
     const list = f.blocks.filter((b) => b.pos === pos);
-    return list.length ? `<div class="blocks">${list.map(blockHtml).join('')}</div>` : '';
+    return list.length ? `<div class="blocks">${list.map(noteHtml).join('')}</div>` : '';
   };
   $('#formatNotesTop').innerHTML = formatNotes('top');
   $('#formatNotesBottom').innerHTML = formatNotes('bottom');
@@ -374,7 +378,7 @@ function renderFormat(f, zone, area) {
   }
   const notes = (list, pos) => {
     const items = list.filter((b) => b.pos === pos);
-    return items.length ? `<div class="blocks">${items.map(blockHtml).join('')}</div>` : '';
+    return items.length ? `<div class="blocks">${items.map(noteHtml).join('')}</div>` : '';
   };
   const zoneSub = zone.areas.length ? 'Selecciona un área para consultar su señalización.' : zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
   box.innerHTML = `
@@ -592,5 +596,9 @@ $('#cnAccept').addEventListener('click', () => {
 $('#cnClose').addEventListener('click', () => $('#considerDlg').close());
 $('#considerDlg').addEventListener('cancel', (e) => { if ($('#considerDlg').dataset.mandatory) e.preventDefault(); });
 $('#considerBtn').addEventListener('click', () => openConsiderations({ mandatory: false }));
+// Botón de Consideraciones dentro de las notas rojas "Importante".
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-consider]')) openConsiderations({ mandatory: false });
+});
 
 start();

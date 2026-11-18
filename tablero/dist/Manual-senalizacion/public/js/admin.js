@@ -573,6 +573,12 @@ function areaDetailHtml(zone, area) {
 // Qué hay entre las notas de arriba y las de abajo, según dónde están.
 const NOTE_WHERE = { format: 'las zonas', zone: 'las áreas', area: 'la señalización' };
 
+// Las notas rojas muestran el botón de Consideraciones, igual que en el manual (si la tarjeta tiene contenido).
+function considerLabel() {
+  const c = state.intro && state.intro.considerations;
+  return c && (c.intro || (c.items || []).length || (c.notes || []).length) ? c.title : '';
+}
+
 // Notas con sus herramientas (editar, mover, eliminar) y el botón para agregar en ese lugar.
 function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
@@ -581,7 +587,7 @@ function blocksEditHtml(owner, blocks, pos) {
   const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
   const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
-      ${blockHtml(b)}
+      ${blockHtml(b, { considerLabel: considerLabel() })}
       <div class="blk-tools">
         <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
         <button type="button" data-block-action="edit">Editar</button>
@@ -2527,7 +2533,7 @@ function fillBlockForm(b) {
 function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
-  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
 }
 
 function openBlockDialog(owner, id, pos = 'top') {

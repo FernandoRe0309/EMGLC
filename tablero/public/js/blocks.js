@@ -113,8 +113,12 @@ function blkButton(b, cls) {
 }
 
 // HTML de una nota. Todo el texto se escapa.
-function blockHtml(raw) {
+// opts.considerLabel: si se da, las notas rojas "Importante" llevan el botón que abre
+// la tarjeta de Consideraciones Importantes (el clic lo atiende la página, por data-consider).
+function blockHtml(raw, opts = {}) {
   const b = normalizeBlock(raw);
+  const consider = opts && opts.considerLabel
+    ? `<button type="button" class="blk-consider" data-consider>${blkEsc(opts.considerLabel)}</button>` : '';
   const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
   switch (b.type) {
     case 'importante-rojo':
@@ -123,6 +127,7 @@ function blockHtml(raw) {
         ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
         ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
         ${list()}
+        ${b.type === 'importante-rojo' ? consider : ''}
       </div>`;
     case 'retira':
       return `<div class="blk blk-retira">

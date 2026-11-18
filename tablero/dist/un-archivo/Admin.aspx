@@ -8,7 +8,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.18-1">
+<meta name="app-version" content="2026.11.18-2">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -22,6 +22,24 @@
 
 .blk-importante-rojo { background: #fdf0f0; border-left: 5px solid #e5484d; box-shadow: 0 1px 3px rgba(16, 24, 40, .05); }
 .blk-importante-rojo .blk-title { color: #2b3445; }
+.blk-consider {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: 2px solid #f2c94c;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fffdf2, #fff3c4);
+  color: #7a3d00;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(245, 180, 0, .22);
+  transition: transform .12s, box-shadow .12s;
+}
+.blk-consider:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(245, 180, 0, .3); }
+.blk-consider:focus-visible { outline: 3px solid #1f4fd6; outline-offset: 3px; }
 
 .blk-importante-amarillo { background: #fffaeb; border: 2.5px solid #f5c542; }
 .blk-importante-amarillo .blk-title { color: #7a3d00; }
@@ -1358,7 +1376,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.18-1';
+const APP_VERSION = '2026.11.18-2';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1847,8 +1865,12 @@ function blkButton(b, cls) {
 }
 
 // HTML de una nota. Todo el texto se escapa.
-function blockHtml(raw) {
+// opts.considerLabel: si se da, las notas rojas "Importante" llevan el botón que abre
+// la tarjeta de Consideraciones Importantes (el clic lo atiende la página, por data-consider).
+function blockHtml(raw, opts = {}) {
   const b = normalizeBlock(raw);
+  const consider = opts && opts.considerLabel
+    ? `<button type="button" class="blk-consider" data-consider>${blkEsc(opts.considerLabel)}</button>` : '';
   const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
   switch (b.type) {
     case 'importante-rojo':
@@ -1857,6 +1879,7 @@ function blockHtml(raw) {
         ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
         ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
         ${list()}
+        ${b.type === 'importante-rojo' ? consider : ''}
       </div>`;
     case 'retira':
       return `<div class="blk blk-retira">
@@ -2452,6 +2475,12 @@ function areaDetailHtml(zone, area) {
 // Qué hay entre las notas de arriba y las de abajo, según dónde están.
 const NOTE_WHERE = { format: 'las zonas', zone: 'las áreas', area: 'la señalización' };
 
+// Las notas rojas muestran el botón de Consideraciones, igual que en el manual (si la tarjeta tiene contenido).
+function considerLabel() {
+  const c = state.intro && state.intro.considerations;
+  return c && (c.intro || (c.items || []).length || (c.notes || []).length) ? c.title : '';
+}
+
 // Notas con sus herramientas (editar, mover, eliminar) y el botón para agregar en ese lugar.
 function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
@@ -2460,7 +2489,7 @@ function blocksEditHtml(owner, blocks, pos) {
   const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
   const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
-      ${blockHtml(b)}
+      ${blockHtml(b, { considerLabel: considerLabel() })}
       <div class="blk-tools">
         <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
         <button type="button" data-block-action="edit">Editar</button>
@@ -4406,7 +4435,7 @@ function fillBlockForm(b) {
 function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
-  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
 }
 
 function openBlockDialog(owner, id, pos = 'top') {

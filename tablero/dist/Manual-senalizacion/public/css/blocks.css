@@ -10,6 +10,24 @@
 
 .blk-importante-rojo { background: #fdf0f0; border-left: 5px solid #e5484d; box-shadow: 0 1px 3px rgba(16, 24, 40, .05); }
 .blk-importante-rojo .blk-title { color: #2b3445; }
+.blk-consider {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: 2px solid #f2c94c;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fffdf2, #fff3c4);
+  color: #7a3d00;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(245, 180, 0, .22);
+  transition: transform .12s, box-shadow .12s;
+}
+.blk-consider:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(245, 180, 0, .3); }
+.blk-consider:focus-visible { outline: 3px solid #1f4fd6; outline-offset: 3px; }
 
 .blk-importante-amarillo { background: #fffaeb; border: 2.5px solid #f5c542; }
 .blk-importante-amarillo .blk-title { color: #7a3d00; }
