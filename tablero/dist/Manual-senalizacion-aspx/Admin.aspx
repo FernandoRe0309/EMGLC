@@ -8,9 +8,9 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.18-3">
-<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.18-3">
-<link rel="stylesheet" href="public/css/admin.css?v=2026.11.18-3">
+<meta name="app-version" content="2026.11.18-4">
+<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.18-4">
+<link rel="stylesheet" href="public/css/admin.css?v=2026.11.18-4">
 </head>
 <body>
 
@@ -181,7 +181,7 @@
         <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
         <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
         <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
-        <button type="button" id="blkUseConsider" class="btn" hidden>Usar el contenido de Consideraciones Importantes</button>
+        <button type="button" id="blkUseConsider" class="btn" hidden>Copiar el texto de Consideraciones Importantes</button>
         <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
         <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
         <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
@@ -269,8 +269,8 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="public/js/sharepoint.js?v=2026.11.18-3"></script>
-<script src="public/js/blocks.js?v=2026.11.18-3"></script>
-<script src="public/js/admin.js?v=2026.11.18-3"></script>
+<script src="public/js/sharepoint.js?v=2026.11.18-4"></script>
+<script src="public/js/blocks.js?v=2026.11.18-4"></script>
+<script src="public/js/admin.js?v=2026.11.18-4"></script>
 </body>
 </html>

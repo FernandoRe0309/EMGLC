@@ -573,12 +573,6 @@ function areaDetailHtml(zone, area) {
 // Qué hay entre las notas de arriba y las de abajo, según dónde están.
 const NOTE_WHERE = { format: 'las zonas', zone: 'las áreas', area: 'la señalización' };
 
-// Las notas rojas muestran el botón de Consideraciones, igual que en el manual (si la tarjeta tiene contenido).
-function considerLabel() {
-  const c = state.intro && state.intro.considerations;
-  return c && (c.intro || (c.items || []).length || (c.notes || []).length) ? c.title : '';
-}
-
 // Notas con sus herramientas (editar, mover, eliminar) y el botón para agregar en ese lugar.
 function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
@@ -587,7 +581,7 @@ function blocksEditHtml(owner, blocks, pos) {
   const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
   const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
-      ${blockHtml(b, { considerLabel: considerLabel() })}
+      ${blockHtml(b)}
       <div class="blk-tools">
         <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
         <button type="button" data-block-action="edit">Editar</button>
@@ -2533,7 +2527,7 @@ function fillBlockForm(b) {
 function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
-  $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
   $('#blkUseConsider').hidden = $('#blkType').value !== 'importante-rojo';
 }
 
@@ -2546,7 +2540,7 @@ function openBlockDialog(owner, id, pos = 'top') {
   $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
   const where = NOTE_WHERE[owner];
   $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
-  fillBlockForm(existing ? normalizeBlock(existing) : defaultBlock('importante-rojo', pos));
+  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo', pos));
   $('#blkDelete').hidden = !existing;
   renderBlockForm();
   $('#blockDlg').showModal();
@@ -2564,19 +2558,10 @@ function moveBlock(owner, id, dir) {
   commit();
 }
 
-// Las notas rojas "Importante" nuevas empiezan con el contenido de Consideraciones Importantes.
+// Texto actual de la tarjeta de Consideraciones, para copiarlo a una nota roja.
 function considerationsNoteContent() {
   const c = { ...DEFAULT_CONSIDERATIONS, ...((state.intro && state.intro.considerations) || {}) };
-  return {
-    title: c.title || 'Importante',
-    text: c.intro || '',
-    items: [...(c.items || []), ...(c.notes || [])],
-  };
-}
-
-function defaultBlock(type, pos) {
-  const b = newBlock(type, pos);
-  return type === 'importante-rojo' ? { ...b, ...considerationsNoteContent() } : b;
+  return { text: c.intro || '', items: [...(c.items || []), ...(c.notes || [])] };
 }
 
 function setupBlockEditor() {
@@ -2585,7 +2570,7 @@ function setupBlockEditor() {
     // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
     if (!blockEdit.touched) {
       const pos = $('#blkPos').value;
-      fillBlockForm(defaultBlock($('#blkType').value, pos));
+      fillBlockForm(newBlock($('#blkType').value, pos));
     }
     renderBlockForm();
   });

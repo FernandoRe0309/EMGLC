@@ -7,38 +7,20 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.18-3">
+<meta name="app-version" content="2026.11.18-4">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
 .blk { border-radius: 14px; padding: 20px 24px; font-size: 15px; line-height: 1.5; color: #2b3445; }
 .blk p { margin: 0; }
 .blk p + ul, .blk p + p { margin-top: 10px; }
-.blk ul { margin: 10px 0 0; padding-left: 22px; }
+.blk ul, .blk ol { margin: 10px 0 0; padding-left: 22px; }
 .blk li + li { margin-top: 4px; }
 .blk-title { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 17px; font-weight: 700; }
 .blk-ico { width: 22px; height: 22px; flex: none; }
 
 .blk-importante-rojo { background: #fdf0f0; border-left: 5px solid #e5484d; box-shadow: 0 1px 3px rgba(16, 24, 40, .05); }
 .blk-importante-rojo .blk-title { color: #2b3445; }
-.blk-consider {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 12px;
-  padding: 10px 20px;
-  border: 2px solid #f2c94c;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fffdf2, #fff3c4);
-  color: #7a3d00;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(245, 180, 0, .22);
-  transition: transform .12s, box-shadow .12s;
-}
-.blk-consider:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(245, 180, 0, .3); }
-.blk-consider:focus-visible { outline: 3px solid #1f4fd6; outline-offset: 3px; }
 
 .blk-importante-amarillo { background: #fffaeb; border: 2.5px solid #f5c542; }
 .blk-importante-amarillo .blk-title { color: #7a3d00; }
@@ -1276,7 +1258,7 @@ a.btn { text-decoration: none; color: inherit; }
         <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
         <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
         <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
-        <button type="button" id="blkUseConsider" class="btn" hidden>Usar el contenido de Consideraciones Importantes</button>
+        <button type="button" id="blkUseConsider" class="btn" hidden>Copiar el texto de Consideraciones Importantes</button>
         <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
         <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
         <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
@@ -1376,7 +1358,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.18-3';
+const APP_VERSION = '2026.11.18-4';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1763,10 +1745,17 @@ const BLOCK_TYPES = {
     fields: ['title', 'text', 'items'],
     defaults: {
       title: 'Importante',
+      text: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
       items: [
-        'Retira cualquier señalización que no esté indicada en este manual.',
-        'Mantén únicamente la señalización autorizada en tienda.',
-        'Coloca máximo una señalización por departamento.',
+        'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+        'Evita duplicidades: coloca máximo una señalización por departamento.',
+        'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+        'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+        'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+        'Señalización de Precios, Liquidaciones y Aisle Locator, Bin Locator se mantiene en su totalidad.',
+        'Señalización de Protección Civil como los ejemplos adjuntos se mantienen en su totalidad.',
+        'Señalización de stickers de las máquinas y áreas de Perecederos se mantiene en su totalidad.',
+        'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
       ],
     },
   },
@@ -1827,9 +1816,22 @@ function blkSafeUrl(u) {
   return '';
 }
 
+// Puntos que traían antes las notas rojas. Una nota roja que sigue exactamente así (nadie
+// la editó) pasa a mostrar el texto predeterminado actual.
+const OLD_RED_ITEMS = [
+  'Retira cualquier señalización que no esté indicada en este manual.',
+  'Mantén únicamente la señalización autorizada en tienda.',
+  'Coloca máximo una señalización por departamento.',
+];
+
 // Limpia una nota guardada o publicada.
 function normalizeBlock(b) {
   const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
+  if (type === 'importante-rojo' && !(b.text || '').trim() && Array.isArray(b.items)
+    && b.items.length === OLD_RED_ITEMS.length && b.items.every((x, i) => String(x).trim() === OLD_RED_ITEMS[i])) {
+    const d = BLOCK_TYPES['importante-rojo'].defaults;
+    b = { ...b, text: d.text, items: d.items.slice() };
+  }
   return {
     id: (b && b.id) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
     type,
@@ -1865,21 +1867,16 @@ function blkButton(b, cls) {
 }
 
 // HTML de una nota. Todo el texto se escapa.
-// opts.considerLabel: si se da, las notas rojas "Importante" llevan el botón que abre
-// la tarjeta de Consideraciones Importantes (el clic lo atiende la página, por data-consider).
-function blockHtml(raw, opts = {}) {
+function blockHtml(raw) {
   const b = normalizeBlock(raw);
-  const consider = opts && opts.considerLabel
-    ? `<button type="button" class="blk-consider" data-consider>${blkEsc(opts.considerLabel)}</button>` : '';
-  const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
+  const list = (cls = '', tag = 'ul') => (b.items.length ? `<${tag} class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</${tag}>` : '');
   switch (b.type) {
     case 'importante-rojo':
     case 'importante-amarillo':
       return `<div class="blk blk-${b.type}">
         ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
         ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
-        ${list()}
-        ${b.type === 'importante-rojo' ? consider : ''}
+        ${b.type === 'importante-rojo' ? list('', 'ol') : list()}
       </div>`;
     case 'retira':
       return `<div class="blk blk-retira">
@@ -2475,12 +2472,6 @@ function areaDetailHtml(zone, area) {
 // Qué hay entre las notas de arriba y las de abajo, según dónde están.
 const NOTE_WHERE = { format: 'las zonas', zone: 'las áreas', area: 'la señalización' };
 
-// Las notas rojas muestran el botón de Consideraciones, igual que en el manual (si la tarjeta tiene contenido).
-function considerLabel() {
-  const c = state.intro && state.intro.considerations;
-  return c && (c.intro || (c.items || []).length || (c.notes || []).length) ? c.title : '';
-}
-
 // Notas con sus herramientas (editar, mover, eliminar) y el botón para agregar en ese lugar.
 function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
@@ -2489,7 +2480,7 @@ function blocksEditHtml(owner, blocks, pos) {
   const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
   const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
-      ${blockHtml(b, { considerLabel: considerLabel() })}
+      ${blockHtml(b)}
       <div class="blk-tools">
         <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
         <button type="button" data-block-action="edit">Editar</button>
@@ -4435,7 +4426,7 @@ function fillBlockForm(b) {
 function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
-  $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
+  $('#blkPreview').innerHTML = blockHtml(readBlockForm());
   $('#blkUseConsider').hidden = $('#blkType').value !== 'importante-rojo';
 }
 
@@ -4448,7 +4439,7 @@ function openBlockDialog(owner, id, pos = 'top') {
   $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
   const where = NOTE_WHERE[owner];
   $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
-  fillBlockForm(existing ? normalizeBlock(existing) : defaultBlock('importante-rojo', pos));
+  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo', pos));
   $('#blkDelete').hidden = !existing;
   renderBlockForm();
   $('#blockDlg').showModal();
@@ -4466,19 +4457,10 @@ function moveBlock(owner, id, dir) {
   commit();
 }
 
-// Las notas rojas "Importante" nuevas empiezan con el contenido de Consideraciones Importantes.
+// Texto actual de la tarjeta de Consideraciones, para copiarlo a una nota roja.
 function considerationsNoteContent() {
   const c = { ...DEFAULT_CONSIDERATIONS, ...((state.intro && state.intro.considerations) || {}) };
-  return {
-    title: c.title || 'Importante',
-    text: c.intro || '',
-    items: [...(c.items || []), ...(c.notes || [])],
-  };
-}
-
-function defaultBlock(type, pos) {
-  const b = newBlock(type, pos);
-  return type === 'importante-rojo' ? { ...b, ...considerationsNoteContent() } : b;
+  return { text: c.intro || '', items: [...(c.items || []), ...(c.notes || [])] };
 }
 
 function setupBlockEditor() {
@@ -4487,7 +4469,7 @@ function setupBlockEditor() {
     // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
     if (!blockEdit.touched) {
       const pos = $('#blkPos').value;
-      fillBlockForm(defaultBlock($('#blkType').value, pos));
+      fillBlockForm(newBlock($('#blkType').value, pos));
     }
     renderBlockForm();
   });

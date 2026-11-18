@@ -11,10 +11,17 @@ const BLOCK_TYPES = {
     fields: ['title', 'text', 'items'],
     defaults: {
       title: 'Importante',
+      text: 'Antes de iniciar tu recorrido, considera los siguientes puntos clave. Te ayudarán a garantizar que en cada área de tu tienda permanezca únicamente la señalización autorizada.',
       items: [
-        'Retira cualquier señalización que no esté indicada en este manual.',
-        'Mantén únicamente la señalización autorizada en tienda.',
-        'Coloca máximo una señalización por departamento.',
+        'Retira toda señalización que no aparezca en este manual y mantén únicamente la señalización indicada',
+        'Evita duplicidades: coloca máximo una señalización por departamento.',
+        'Verifica que los letreros de Entrada y Salida permanezcan visibles en los accesos principales de clientes.',
+        'Conserva toda la señalización ubicada en las gavetas de Farmacia.',
+        'Mantén toda la señalización relacionada con precios. Esta señalización no debe retirarse.',
+        'Señalización de Precios, Liquidaciones y Aisle Locator, Bin Locator se mantiene en su totalidad.',
+        'Señalización de Protección Civil como los ejemplos adjuntos se mantienen en su totalidad.',
+        'Señalización de stickers de las máquinas y áreas de Perecederos se mantiene en su totalidad.',
+        'La imagen mostrada puede variar respecto a la señalización de tu tienda. Guíate por el contenido de la señalización, no por su diseño. Los equipos correspondientes informarán posteriormente sobre reemplazos o fechas de llegada.',
       ],
     },
   },
@@ -75,9 +82,22 @@ function blkSafeUrl(u) {
   return '';
 }
 
+// Puntos que traían antes las notas rojas. Una nota roja que sigue exactamente así (nadie
+// la editó) pasa a mostrar el texto predeterminado actual.
+const OLD_RED_ITEMS = [
+  'Retira cualquier señalización que no esté indicada en este manual.',
+  'Mantén únicamente la señalización autorizada en tienda.',
+  'Coloca máximo una señalización por departamento.',
+];
+
 // Limpia una nota guardada o publicada.
 function normalizeBlock(b) {
   const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
+  if (type === 'importante-rojo' && !(b.text || '').trim() && Array.isArray(b.items)
+    && b.items.length === OLD_RED_ITEMS.length && b.items.every((x, i) => String(x).trim() === OLD_RED_ITEMS[i])) {
+    const d = BLOCK_TYPES['importante-rojo'].defaults;
+    b = { ...b, text: d.text, items: d.items.slice() };
+  }
   return {
     id: (b && b.id) || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
     type,
@@ -113,21 +133,16 @@ function blkButton(b, cls) {
 }
 
 // HTML de una nota. Todo el texto se escapa.
-// opts.considerLabel: si se da, las notas rojas "Importante" llevan el botón que abre
-// la tarjeta de Consideraciones Importantes (el clic lo atiende la página, por data-consider).
-function blockHtml(raw, opts = {}) {
+function blockHtml(raw) {
   const b = normalizeBlock(raw);
-  const consider = opts && opts.considerLabel
-    ? `<button type="button" class="blk-consider" data-consider>${blkEsc(opts.considerLabel)}</button>` : '';
-  const list = (cls = '') => (b.items.length ? `<ul class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</ul>` : '');
+  const list = (cls = '', tag = 'ul') => (b.items.length ? `<${tag} class="${cls}">${b.items.map((x) => `<li>${blkEsc(x)}</li>`).join('')}</${tag}>` : '');
   switch (b.type) {
     case 'importante-rojo':
     case 'importante-amarillo':
       return `<div class="blk blk-${b.type}">
         ${b.title ? `<h4 class="blk-title">${BLK_ICONS.warn}<span>${blkEsc(b.title)}</span></h4>` : ''}
         ${b.text ? `<p>${blkEsc(b.text)}</p>` : ''}
-        ${list()}
-        ${b.type === 'importante-rojo' ? consider : ''}
+        ${b.type === 'importante-rojo' ? list('', 'ol') : list()}
       </div>`;
     case 'retira':
       return `<div class="blk blk-retira">
