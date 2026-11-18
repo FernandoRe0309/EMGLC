@@ -7,7 +7,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.18-2">
+<meta name="app-version" content="2026.11.18-3">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -1276,6 +1276,7 @@ a.btn { text-decoration: none; color: inherit; }
         <label data-f="title">Título<input id="blkTitle" maxlength="160" autocomplete="off"></label>
         <label data-f="text">Texto<textarea id="blkText" rows="3"></textarea></label>
         <label data-f="items">Puntos <span class="muted">(uno por renglón)</span><textarea id="blkItems" rows="5"></textarea></label>
+        <button type="button" id="blkUseConsider" class="btn" hidden>Usar el contenido de Consideraciones Importantes</button>
         <label data-f="footer">Texto final<input id="blkFooter" maxlength="200" autocomplete="off"></label>
         <label data-f="button">Texto del botón<input id="blkBtnLabel" maxlength="60" autocomplete="off"></label>
         <label data-f="button">Enlace del botón<input id="blkBtnUrl" autocomplete="off" placeholder="https://… (PDF, archivo o página de SharePoint)"></label>
@@ -1375,7 +1376,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.18-2';
+const APP_VERSION = '2026.11.18-3';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -4435,6 +4436,7 @@ function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
   $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
+  $('#blkUseConsider').hidden = $('#blkType').value !== 'importante-rojo';
 }
 
 function openBlockDialog(owner, id, pos = 'top') {
@@ -4446,7 +4448,7 @@ function openBlockDialog(owner, id, pos = 'top') {
   $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
   const where = NOTE_WHERE[owner];
   $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
-  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo', pos));
+  fillBlockForm(existing ? normalizeBlock(existing) : defaultBlock('importante-rojo', pos));
   $('#blkDelete').hidden = !existing;
   renderBlockForm();
   $('#blockDlg').showModal();
@@ -4464,13 +4466,28 @@ function moveBlock(owner, id, dir) {
   commit();
 }
 
+// Las notas rojas "Importante" nuevas empiezan con el contenido de Consideraciones Importantes.
+function considerationsNoteContent() {
+  const c = { ...DEFAULT_CONSIDERATIONS, ...((state.intro && state.intro.considerations) || {}) };
+  return {
+    title: c.title || 'Importante',
+    text: c.intro || '',
+    items: [...(c.items || []), ...(c.notes || [])],
+  };
+}
+
+function defaultBlock(type, pos) {
+  const b = newBlock(type, pos);
+  return type === 'importante-rojo' ? { ...b, ...considerationsNoteContent() } : b;
+}
+
 function setupBlockEditor() {
   const dlg = $('#blockDlg');
   $('#blkType').addEventListener('change', () => {
     // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
     if (!blockEdit.touched) {
       const pos = $('#blkPos').value;
-      fillBlockForm(newBlock($('#blkType').value, pos));
+      fillBlockForm(defaultBlock($('#blkType').value, pos));
     }
     renderBlockForm();
   });
@@ -4480,6 +4497,13 @@ function setupBlockEditor() {
     renderBlockForm();
   });
   $('#blkPreview').addEventListener('click', (e) => { if (e.target.closest('a')) e.preventDefault(); });
+  // Rellena la nota con los textos actuales de Consideraciones Importantes (se pueden editar después).
+  $('#blkUseConsider').addEventListener('click', () => {
+    const b = { ...readBlockForm(), ...considerationsNoteContent() };
+    fillBlockForm(b);
+    blockEdit.touched = true;
+    renderBlockForm();
+  });
 
   $('#blockForm').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'cancel') return;

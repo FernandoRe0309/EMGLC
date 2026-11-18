@@ -2534,6 +2534,7 @@ function renderBlockForm() {
   const fields = BLOCK_TYPES[$('#blkType').value].fields;
   document.querySelectorAll('#blockDlg [data-f]').forEach((el) => { el.hidden = !fields.includes(el.dataset.f); });
   $('#blkPreview').innerHTML = blockHtml(readBlockForm(), { considerLabel: considerLabel() });
+  $('#blkUseConsider').hidden = $('#blkType').value !== 'importante-rojo';
 }
 
 function openBlockDialog(owner, id, pos = 'top') {
@@ -2545,7 +2546,7 @@ function openBlockDialog(owner, id, pos = 'top') {
   $('#blkType').innerHTML = Object.entries(BLOCK_TYPES).map(([k, t]) => `<option value="${k}">${escapeHtml(t.label)}</option>`).join('');
   const where = NOTE_WHERE[owner];
   $('#blkPos').innerHTML = `<option value="top">Arriba de ${where}</option><option value="bottom">Abajo de ${where}</option>`;
-  fillBlockForm(existing ? normalizeBlock(existing) : newBlock('importante-rojo', pos));
+  fillBlockForm(existing ? normalizeBlock(existing) : defaultBlock('importante-rojo', pos));
   $('#blkDelete').hidden = !existing;
   renderBlockForm();
   $('#blockDlg').showModal();
@@ -2563,13 +2564,28 @@ function moveBlock(owner, id, dir) {
   commit();
 }
 
+// Las notas rojas "Importante" nuevas empiezan con el contenido de Consideraciones Importantes.
+function considerationsNoteContent() {
+  const c = { ...DEFAULT_CONSIDERATIONS, ...((state.intro && state.intro.considerations) || {}) };
+  return {
+    title: c.title || 'Importante',
+    text: c.intro || '',
+    items: [...(c.items || []), ...(c.notes || [])],
+  };
+}
+
+function defaultBlock(type, pos) {
+  const b = newBlock(type, pos);
+  return type === 'importante-rojo' ? { ...b, ...considerationsNoteContent() } : b;
+}
+
 function setupBlockEditor() {
   const dlg = $('#blockDlg');
   $('#blkType').addEventListener('change', () => {
     // Si aún no escribiste nada, se cargan los textos de ejemplo del tipo elegido.
     if (!blockEdit.touched) {
       const pos = $('#blkPos').value;
-      fillBlockForm(newBlock($('#blkType').value, pos));
+      fillBlockForm(defaultBlock($('#blkType').value, pos));
     }
     renderBlockForm();
   });
@@ -2579,6 +2595,13 @@ function setupBlockEditor() {
     renderBlockForm();
   });
   $('#blkPreview').addEventListener('click', (e) => { if (e.target.closest('a')) e.preventDefault(); });
+  // Rellena la nota con los textos actuales de Consideraciones Importantes (se pueden editar después).
+  $('#blkUseConsider').addEventListener('click', () => {
+    const b = { ...readBlockForm(), ...considerationsNoteContent() };
+    fillBlockForm(b);
+    blockEdit.touched = true;
+    renderBlockForm();
+  });
 
   $('#blockForm').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'cancel') return;

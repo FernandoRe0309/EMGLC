@@ -150,6 +150,14 @@ async function checkConsiderations() {
   }
 }
 
+// Cada vez que se entra a la página principal se abre la tarjeta. Si aún no confirma esta
+// versión, es obligatoria (sin cerrar); si ya la confirmó, se puede cerrar con la X.
+async function homeConsiderations() {
+  if (!data || !considerationsHaveContent() || data.intro.considerations.enabled === false) return;
+  await checkConsiderations();
+  if (!$('#home').hidden && !lb.open && !$('#considerDlg').open) openConsiderations({ mandatory: false });
+}
+
 // Cada minuto revisa si se publicó algo nuevo y lo muestra sin recargar ni mover la página.
 let refreshing = false;
 function startAutoRefresh() {
@@ -289,7 +297,7 @@ function route({ quiet = false } = {}) {
   if (!data) return;
   const [fid, zid, aid] = location.hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
   const fmt = fid && data.formats.find((f) => f.id === fid);
-  if (!fmt) { lastFormatId = null; renderHome(); if (!quiet) window.scrollTo(0, 0); return; }
+  if (!fmt) { lastFormatId = null; renderHome(); if (!quiet) { window.scrollTo(0, 0); homeConsiderations(); } return; }
   const zone = fmt.zones.find((z) => z.id === zid) || fmt.zones[0] || null;
   const area = zone && zone.areas.find((a) => a.id === aid) || null;
   const firstOpen = lastFormatId !== fmt.id;
