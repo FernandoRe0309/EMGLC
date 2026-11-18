@@ -82,8 +82,8 @@ function blkSafeUrl(u) {
   return '';
 }
 
-// Puntos que traían antes las notas rojas. Una nota roja que sigue exactamente así (nadie
-// la editó) pasa a mostrar el texto predeterminado actual.
+// Puntos que traían antes las notas rojas. Una nota roja sin párrafo que empieza con estos
+// tres puntos (aunque se le hayan agregado más) pasa a mostrar el texto predeterminado actual.
 const OLD_RED_ITEMS = [
   'Retira cualquier señalización que no esté indicada en este manual.',
   'Mantén únicamente la señalización autorizada en tienda.',
@@ -94,7 +94,7 @@ const OLD_RED_ITEMS = [
 function normalizeBlock(b) {
   const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
   if (type === 'importante-rojo' && !(b.text || '').trim() && Array.isArray(b.items)
-    && b.items.length === OLD_RED_ITEMS.length && b.items.every((x, i) => String(x).trim() === OLD_RED_ITEMS[i])) {
+    && b.items.length >= OLD_RED_ITEMS.length && OLD_RED_ITEMS.every((x, i) => String(b.items[i]).trim() === x)) {
     const d = BLOCK_TYPES['importante-rojo'].defaults;
     b = { ...b, text: d.text, items: d.items.slice() };
   }

@@ -8,7 +8,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.18-4">
+<meta name="app-version" content="2026.11.18-5">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -1359,7 +1359,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.18-4';
+const APP_VERSION = '2026.11.18-5';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1817,8 +1817,8 @@ function blkSafeUrl(u) {
   return '';
 }
 
-// Puntos que traían antes las notas rojas. Una nota roja que sigue exactamente así (nadie
-// la editó) pasa a mostrar el texto predeterminado actual.
+// Puntos que traían antes las notas rojas. Una nota roja sin párrafo que empieza con estos
+// tres puntos (aunque se le hayan agregado más) pasa a mostrar el texto predeterminado actual.
 const OLD_RED_ITEMS = [
   'Retira cualquier señalización que no esté indicada en este manual.',
   'Mantén únicamente la señalización autorizada en tienda.',
@@ -1829,7 +1829,7 @@ const OLD_RED_ITEMS = [
 function normalizeBlock(b) {
   const type = BLOCK_TYPES[b && b.type] ? b.type : 'info';
   if (type === 'importante-rojo' && !(b.text || '').trim() && Array.isArray(b.items)
-    && b.items.length === OLD_RED_ITEMS.length && b.items.every((x, i) => String(x).trim() === OLD_RED_ITEMS[i])) {
+    && b.items.length >= OLD_RED_ITEMS.length && OLD_RED_ITEMS.every((x, i) => String(b.items[i]).trim() === x)) {
     const d = BLOCK_TYPES['importante-rojo'].defaults;
     b = { ...b, text: d.text, items: d.items.slice() };
   }
