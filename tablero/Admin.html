@@ -16,11 +16,11 @@
 <header class="topbar">
   <div class="brand">
     <h1>Señalización en tu tienda <span class="tag">Administrador</span></h1>
-    <p id="stats" class="stats">Sin imágenes cargadas</p>
+    <nav id="stats" class="stats crumbs" aria-label="Ubicación"></nav>
   </div>
   <div class="actions">
     <span id="publishState" class="publish-state"></span>
-    <button id="publishBtn" class="btn btn-primary" type="button" title="Guarda las fotos y la distribución en la carpeta de SharePoint para que se vean en el panel de lectura">Publicar</button>
+    <button id="publishBtn" class="btn btn-primary" type="button">Publicar</button>
     <button id="authBtn" class="btn account" type="button">Conectando…</button>
     <label class="btn" title="Elige la carpeta Señalización completa; se conservan las subcarpetas">
       Cargar carpeta
@@ -64,7 +64,6 @@
       <label class="check"><input id="onlyUnplaced" type="checkbox"> Solo sin colocar en este formato</label>
     </div>
     <div id="libraryList" class="library-list"></div>
-    <p class="library-foot">Arrastra una foto a un espacio, a la lista de espacios o al botón de un área. Suelta aquí un espacio para quitarle la foto.</p>
   </aside>
 
   <main class="board-wrap">

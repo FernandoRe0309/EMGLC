@@ -6,7 +6,7 @@
 <title>Señalización en tu tienda</title>
 <meta name="description" content="Manual de señalización autorizada por formato y área de tienda (solo lectura).">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231f4fd6%22/><rect x=%226%22 y=%2224%22 width=%2220%22 height=%223%22 rx=%221.5%22 fill=%22%23ffc220%22/><rect x=%228%22 y=%227%22 width=%2216%22 height=%2213%22 rx=%222%22 fill=%22%23fff%22/></svg>">
-<meta name="app-version" content="2026.11.18-5">
+<meta name="app-version" content="2026.11.19-1">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -115,6 +115,12 @@ button, input { font: inherit; color: inherit; }
 .hero.compact .hero-inner { max-width: 1400px; justify-content: flex-start; text-align: left; padding: 14px 20px; }
 .hero.compact h1 { font-size: 24px; }
 .hero.compact p { margin-top: 2px; font-size: 13px; }
+.hero .crumbs { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 6px; font-weight: 600; }
+.hero.compact .crumbs { justify-content: flex-start; }
+.hero .crumbs a { color: inherit; text-decoration: none; }
+.hero .crumbs a:hover { text-decoration: underline; }
+.hero .crumbs span:last-child:not(.crumb-sep) { opacity: 1; }
+.crumb-sep { opacity: .6; }
 .back {
   flex: none;
   padding: 8px 14px;
@@ -696,7 +702,6 @@ a.pill { text-decoration: none; }
   </button>
 
   <div id="formats" class="formats"></div>
-  <p id="updatedHome" class="updated"></p>
 </main>
 
 <div id="catalog" class="catalog" hidden>
@@ -759,7 +764,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.18-5';
+const APP_VERSION = '2026.11.19-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1611,12 +1616,19 @@ window.addEventListener('hashchange', () => route());
 
 const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 
-function setHero({ title, sub, color }) {
+function setHero({ title, sub, color, crumbs }) {
   const hero = $('#hero');
   hero.style.setProperty('--hero', color || '');
   $('#heroTitle').textContent = title;
-  $('#heroSub').textContent = sub || '';
-  $('#heroSub').hidden = !sub;
+  // crumbs: [{ label, href }] → ruta Formato › Zona › Área; si no, un subtítulo de texto.
+  if (crumbs) {
+    $('#heroSub').innerHTML = crumbs.map((c) => (c.href ? `<a href="${esc(c.href)}">${esc(c.label)}</a>` : `<span>${esc(c.label)}</span>`))
+      .join('<span class="crumb-sep" aria-hidden="true">›</span>');
+  } else {
+    $('#heroSub').textContent = sub || '';
+  }
+  $('#heroSub').className = crumbs ? 'crumbs' : '';
+  $('#heroSub').hidden = !(crumbs ? crumbs.length : sub);
 }
 
 function renderHome() {
@@ -1645,14 +1657,22 @@ function renderHome() {
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');
-  $('#updatedHome').textContent = updatedText();
   $('#considerBtn').hidden = !considerationsHaveContent();
   $('#considerBtnLabel').textContent = data.intro.considerations.title;
 }
 
 function renderFormat(f, zone, area) {
   document.title = `${data.intro.title} · ${f.name}`;
-  setHero({ title: `${data.intro.title} · ${f.name}`, sub: '', color: f.color });
+  setHero({
+    title: data.intro.title,
+    color: f.color,
+    crumbs: [
+      { label: 'Inicio', href: '#/' },
+      { label: f.name, href: zone || area ? link(f.id) : '' },
+      ...(zone ? [{ label: zone.name, href: area ? link(f.id, zone.id) : '' }] : []),
+      ...(area ? [{ label: area.name }] : []),
+    ],
+  });
   $('#home').hidden = true;
   $('#status').hidden = true;
   $('#catalog').hidden = false;
@@ -1684,7 +1704,7 @@ function renderFormat(f, zone, area) {
     const items = list.filter((b) => b.pos === pos);
     return items.length ? `<div class="blocks">${items.map(blockHtml).join('')}</div>` : '';
   };
-  const zoneSub = zone.areas.length ? 'Selecciona un área para consultar su señalización.' : zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
+  const zoneSub = zone.areas.length || zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
   box.innerHTML = `
     <h2 class="zone-title">${esc(zone.name)}</h2>
     ${notes(zone.blocks, 'top')}

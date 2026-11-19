@@ -528,6 +528,11 @@ a.btn { text-decoration: none; color: inherit; }
   box-shadow: 0 2px 8px rgba(16, 24, 40, .15);
 }
 .topbar .stats { color: rgba(255, 255, 255, .82); }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: 13px; font-weight: 600; }
+.crumbs button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.crumbs button:hover { color: #fff; text-decoration: underline; }
+.crumbs span:last-child:not(.crumb-sep) { color: #fff; }
+.crumb-sep { opacity: .6; }
 .topbar .btn {
   background: rgba(255, 255, 255, .12);
   border-color: rgba(255, 255, 255, .35);

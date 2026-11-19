@@ -311,12 +311,19 @@ window.addEventListener('hashchange', () => route());
 
 const link = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 
-function setHero({ title, sub, color }) {
+function setHero({ title, sub, color, crumbs }) {
   const hero = $('#hero');
   hero.style.setProperty('--hero', color || '');
   $('#heroTitle').textContent = title;
-  $('#heroSub').textContent = sub || '';
-  $('#heroSub').hidden = !sub;
+  // crumbs: [{ label, href }] → ruta Formato › Zona › Área; si no, un subtítulo de texto.
+  if (crumbs) {
+    $('#heroSub').innerHTML = crumbs.map((c) => (c.href ? `<a href="${esc(c.href)}">${esc(c.label)}</a>` : `<span>${esc(c.label)}</span>`))
+      .join('<span class="crumb-sep" aria-hidden="true">›</span>');
+  } else {
+    $('#heroSub').textContent = sub || '';
+  }
+  $('#heroSub').className = crumbs ? 'crumbs' : '';
+  $('#heroSub').hidden = !(crumbs ? crumbs.length : sub);
 }
 
 function renderHome() {
@@ -345,14 +352,22 @@ function renderHome() {
       <strong>${esc(f.name)}</strong>
       <span class="format-sub">${esc(f.subtitle)}</span>
     </a>`).join('');
-  $('#updatedHome').textContent = updatedText();
   $('#considerBtn').hidden = !considerationsHaveContent();
   $('#considerBtnLabel').textContent = data.intro.considerations.title;
 }
 
 function renderFormat(f, zone, area) {
   document.title = `${data.intro.title} · ${f.name}`;
-  setHero({ title: `${data.intro.title} · ${f.name}`, sub: '', color: f.color });
+  setHero({
+    title: data.intro.title,
+    color: f.color,
+    crumbs: [
+      { label: 'Inicio', href: '#/' },
+      { label: f.name, href: zone || area ? link(f.id) : '' },
+      ...(zone ? [{ label: zone.name, href: area ? link(f.id, zone.id) : '' }] : []),
+      ...(area ? [{ label: area.name }] : []),
+    ],
+  });
   $('#home').hidden = true;
   $('#status').hidden = true;
   $('#catalog').hidden = false;
@@ -384,7 +399,7 @@ function renderFormat(f, zone, area) {
     const items = list.filter((b) => b.pos === pos);
     return items.length ? `<div class="blocks">${items.map(blockHtml).join('')}</div>` : '';
   };
-  const zoneSub = zone.areas.length ? 'Selecciona un área para consultar su señalización.' : zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
+  const zoneSub = zone.areas.length || zone.blocks.length ? '' : 'Aún no hay áreas en esta sección.';
   box.innerHTML = `
     <h2 class="zone-title">${esc(zone.name)}</h2>
     ${notes(zone.blocks, 'top')}

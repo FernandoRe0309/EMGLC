@@ -472,11 +472,9 @@ function renderLibrary(counts) {
 /* ---------- Render: formatos, zonas, áreas y espacios ---------- */
 function renderFormatTabs() {
   $('#formatTabs').innerHTML = state.formats.map((f) => {
-    const spaces = allSpaces(f);
-    const filled = spaces.filter((s) => s.imageId).length;
     return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
       <span class="ftab-mark">${f.logo && images.get(f.logo) ? `<img alt="" src="${urlFor(images.get(f.logo))}">` : escapeHtml(f.name.slice(0, 3))}</span>
-      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong><small>${f.hidden ? 'Oculto en la portada' : `${filled}/${spaces.length} con foto`}</small></span>
+      <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong>${f.hidden ? '<small>Oculto</small>' : ''}</span>
     </button>`;
   }).join('') + `<button type="button" class="ftab-tool" data-format-action="edit" title="Botones, secciones, zonas y áreas del panel de ${escapeHtml(board.name)}">Personalizar panel</button>
     <button type="button" class="ftab-tool" data-format-action="add">+ Formato</button>
@@ -488,15 +486,14 @@ function renderBanner() {
   const img = board.banner && images.get(board.banner);
   el.innerHTML = img
     ? `<img alt="" src="${urlFor(img)}"><button type="button" class="banner-clear" data-banner-clear title="Quitar foto de portada">×</button>`
-    : `<span>Foto de portada de ${escapeHtml(board.name)} (opcional): arrastra aquí una imagen</span>`;
+    : '<span>Portada</span>';
   el.classList.toggle('has-img', !!img);
 }
 
 function renderZoneBar() {
   $('#zoneBar').innerHTML = board.zones.map((z) => {
-    const n = z.areas.reduce((k, a) => k + signsOf(a).length, 0);
     return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
-      ${escapeHtml(z.name)}<small>${z.hidden ? 'Oculta en el manual' : `${plural(z.areas.length, 'área', 'áreas')} · ${plural(n, 'espacio', 'espacios')}`}</small></button>`;
+      ${escapeHtml(z.name)}${z.hidden ? '<small>Oculta</small>' : ''}</button>`;
   }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>' + pasteButtonHtml('zone');
 }
 
@@ -504,7 +501,7 @@ function renderZonePanel() {
   const panel = $('#zonePanel');
   const zone = activeZone();
   if (!zone) {
-    panel.innerHTML = '<div class="empty-panel">Este formato no tiene zonas. Usa <strong>+ Zona</strong> para crear una.</div>';
+    panel.innerHTML = '';
     return;
   }
   const zi = board.zones.indexOf(zone);
@@ -513,7 +510,6 @@ function renderZonePanel() {
     <div class="panel-head">
       <div>
         <h2 class="zone-title" contenteditable="true" spellcheck="false" data-zone-title>${escapeHtml(zone.name)}</h2>
-        <p class="muted">Selecciona un área para acomodar su señalización.</p>
       </div>
       <div class="tools">
         <button type="button" class="copy-btn" data-zone-action="copy" title="Copiar esta zona con todas sus áreas, notas y fotos para pegarla en otro formato">Copiar</button>
@@ -526,16 +522,14 @@ function renderZonePanel() {
     ${blocksEditHtml('zone', zone.blocks, 'top')}
     <div class="area-grid">
       ${zone.areas.map((a) => {
-        const filled = a.spaces.filter((s) => s.imageId).length;
-        const total = signsOf(a).length;
         return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}${a.hidden ? ' is-hidden' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
-          <span>${escapeHtml(a.name)}</span><small>${a.hidden ? 'oculta' : `${filled}/${total}`}</small></button>`;
+          <span>${escapeHtml(a.name)}</span>${a.hidden ? '<small>Oculta</small>' : ''}</button>`;
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
       ${pasteButtonHtml('area')}
     </div>
     ${blocksEditHtml('zone', zone.blocks, 'bottom')}
-    ${area ? areaDetailHtml(zone, area) : `<p class="pick-hint">${zone.areas.length ? 'Elige un área para ver y acomodar sus espacios.' : 'Esta zona aún no tiene áreas. Usa <strong>+ Área</strong>.'}</p>`}`;
+    ${area ? areaDetailHtml(zone, area) : ''}`;
 
   if (area) {
     const dz = panel.querySelector('.dropzone');
@@ -564,8 +558,8 @@ function areaDetailHtml(zone, area) {
     <p class="area-note" contenteditable="true" spellcheck="false" data-area-note data-placeholder="${escapeHtml(defaultNote(area.name))}">${escapeHtml(area.note || '')}</p>
     ${blocksEditHtml('area', area.blocks, 'top')}
     <div class="dropzone" data-area-id="${area.id}">
-      <button type="button" class="space-add" data-space-action="add">+ Espacio<small>o suelta aquí una foto para crear uno</small></button>
-      <button type="button" class="title-add" data-space-action="add-title">+ Título<small>para agrupar la señalización (ej. Licencias, Letreros). Después arrástralo a su lugar.</small></button>
+      <button type="button" class="space-add" data-space-action="add">+ Espacio</button>
+      <button type="button" class="title-add" data-space-action="add-title">+ Título</button>
     </div>
     ${blocksEditHtml('area', area.blocks, 'bottom')}`;
 }
@@ -578,12 +572,12 @@ function blocksEditHtml(owner, blocks, pos) {
   const list = (blocks || []).filter((b) => (b.pos || 'top') === pos);
   const where = NOTE_WHERE[owner];
   const other = pos === 'top' ? 'abajo' : 'arriba';
-  const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}">+ Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</button>`;
+  const add = `<button type="button" class="note-add" data-block-action="add" data-owner="${owner}" data-pos="${pos}" title="Nota ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}">+ Nota</button>`;
   const notes = list.length ? `<div class="blocks blocks-edit">${list.map((b, i) => `
     <div class="blk-wrap" data-block="${b.id}" data-owner="${owner}">
       ${blockHtml(b)}
       <div class="blk-tools">
-        <span class="blk-kind">${escapeHtml(BLOCK_TYPES[b.type]?.label || 'Nota')} · ${pos === 'top' ? 'arriba' : 'abajo'} de ${where}</span>
+        <span class="blk-kind"></span>
         <button type="button" data-block-action="edit">Editar</button>
         <button type="button" data-block-action="up" title="Subir" ${i === 0 ? 'disabled' : ''}>↑</button>
         <button type="button" data-block-action="down" title="Bajar" ${i === list.length - 1 ? 'disabled' : ''}>↓</button>
@@ -622,18 +616,21 @@ function spaceEl(sp) {
       ${img ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
         <button type="button" class="slot-clear" data-space-action="clear" title="Quitar foto">×</button>`
         : sp.imageId ? `<span class="missing">Falta la foto en la biblioteca:<br>${escapeHtml(sp.imageId)}</span>`
-          : `<span class="slot-hint">Coloca aquí la imagen de ${escapeHtml(sp.title)}</span>`}
+          : ''}
     </div>
     <div class="space-text${sp.text ? ' has-text' : ''}" contenteditable="true" spellcheck="true" data-space-text
-      data-placeholder="+ Agregar texto debajo de la imagen" title="Texto opcional que aparece debajo de la imagen. Mayús + Enter para un renglón nuevo.">${escapeHtml(sp.text || '')}</div>`;
+      data-placeholder="+ Texto" title="Texto opcional que aparece debajo de la imagen. Mayús + Enter para un renglón nuevo.">${escapeHtml(sp.text || '')}</div>`;
   return el;
 }
 
-function renderStats(counts) {
-  const spaces = allSpaces();
-  const filled = spaces.filter((s) => s.imageId).length;
-  const placed = [...images.keys()].filter((id) => counts.get(id)).length;
-  $('#stats').textContent = `${board.name}: ${filled} de ${plural(spaces.length, 'espacio', 'espacios')} con foto · Biblioteca: ${plural(images.size, 'imagen', 'imágenes')}, ${placed} usadas en ${board.name}`;
+// Ruta donde estás: Formato › Zona › Área (cada parte lleva de regreso a ese nivel).
+function renderCrumbs() {
+  const zone = activeZone();
+  const area = activeArea();
+  const parts = [`<button type="button" data-crumb="format">${escapeHtml(board.name)}</button>`];
+  if (zone) parts.push(`<button type="button" data-crumb="zone">${escapeHtml(zone.name)}</button>`);
+  if (area) parts.push(`<span>${escapeHtml(area.name)}</span>`);
+  $('#stats').innerHTML = parts.join('<span class="crumb-sep" aria-hidden="true">›</span>');
 }
 
 function render() {
@@ -645,7 +642,7 @@ function render() {
   $('#formatNotesTop').innerHTML = blocksEditHtml('format', board.blocks, 'top');
   $('#formatNotesBottom').innerHTML = blocksEditHtml('format', board.blocks, 'bottom');
   renderLibrary(counts);
-  renderStats(counts);
+  renderCrumbs();
 }
 
 /* ---------- Operaciones ---------- */
@@ -1202,13 +1199,13 @@ function renderPublishState() {
   if (state.dirty) {
     el.className = 'publish-state dirty';
     el.textContent = 'Cambios sin publicar';
-  } else if (state.publishedAt) {
-    el.className = 'publish-state';
-    el.textContent = 'Publicado ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) + (state.publishedBy ? ` por ${state.publishedBy}` : '');
   } else {
     el.className = 'publish-state';
     el.textContent = '';
   }
+  $('#publishBtn').title = state.publishedAt
+    ? 'Última publicación: ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) + (state.publishedBy ? ` por ${state.publishedBy}` : '')
+    : '';
 }
 
 // Carpetas en SharePoint: <Formato>/<Zona>/<Área>/<Espacio>.jpg y <Formato>/Portada.jpg
@@ -1947,7 +1944,6 @@ function renderPanelZones() {
       <div class="pe-row">
         <label class="pe-check" title="Mostrar esta zona"><input type="checkbox" data-zone-field="visible" ${z.hidden ? '' : 'checked'}></label>
         <div class="pe-main"><input data-zone-field="name" value="${escapeHtml(z.name)}" maxlength="60" aria-label="Nombre de la zona"></div>
-        <span class="pe-count">${plural(z.areas.length, 'área', 'áreas')}</span>
         <button type="button" class="icon-btn" data-zone-move="-1" ${zi === 0 ? 'disabled' : ''} title="Mover antes">↑</button>
         <button type="button" class="icon-btn" data-zone-move="1" ${zi === zones.length - 1 ? 'disabled' : ''} title="Mover después">↓</button>
         <button type="button" class="icon-btn danger" data-zone-remove title="Eliminar zona">${ICON_TRASH}</button>
@@ -1957,7 +1953,6 @@ function renderPanelZones() {
           <div class="pe-row pe-area${a.hidden ? ' off' : ''}" data-pe-area="${a.id}">
             <label class="pe-check" title="Mostrar esta área"><input type="checkbox" data-area-field="visible" ${a.hidden ? '' : 'checked'}></label>
             <div class="pe-main"><input data-area-field="name" value="${escapeHtml(a.name)}" maxlength="80" aria-label="Nombre del área"></div>
-            <span class="pe-count">${plural(signsOf(a).length, 'espacio', 'espacios')}</span>
             <button type="button" class="icon-btn" data-area-move="-1" ${ai === 0 ? 'disabled' : ''} title="Subir">↑</button>
             <button type="button" class="icon-btn" data-area-move="1" ${ai === z.areas.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
             <button type="button" class="icon-btn danger" data-area-remove title="Eliminar área">${ICON_TRASH}</button>
@@ -2332,6 +2327,15 @@ async function pasteClip(kind) {
 function setupBoardUI() {
   $('#bannerBox').addEventListener('click', (e) => {
     if (e.target.closest('[data-banner-clear]')) { board.banner = null; commit(); }
+  });
+
+  $('#stats').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-crumb]');
+    if (!c) return;
+    if (c.dataset.crumb === 'format') board.activeZoneId = (board.zones[0] && board.zones[0].id) || null;
+    board.activeAreaId = null;
+    saveBoard({ dirty: false });
+    render();
   });
 
   $('#zoneBar').addEventListener('click', (e) => {
