@@ -1064,3 +1064,6 @@ a.btn { text-decoration: none; color: inherit; }
 .area-detail.locked { opacity: .55; pointer-events: none; user-select: none; }
 
 #authBtn { cursor: default; }
+
+.publish-state.saving { opacity: .8; font-weight: 500; }
+.publish-state.err { color: #ffd0d0; font-weight: 700; }

@@ -8,7 +8,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.24-5">
+<meta name="app-version" content="2026.11.25-1">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -1141,6 +1141,9 @@ a.btn { text-decoration: none; color: inherit; }
 
 #authBtn { cursor: default; }
 
+.publish-state.saving { opacity: .8; font-weight: 500; }
+.publish-state.err { color: #ffd0d0; font-weight: 700; }
+
 </style>
 </head>
 <body>
@@ -1166,7 +1169,7 @@ a.btn { text-decoration: none; color: inherit; }
         <hr>
         <button type="button" data-action="readlog">Registro de lectura</button>
         <button type="button" data-action="history">Versiones anteriores</button>
-        <button type="button" data-action="load-published">Recargar lo publicado</button>
+        <button type="button" data-action="load-published">Recargar</button>
         <hr>
         <button type="button" id="saveJsonBtn">Guardar respaldo</button>
         <label data-menu-close>Abrir respaldo<input id="openJsonInput" type="file" accept="application/json,.json" hidden></label>
@@ -1384,7 +1387,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.24-5';
+const APP_VERSION = '2026.11.25-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1499,6 +1502,64 @@ const SP = (() => {
     if (r.status === 404) return null;
     if (!r.ok) throw new SPError(r.status, 'read_failed', 'No se pudo leer tablero.json.');
     return r.json();
+  }
+
+  /* Lectura y escritura seguras de un .json compartido.
+     readJsonFile devuelve el contenido y su ETag (la "versión" del archivo en SharePoint).
+     writeJsonFile solo escribe si el archivo sigue en esa versión; si otra persona lo cambió
+     mientras tanto, SharePoint lo rechaza (412) y se lanza un error con code 'conflict' para
+     volver a leer, combinar y reintentar. Así nunca se escribe encima del trabajo de alguien. */
+  const isMissing = (e) => e && (e.status === 404 || (e.status === 500 && /not found|no se encontr|no existe/i.test(e.message || '')));
+
+  async function fileEtag(rel) {
+    try {
+      const d = await api(`/_api/web/GetFileByServerRelativePath(DecodedUrl=@a1)?$select=ETag,Exists&@a1=${lit(fullPath(rel))}`);
+      return d.Exists === false ? null : d.ETag || null;
+    } catch (e) {
+      if (isMissing(e)) return null;
+      throw e;
+    }
+  }
+
+  async function readJsonFile(rel) {
+    const etag = await fileEtag(rel);
+    if (!etag) return { data: null, etag: null };
+    const r = await fetch(`${fileUrl(rel)}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
+    if (r.status === 404) return { data: null, etag: null };
+    if (!r.ok) throw new SPError(r.status, 'read_failed', `No se pudo leer ${rel}.`);
+    return { data: await r.json(), etag };
+  }
+
+  let conditionalWrites = true; // si el sitio no acepta escrituras condicionales, se usa la forma simple
+  async function writeJsonFile(rel, obj, etag) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    if (!etag) {
+      // Crear: falla si alguien lo creó un instante antes.
+      try {
+        return await api(`/_api/web/GetFolderByServerRelativePath(DecodedUrl=@a1)/Files/AddUsingPath(DecodedUrl=@a2,Overwrite=false)?@a1=${lit(fullPath(''))}&@a2=${lit(rel)}`, {
+          method: 'POST', body: blob, headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      } catch (e) {
+        if (e.status === 400 || e.status === 409 || (e.status === 500 && /exist/i.test(e.message || ''))) throw new SPError(412, 'conflict', 'El archivo cambió.');
+        throw e;
+      }
+    }
+    if (conditionalWrites) {
+      try {
+        return await api(`/_api/web/GetFileByServerRelativePath(DecodedUrl=@a1)/$value?@a1=${lit(fullPath(rel))}`, {
+          method: 'POST', body: blob,
+          headers: { 'Content-Type': 'application/octet-stream', 'X-HTTP-Method': 'PUT', 'IF-MATCH': etag },
+        });
+      } catch (e) {
+        if (e.status === 412) throw new SPError(412, 'conflict', 'El archivo cambió.');
+        if (![400, 405, 501].includes(e.status)) throw e;
+        console.warn('El sitio no acepta escrituras condicionales; se usa la escritura simple.', e);
+        conditionalWrites = false;
+      }
+    }
+    // Escritura simple: revisar justo antes que nadie lo haya cambiado.
+    if ((await fileEtag(rel)) !== etag) throw new SPError(412, 'conflict', 'El archivo cambió.');
+    return upload(rel, blob);
   }
 
   // Contenido de una subcarpeta: Map nombre -> { downloadUrl, isFolder }
@@ -1751,7 +1812,7 @@ const SP = (() => {
     silentToken: async () => true,
     signIn: async () => account,
     signOut: async () => {},
-    fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    fileUrl, resolveRoot, readJson, readJsonFile, writeJsonFile, fileEtag, list, upload, remove, ensureFolder, safeName, errorText, SPError,
     LOG_LIST, logListExists, createLogList, grantLogPermissions, registerVisit, hasConfirmed, readLog,
   };
 })();
@@ -2279,7 +2340,7 @@ function persistNow() {
   return idb('state', 'readwrite', (s) => s.put(state, 'board')).catch((e) => console.error(e));
 }
 function saveBoard({ dirty = true } = {}) {
-  if (dirty) state.dirty = true;
+  if (dirty) { state.dirty = true; scheduleSync(); }
   renderPublishState();
   if (saveTimer) return;
   saveTimer = setTimeout(persistNow, Math.max(0, 300 - (Date.now() - lastSave)));
@@ -3150,12 +3211,22 @@ function renderPublishState() {
   if (publishing) return;
   const el = $('#publishState');
   if (!el || !state) return;
-  if (state.dirty) {
+  if (syncError) {
+    el.className = 'publish-state err';
+    el.textContent = 'Sin guardar';
+    el.title = syncError;
+  } else if (state.dirty) {
+    el.className = 'publish-state saving';
+    el.textContent = spReady ? 'Guardando…' : 'Sin conexión';
+    el.title = '';
+  } else if (spReady && hasUnpublished()) {
     el.className = 'publish-state dirty';
-    el.textContent = 'Cambios sin publicar';
+    el.textContent = 'Sin publicar';
+    el.title = 'Hay cambios guardados que las tiendas todavía no ven';
   } else {
     el.className = 'publish-state';
     el.textContent = '';
+    el.title = '';
   }
   $('#publishBtn').title = state.publishedAt
     ? 'Última publicación: ' + new Date(state.publishedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) + (state.publishedBy ? ` por ${state.publishedBy}` : '')
@@ -3163,13 +3234,28 @@ function renderPublishState() {
 }
 
 // Carpetas en SharePoint: <Formato>/<Zona>/<Área>/<Espacio>.jpg y <Formato>/Portada.jpg
-async function buildPlan(pubRefs = new Map()) {
+async function buildPlan(pubRefs = new Map(), liveFiles = new Map()) {
   const files = new Map(); // ruta -> img
   // Si una foto publicada (por otra persona) no está en esta computadora, se conserva tal cual.
   const keepRef = (id) => (id && pubRefs.get(id)) || null;
   const uniq = (set, name) => { let n = name, k = 2; while (set.has(n.toLowerCase())) n = `${name} (${k++})`; set.add(n.toLowerCase()); return n; };
-  const ref = async (img, file) => {
+  // Nombre del archivo en SharePoint: se reutiliza el que ya tenía esa foto y nunca se
+  // sobrescribe un archivo que el manual publicado usa con otra foto (se agrega " (2)").
+  const taken = new Set();
+  const pickFile = (desired, img) => {
+    const dot = desired.lastIndexOf('.');
+    const stem = desired.slice(0, dot);
+    const ext = desired.slice(dot);
+    const ok = (f) => !taken.has(f.toLowerCase()) && (!liveFiles.has(f) || liveFiles.get(f) === img.hash);
+    const prev = pubRefs.get(img.id);
+    let f = prev && prev.hash === img.hash && prev.file && prev.file.startsWith(stem) && prev.file.endsWith(ext) && ok(prev.file) ? prev.file : desired;
+    for (let k = 2; !ok(f); k++) f = `${stem} (${k})${ext}`;
+    taken.add(f.toLowerCase());
+    return f;
+  };
+  const ref = async (img, desired) => {
     if (!img.hash) img.hash = await sha1(img.blob);
+    const file = pickFile(desired, img);
     files.set(file, img);
     return { path: img.id, hash: img.hash, file };
   };
@@ -3198,20 +3284,12 @@ async function buildPlan(pubRefs = new Map()) {
       for (const a of z.areas) {
         const aname = uniq(areaNames, SP.safeName(a.name) || 'Área');
         const folder = `${fname}/${zname}/${aname}`;
-        const used = new Set();
         const spaces = [];
         for (const s of a.spaces) {
           if (isTitle(s)) { spaces.push({ id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden }); continue; }
           const img = s.imageId && images.get(s.imageId);
           let image = img ? null : keepRef(s.imageId);
-          if (img) {
-            const ext = expectedExt(img);
-            const base = SP.safeName(s.title) || 'Señalización';
-            let name = `${base}.${ext}`;
-            for (let k = 2; used.has(name.toLowerCase()); k++) name = `${base} (${k}).${ext}`;
-            used.add(name.toLowerCase());
-            image = await ref(img, `${folder}/${name}`);
-          }
+          if (img) image = await ref(img, `${folder}/${SP.safeName(s.title) || 'Señalización'}.${expectedExt(img)}`);
           spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', badge: spaceBadge(s.badge), image });
         }
         areas.push({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
@@ -3243,19 +3321,17 @@ const parentDirs = (file) => {
   return out;
 };
 
-/* ---------- Trabajo en equipo ----------
-   Cada persona edita en su navegador. Para no perder lo de nadie:
-   - Al publicar se COMBINAN los cambios con lo que otra persona haya publicado
-     (combinación de tres vías: lo último que viste, lo tuyo y lo publicado).
-   - Cada 20 s se revisa si alguien publicó, y se trae a tu pantalla.
-   - Antes de guardar se respalda la versión anterior en _historial/.
-   - Publicar nunca borra fotos; hay una opción aparte para limpiar las que ya no se usan. */
+/* ---------- Combinar cambios de varias personas ----------
+   Combinación de tres vías: lo último que se vio del borrador compartido, lo tuyo y lo que
+   hay ahora. Antes de publicar se respalda la versión anterior en _historial/. Publicar
+   nunca borra fotos; hay una opción aparte para limpiar las que ya no se usan. */
 const SCHEMA = 5;              // versión del formato de tablero.json
 const HISTORY_DIR = '_historial';
 const HISTORY_KEEP = 60;
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
-const stable = (v) => JSON.stringify(v, (k, x) => (isObj(x) ? Object.keys(x).sort().reduce((o, kk) => { o[kk] = x[kk]; return o; }, {}) : x));
+// undefined cuenta igual que null (un campo vacío puede venir de cualquiera de las dos formas).
+const stable = (v) => JSON.stringify(v, (k, x) => (x === undefined ? null : isObj(x) ? Object.keys(x).sort().reduce((o, kk) => { o[kk] = x[kk]; return o; }, {}) : x));
 const same = (a, b) => stable(a) === stable(b);
 const isKeyed = (...arrs) => arrs.some((x) => Array.isArray(x) && x.length && isObj(x[0]) && 'id' in x[0]);
 
@@ -3363,7 +3439,7 @@ function adoptIds(doc, ref) {
 
 // Estado local → documento comparable.
 function toDoc(st = state) {
-  return { intro: structuredClone(st.intro), formats: st.formats.map((f) => structuredClone(formatToJson(f))) };
+  return { intro: { ...structuredClone(st.intro), banner: st.intro.banner || null }, formats: st.formats.map((f) => structuredClone(formatToJson(f))) };
 }
 
 // tablero.json publicado → documento comparable (fotos por su ruta original).
@@ -3429,30 +3505,173 @@ async function downloadPublishedImages(data, { quiet = false } = {}) {
   if (fetched.length) await idb('images', 'readwrite', (st) => { fetched.forEach((x) => st.put(x)); }).catch(console.error);
 }
 
-function publishedByText(data) {
-  const who = data && data.updatedBy ? data.updatedBy : 'Otra persona';
-  const when = data && data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-  return { who, when };
+/* ---------- Borrador compartido ----------
+   Todo lo que cada persona hace en el administrador se guarda solo, en segundos, en
+   tablero-borrador.json (en la misma carpeta). Cada administrador lo revisa cada pocos
+   segundos y combina lo de las demás personas con lo suyo, así todas ven lo mismo.
+   La escritura es condicional (ETag): si otra persona guardó un instante antes, SharePoint
+   la rechaza, se vuelve a leer, se combina y se reintenta; nunca se escribe encima.
+   El manual de las tiendas lee tablero.json, que solo cambia al presionar Publicar. */
+const DRAFT_FILE = 'tablero-borrador.json';
+let syncing = false;
+let syncAgain = false;
+let syncTimer = null;
+let syncError = null;
+let lastDraftEtag = null;   // versión del borrador que ya tienes combinada
+let lastDraftData = null;
+let liveEtag = null;        // versión de tablero.json (lo publicado)
+let liveData = null;
+let liveDoc = null;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function scheduleSync(delay = 1200) {
+  if (!spReady) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncDraft(), delay);
 }
 
-// Trae lo publicado y lo combina con tus cambios sin publicar (si los hay).
+// Combina el borrador compartido (o lo publicado) con tus cambios que aún no se guardan.
 async function mergeFromPublished(data, { quiet = false } = {}) {
   await downloadPublishedImages(data, { quiet });
   const theirs = docFromPublished(data, state.base || toDoc());
   const conflicts = [];
-  if (!state.dirty) {
-    applyDoc(theirs);
-  } else {
-    applyDoc(merge3(state.base, toDoc(), theirs, conflicts));
-  }
+  if (!state.dirty) applyDoc(theirs);
+  else applyDoc(merge3(state.base || null, toDoc(), theirs, conflicts));
   state.base = theirs;
-  state.publishedAt = data.updatedAt || null;
-  state.publishedBy = data.updatedBy || null;
+  state.draftAt = data.updatedAt || null;
+  state.draftBy = data.updatedBy || null;
   state.dirty = !same(toDoc(), theirs);
   saveBoard({ dirty: false });
   render();
   return conflicts;
 }
+
+// Archivos que ya están en SharePoint (borrador y publicado): ruta -> hash.
+function serverFiles(...docs) {
+  const m = new Map();
+  for (const d of docs) for (const r of publishedRefs(d)) if (!m.has(r.file)) m.set(r.file, r.hash);
+  return m;
+}
+
+async function uploadPlan(plan, known, onProgress) {
+  const uploads = [...plan.files].filter(([file, img]) => known.get(file) !== img.hash);
+  let done = 0;
+  const queue = uploads.slice();
+  const worker = async () => {
+    while (queue.length) {
+      const [file, img] = queue.shift();
+      const { blob } = img.published ? { blob: img.blob } : plan.logoFiles.has(file) ? await optimizeLogo(img.blob) : await optimizeImage(img.blob);
+      await SP.upload(file, blob);
+      if (onProgress) onProgress(++done, uploads.length);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  return uploads.length;
+}
+
+function boardData(plan, extra = {}) {
+  const acc = SP.currentAccount();
+  return {
+    app: 'tablero-senalizacion', version: SCHEMA, schema: SCHEMA, appVersion: SP.APP_VERSION,
+    updatedAt: new Date().toISOString(), updatedBy: acc ? acc.name || acc.username : null,
+    ...extra, intro: plan.intro, formats: plan.formats,
+  };
+}
+
+// Mientras escribes, arrastras o tienes una ventana abierta no se toca la pantalla.
+function isTyping() {
+  const a = document.activeElement;
+  if (drag || document.querySelector('dialog[open]')) return true;
+  if (!a) return false;
+  if (a.isContentEditable || a.tagName === 'TEXTAREA') return true;
+  return a.tagName === 'INPUT' && a.id !== 'searchInput' && /^(text|url|number|)$/.test(a.type || '');
+}
+
+async function syncDraft({ force = false, quiet = true } = {}) {
+  if (!spReady || !state) return false;
+  if (syncing) { syncAgain = true; return false; }
+  if (!force && (publishing || isTyping())) { scheduleSync(1500); return false; }
+  syncing = true;
+  try {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      // 1) ¿Cambió el borrador? Primero solo su versión; el contenido se baja si cambió.
+      const etag = await SP.fileEtag(DRAFT_FILE);
+      let remote = null;
+      if (!etag) {
+        remote = liveData || await SP.readJson(); // primera vez: el borrador empieza igual a lo publicado
+      } else if (etag !== lastDraftEtag || !lastDraftData || !state.base) {
+        const r = await SP.readJsonFile(DRAFT_FILE);
+        if (r.etag !== etag) continue;
+        remote = r.data;
+        lastDraftData = remote;
+      }
+      if (remote) {
+        const vp = versionProblem(remote);
+        if (vp) throw new SP.SPError(0, 'version', vp);
+        if (!state.base || remote.updatedAt !== state.draftAt) {
+          const before = state.base;
+          await mergeFromPublished(remote, { quiet: true });
+          if (etag && before) markRemoteChanges(before, state.base, remote.updatedBy);
+        }
+      }
+      lastDraftEtag = etag;
+      if (etag && !state.dirty) { syncError = null; return true; }
+
+      // 2) Guardar lo tuyo: fotos nuevas y luego el borrador (solo si nadie lo cambió).
+      const known = serverFiles(lastDraftData, liveData);
+      const pubRefs = new Map([...publishedRefs(liveData), ...publishedRefs(lastDraftData)].map((r) => [r.path, r]));
+      const sent = toDoc(); // lo que se va a guardar (para saber si cambiaste algo mientras tanto)
+      const plan = await buildPlan(pubRefs, serverFiles(liveData));
+      await uploadPlan(plan, known, (n, t) => { if (publishing) setPublishProgress(`Subiendo fotos ${n} de ${t}…`); });
+      const data = boardData(plan, { draft: true });
+      try {
+        await SP.writeJsonFile(DRAFT_FILE, data, etag);
+      } catch (e) {
+        if (e.code === 'conflict') { lastDraftEtag = null; await sleep(200 + Math.random() * 600); continue; }
+        throw e;
+      }
+      lastDraftData = data;
+      lastDraftEtag = null; // se revisa otra vez por si alguien guardó justo después
+      state.base = docFromPublished(data, toDoc());
+      state.draftAt = data.updatedAt;
+      state.draftBy = data.updatedBy;
+      // Guardado. Solo queda pendiente si cambiaste algo mientras se subía.
+      state.dirty = !same(toDoc(), sent);
+      saveBoard({ dirty: false });
+      syncError = null;
+      if (state.dirty) continue;
+      return true;
+    }
+    throw new SP.SPError(0, 'busy', 'Otra persona está guardando al mismo tiempo.');
+  } catch (e) {
+    console.warn(e);
+    syncError = e.code === 'version' ? e.message : 'No se pudo guardar. ' + SP.errorText(e);
+    if (!quiet) toast(syncError, 8000);
+    if (e.code !== 'version') scheduleSync(8000);
+    return false;
+  } finally {
+    syncing = false;
+    renderPublishState();
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  }
+}
+
+// Lo publicado (tablero.json): para saber si hay cambios sin publicar y quién publicó.
+async function refreshLive() {
+  if (!spReady) return;
+  try {
+    const etag = await SP.fileEtag(SP.DATA_FILE);
+    if (etag && etag === liveEtag && liveData) return;
+    liveData = etag ? await SP.readJson() : null;
+    liveEtag = etag;
+    state.publishedAt = liveData ? liveData.updatedAt || null : null;
+    state.publishedBy = liveData ? liveData.updatedBy || null : null;
+    liveDoc = liveData ? docFromPublished(liveData, state.base || toDoc()) : null;
+    renderPublishState();
+  } catch (e) { console.warn('No se pudo revisar lo publicado', e); }
+}
+
+const hasUnpublished = () => !!(state && state.base && (!liveDoc || !same(liveDoc, state.base)));
 
 function versionProblem(data) {
   if (SP.updateAvailable()) return 'Hay una versión nueva de esta página. Presiona "Actualizar ahora" (abajo) antes de publicar.';
@@ -3474,72 +3693,43 @@ async function publish() {
   if (publishing || !ensureConnected()) return;
   const problem = versionProblem(null);
   if (problem) { toast(problem, 8000); return; }
-  if (!confirm(`Se publicarán tus cambios en esta carpeta de SharePoint. Si otra persona publicó mientras tanto, sus cambios se conservan y se combinan con los tuyos. ¿Publicar?`)) return;
+  if (!confirm('Se publicará en el manual de las tiendas todo lo que está en el administrador (incluido lo de las demás personas). ¿Publicar?')) return;
 
   publishing = true;
   const btn = $('#publishBtn');
   btn.disabled = true;
   try {
-    setPublishProgress('Conectando con SharePoint…');
-    await SP.resolveRoot();
-    let prev = await SP.readJson();
-    let merged = 0;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const vp = versionProblem(prev);
-      if (vp) throw new SP.SPError(0, 'version', vp);
-      // 1) Si alguien publicó después de lo último que viste, combinar primero.
-      if (prev && prev.updatedAt !== state.publishedAt) {
-        setPublishProgress('Combinando con los cambios de otra persona…');
-        const conflicts = await mergeFromPublished(prev, { quiet: true });
-        merged++;
-        state.dirty = true;
-        if (conflicts.length) console.warn('Cambios en el mismo lugar (se conservó lo tuyo):', conflicts);
-      }
-      // 2) Subir fotos nuevas o cambiadas.
-      setPublishProgress('Preparando…');
-      const pubRefs = new Map(publishedRefs(prev).map((r) => [r.path, r]));
-      const prevFiles = new Map(publishedRefs(prev).map((r) => [r.file, r.hash]));
-      const plan = await buildPlan(pubRefs);
-      const uploads = [...plan.files].filter(([file, img]) => prevFiles.get(file) !== img.hash);
-      let done = 0;
-      const queue = uploads.slice();
-      const worker = async () => {
-        while (queue.length) {
-          const [file, img] = queue.shift();
-          const { blob } = img.published ? { blob: img.blob } : plan.logoFiles.has(file) ? await optimizeLogo(img.blob) : await optimizeImage(img.blob);
-          await SP.upload(file, blob);
-          setPublishProgress(`Subiendo fotos ${++done} de ${uploads.length}…`);
-        }
-      };
-      await Promise.all([worker(), worker(), worker()]);
+    // 1) Que todo lo tuyo ya esté en el borrador compartido.
+    setPublishProgress('Guardando…');
+    while (syncing) await sleep(100);
+    clearTimeout(syncTimer);
+    if (!(await syncDraft({ force: true }))) throw new SP.SPError(0, 'sync', syncError || 'No se pudo guardar.');
+    while (syncing) await sleep(100);
+    const { data: draft } = await SP.readJsonFile(DRAFT_FILE);
+    if (!draft) throw new SP.SPError(0, 'sync', 'No se encontró el borrador.');
+    const vp = versionProblem(draft);
+    if (vp) throw new SP.SPError(0, 'version', vp);
 
-      // 3) Justo antes de guardar, revisar que nadie haya publicado en este momento.
-      const check = await SP.readJson();
-      if ((check && check.updatedAt) !== (prev && prev.updatedAt)) { prev = check; continue; }
-
-      // 4) Respaldo de la versión anterior y guardado.
-      setPublishProgress('Guardando…');
-      await saveHistoryCopy(prev).catch((e) => console.warn('No se pudo guardar el historial', e));
-      const updatedAt = new Date().toISOString();
-      const acc = SP.currentAccount();
-      const data = {
-        app: 'tablero-senalizacion', version: SCHEMA, schema: SCHEMA, appVersion: SP.APP_VERSION,
-        updatedAt, updatedBy: acc ? acc.name || acc.username : null,
-        intro: plan.intro, formats: plan.formats,
-      };
-      await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-
-      state.base = docFromPublished(data, toDoc());
-      state.dirty = false;
-      state.publishedAt = updatedAt;
-      state.publishedBy = data.updatedBy;
-      publishing = false;
-      saveBoard({ dirty: false });
-      render();
-      toast(`Publicado${merged ? ' (combinado con los cambios de otra persona)' : ''}: ${plural(uploads.length, 'foto subida', 'fotos subidas')}.`, 6000);
-      return;
-    }
-    throw new SP.SPError(0, 'busy', 'Otra persona está publicando al mismo tiempo. Espera unos segundos e intenta de nuevo.');
+    // 2) Respaldo de lo publicado y copia del borrador al manual.
+    setPublishProgress('Publicando…');
+    const prev = await SP.readJson();
+    const vpLive = versionProblem(prev);
+    if (vpLive) throw new SP.SPError(0, 'version', vpLive);
+    await saveHistoryCopy(prev).catch((e) => console.warn('No se pudo guardar el historial', e));
+    const { draft: _d, ...rest } = draft;
+    const acc = SP.currentAccount();
+    const live = { ...rest, updatedAt: new Date().toISOString(), updatedBy: acc ? acc.name || acc.username : null, draftAt: draft.updatedAt, appVersion: SP.APP_VERSION };
+    await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(live, null, 2)], { type: 'application/json' }));
+    liveData = live;
+    liveEtag = null;
+    state.publishedAt = live.updatedAt;
+    state.publishedBy = live.updatedBy;
+    liveDoc = docFromPublished(live, state.base || toDoc());
+    if (draft.updatedAt !== state.draftAt) scheduleSync(100); // alguien guardó justo ahora: traerlo
+    publishing = false;
+    saveBoard({ dirty: false });
+    render();
+    toast('Publicado en el manual.', 5000);
   } catch (e) {
     console.error(e);
     publishing = false;
@@ -3551,67 +3741,34 @@ async function publish() {
   }
 }
 
-/* ---------- Cargar lo publicado ---------- */
-async function fetchPublished() {
-  const data = await SP.readJson();
-  return data && Array.isArray(data.formats) ? data : null;
-}
-
-// Reemplaza lo local por lo publicado (descarta cambios sin publicar).
-async function loadPublished(data) {
-  await downloadPublishedImages(data);
-  const doc = docFromPublished(data, state && state.base);
-  applyDoc(doc);
-  state.base = doc;
-  state.dirty = false;
-  state.publishedAt = data.updatedAt || null;
-  state.publishedBy = data.updatedBy || null;
-  saveBoard({ dirty: false });
-  render();
-  toast('Se cargó la versión publicada.');
-}
-
+/* ---------- Recargar ---------- */
+// Descarta lo que aún no se guarda y trae lo más reciente del borrador compartido.
 async function loadPublishedAction() {
   if (!ensureConnected()) return;
-  if (state.dirty && !confirm('Tienes cambios sin publicar. Se descartarán y se cargará la versión publicada. ¿Continuar?')) return;
-  try {
-    const data = await fetchPublished();
-    if (!data) { toast('Todavía no hay nada publicado.'); return; }
-    await loadPublished(data);
-  } catch (e) {
-    console.error(e);
-    toast('No se pudo leer la versión publicada. ' + SP.errorText(e), 7000);
-  }
+  if (state.dirty && !confirm('Se descartarán tus cambios que aún no se guardan. ¿Continuar?')) return;
+  state.dirty = false;
+  state.draftAt = null;
+  lastDraftEtag = null;
+  lastDraftData = null;
+  if (await syncDraft({ force: true, quiet: false })) toast('Listo: estás viendo lo más reciente.');
 }
 
-async function syncWithPublished({ quiet = false } = {}) {
-  let published = null;
-  try { published = await fetchPublished(); } catch (e) { console.warn(e); if (!quiet) toast(SP.errorText(e), 7000); return; }
-  if (!published || published.updatedAt === state.publishedAt) return;
-  const hadChanges = state.dirty;
-  const before = state.base;
-  const conflicts = await mergeFromPublished(published, { quiet });
-  markRemoteChanges(before, state.base, published.updatedBy);
-  const { who, when } = publishedByText(published);
-  toast(hadChanges
-    ? `${who} publicó cambios a las ${when}. Se combinaron con los tuyos; recuerda publicar.${conflicts.length ? ' En lo que ambos cambiaron se conservó lo tuyo.' : ''}`
-    : `${who} publicó cambios a las ${when}. Ya los ves aquí.`, 7000);
-}
-
-// Revisión periódica: sin interrumpir si estás escribiendo, arrastrando o con una ventana abierta.
+// No interrumpir la pantalla mientras trabajas (para avisos y redibujos).
 function isBusyEditing() {
-  const a = document.activeElement;
-  return !!(drag || publishing || document.querySelector('dialog[open]') || (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))));
+  return !!(publishing || isTyping() || (document.activeElement && document.activeElement.tagName === 'SELECT'));
 }
 
+// Revisión periódica del borrador compartido y de lo publicado.
 function startPolling() {
   const tick = async () => {
-    if (!spReady || document.visibilityState !== 'visible' || isBusyEditing()) return;
-    await syncWithPublished({ quiet: true });
+    if (!spReady || document.visibilityState !== 'visible') return;
+    await syncDraft();
+    await refreshLive();
   };
-  setInterval(tick, 8000);
+  setInterval(tick, 5000);
   window.addEventListener('focus', tick);
   document.addEventListener('visibilitychange', tick);
+  document.addEventListener('focusout', () => { if (state && state.dirty) scheduleSync(600); });
 }
 
 /* ---------- Trabajo en equipo: quién está dónde y qué cambió ----------
@@ -3696,8 +3853,8 @@ function renderTeam() {
   const el = $('#team');
   if (!el) return;
   el.hidden = !team.length;
-  el.innerHTML = team.map((t) => `<span class="team-person" title="${t.dirty ? 'Tiene cambios sin publicar' : 'Sin cambios pendientes'}">
-    <span class="team-dot${t.dirty ? ' dirty' : ''}"></span><strong>${escapeHtml(t.name)}</strong> ${escapeHtml(t.where || '')}${t.dirty ? ' · sin publicar' : ''}</span>`).join('');
+  el.innerHTML = team.map((t) => `<span class="team-person">
+    <span class="team-dot"></span><strong>${escapeHtml(t.name)}</strong> ${escapeHtml(t.where || '')}</span>`).join('');
 }
 
 // Ids de lo que cambió entre dos versiones publicadas (y de sus zonas, áreas y formatos).
@@ -3779,7 +3936,7 @@ function setupHistory() {
   $('#historyList').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-hist-url]');
     if (!b) return;
-    if (!confirm('Se cargará esa versión en tu tablero (no se publica todavía). Tus cambios sin publicar se reemplazarán. Revísala y presiona Publicar para restaurarla para todos. ¿Continuar?')) return;
+    if (!confirm('Se cargará esa versión en el administrador para todas las personas (las tiendas no la ven hasta que presiones Publicar). ¿Continuar?')) return;
     try {
       const r = await fetch(`${b.dataset.histUrl}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
       const data = await r.json();
@@ -3789,7 +3946,7 @@ function setupHistory() {
       saveBoard();
       render();
       dlg.close();
-      toast('Versión anterior cargada. Revísala y presiona Publicar para restaurarla.', 7000);
+      toast('Versión anterior cargada. Presiona Publicar para que la vean las tiendas.', 7000);
     } catch (err) {
       console.error(err);
       toast('No se pudo abrir esa versión.', 5000);
@@ -3916,7 +4073,8 @@ async function cleanupUnusedPhotos() {
   try {
     toast('Buscando fotos que ya no se usan…', 60000);
     const data = await SP.readJson();
-    const used = new Set(publishedRefs(data).map((r) => r.file));
+    const { data: draft } = await SP.readJsonFile(DRAFT_FILE);
+    const used = new Set([...publishedRefs(data), ...publishedRefs(draft)].map((r) => r.file));
     const files = [];
     const dirs = [];
     const walk = async (dir) => {
@@ -4814,7 +4972,7 @@ function setupEvents() {
   });
   $('#saveJsonBtn').addEventListener('click', saveJson);
   $('#publishBtn').addEventListener('click', publish);
-  window.addEventListener('beforeunload', (e) => { if (publishing) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', (e) => { if (publishing || (spReady && state && state.dirty)) { e.preventDefault(); e.returnValue = ''; } });
 
   const menu = $('.menu');
   menu.addEventListener('click', (e) => {
@@ -4894,7 +5052,9 @@ async function init() {
   renderAccount();
   SP.watchForUpdates();
   if (spReady) {
-    await syncWithPublished();
+    await refreshLive();
+    await syncDraft({ force: true, quiet: false });
+    renderPublishState();
     startPolling();
     startTeam();
   }

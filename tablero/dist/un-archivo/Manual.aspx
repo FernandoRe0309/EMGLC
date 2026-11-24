@@ -7,7 +7,7 @@
 <title>Señalización en tu tienda</title>
 <meta name="description" content="Manual de señalización autorizada por formato y área de tienda (solo lectura).">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231f4fd6%22/><rect x=%226%22 y=%2224%22 width=%2220%22 height=%223%22 rx=%221.5%22 fill=%22%23ffc220%22/><rect x=%228%22 y=%227%22 width=%2216%22 height=%2213%22 rx=%222%22 fill=%22%23fff%22/></svg>">
-<meta name="app-version" content="2026.11.24-5">
+<meta name="app-version" content="2026.11.25-1">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -772,7 +772,7 @@ a.pill { text-decoration: none; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.24-5';
+const APP_VERSION = '2026.11.25-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -887,6 +887,64 @@ const SP = (() => {
     if (r.status === 404) return null;
     if (!r.ok) throw new SPError(r.status, 'read_failed', 'No se pudo leer tablero.json.');
     return r.json();
+  }
+
+  /* Lectura y escritura seguras de un .json compartido.
+     readJsonFile devuelve el contenido y su ETag (la "versión" del archivo en SharePoint).
+     writeJsonFile solo escribe si el archivo sigue en esa versión; si otra persona lo cambió
+     mientras tanto, SharePoint lo rechaza (412) y se lanza un error con code 'conflict' para
+     volver a leer, combinar y reintentar. Así nunca se escribe encima del trabajo de alguien. */
+  const isMissing = (e) => e && (e.status === 404 || (e.status === 500 && /not found|no se encontr|no existe/i.test(e.message || '')));
+
+  async function fileEtag(rel) {
+    try {
+      const d = await api(`/_api/web/GetFileByServerRelativePath(DecodedUrl=@a1)?$select=ETag,Exists&@a1=${lit(fullPath(rel))}`);
+      return d.Exists === false ? null : d.ETag || null;
+    } catch (e) {
+      if (isMissing(e)) return null;
+      throw e;
+    }
+  }
+
+  async function readJsonFile(rel) {
+    const etag = await fileEtag(rel);
+    if (!etag) return { data: null, etag: null };
+    const r = await fetch(`${fileUrl(rel)}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
+    if (r.status === 404) return { data: null, etag: null };
+    if (!r.ok) throw new SPError(r.status, 'read_failed', `No se pudo leer ${rel}.`);
+    return { data: await r.json(), etag };
+  }
+
+  let conditionalWrites = true; // si el sitio no acepta escrituras condicionales, se usa la forma simple
+  async function writeJsonFile(rel, obj, etag) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    if (!etag) {
+      // Crear: falla si alguien lo creó un instante antes.
+      try {
+        return await api(`/_api/web/GetFolderByServerRelativePath(DecodedUrl=@a1)/Files/AddUsingPath(DecodedUrl=@a2,Overwrite=false)?@a1=${lit(fullPath(''))}&@a2=${lit(rel)}`, {
+          method: 'POST', body: blob, headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      } catch (e) {
+        if (e.status === 400 || e.status === 409 || (e.status === 500 && /exist/i.test(e.message || ''))) throw new SPError(412, 'conflict', 'El archivo cambió.');
+        throw e;
+      }
+    }
+    if (conditionalWrites) {
+      try {
+        return await api(`/_api/web/GetFileByServerRelativePath(DecodedUrl=@a1)/$value?@a1=${lit(fullPath(rel))}`, {
+          method: 'POST', body: blob,
+          headers: { 'Content-Type': 'application/octet-stream', 'X-HTTP-Method': 'PUT', 'IF-MATCH': etag },
+        });
+      } catch (e) {
+        if (e.status === 412) throw new SPError(412, 'conflict', 'El archivo cambió.');
+        if (![400, 405, 501].includes(e.status)) throw e;
+        console.warn('El sitio no acepta escrituras condicionales; se usa la escritura simple.', e);
+        conditionalWrites = false;
+      }
+    }
+    // Escritura simple: revisar justo antes que nadie lo haya cambiado.
+    if ((await fileEtag(rel)) !== etag) throw new SPError(412, 'conflict', 'El archivo cambió.');
+    return upload(rel, blob);
   }
 
   // Contenido de una subcarpeta: Map nombre -> { downloadUrl, isFolder }
@@ -1139,7 +1197,7 @@ const SP = (() => {
     silentToken: async () => true,
     signIn: async () => account,
     signOut: async () => {},
-    fileUrl, resolveRoot, readJson, list, upload, remove, ensureFolder, safeName, errorText, SPError,
+    fileUrl, resolveRoot, readJson, readJsonFile, writeJsonFile, fileEtag, list, upload, remove, ensureFolder, safeName, errorText, SPError,
     LOG_LIST, logListExists, createLogList, grantLogPermissions, registerVisit, hasConfirmed, readLog,
   };
 })();
