@@ -8,7 +8,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.24-1">
+<meta name="app-version" content="2026.11.24-2">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -1102,6 +1102,29 @@ a.btn { text-decoration: none; color: inherit; }
 .log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 640px) { .log-stats { grid-template-columns: 1fr; } }
 
+/* ---------- Trabajo en equipo ---------- */
+.team { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, .9); }
+.team-person { display: inline-flex; align-items: center; gap: 6px; }
+.team-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex: none; }
+.team-dot.dirty { background: #ffc220; }
+.team-tag {
+  position: absolute; top: -8px; right: -6px; z-index: 3;
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px;
+  display: inline-grid; place-items: center;
+  background: #7c3aed; color: #fff; font-size: 11px; font-weight: 800; line-height: 1;
+  box-shadow: 0 0 0 2px #fff; pointer-events: none;
+}
+.ftab, .zone-btn, .area-btn { position: relative; }
+.remote-changed { animation: remote-flash 1.2s ease-in-out 3; box-shadow: 0 0 0 3px #7c3aed !important; }
+@keyframes remote-flash { 50% { box-shadow: 0 0 0 6px rgba(124, 58, 237, .35); } }
+.lock-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 10px;
+  background: #f3edff; border: 1px solid #c4b5fd; color: #3b1d8f; font-size: 14px;
+}
+.lock-bar .btn { margin-left: auto; }
+.area-detail.locked { opacity: .55; pointer-events: none; user-select: none; }
+
 </style>
 </head>
 <body>
@@ -1110,6 +1133,7 @@ a.btn { text-decoration: none; color: inherit; }
   <div class="brand">
     <h1>Señalización en tu tienda <span class="tag">Administrador</span></h1>
     <nav id="stats" class="stats crumbs" aria-label="Ubicación"></nav>
+    <div id="team" class="team" hidden></div>
   </div>
   <div class="actions">
     <span id="publishState" class="publish-state"></span>
@@ -1372,7 +1396,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.24-1';
+const APP_VERSION = '2026.11.24-2';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -2402,7 +2426,7 @@ function renderLibrary(counts) {
 /* ---------- Render: formatos, zonas, áreas y espacios ---------- */
 function renderFormatTabs() {
   $('#formatTabs').innerHTML = state.formats.map((f) => {
-    return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">
+    return `<button type="button" class="ftab${f.id === board.id ? ' active' : ''}${remoteChanged(f.id) ? ' remote-changed' : ''}" data-format="${f.id}" style="--fc:${escapeHtml(f.color)}">${teamTag('formatId', f.id)}
       <span class="ftab-mark">${f.logo && images.get(f.logo) ? `<img alt="" src="${urlFor(images.get(f.logo))}">` : escapeHtml(f.name.slice(0, 3))}</span>
       <span class="ftab-text"><strong>${escapeHtml(f.name)}</strong>${f.hidden ? '<small>Oculto</small>' : ''}</span>
     </button>`;
@@ -2422,7 +2446,7 @@ function renderBanner() {
 
 function renderZoneBar() {
   $('#zoneBar').innerHTML = board.zones.map((z) => {
-    return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">
+    return `<button type="button" class="zone-btn${z.id === board.activeZoneId ? ' active' : ''}${z.hidden ? ' is-hidden' : ''}${remoteChanged(z.id) ? ' remote-changed' : ''}" data-zone="${z.id}" data-drop-zone="${z.id}">${teamTag('zoneId', z.id)}
       ${escapeHtml(z.name)}${z.hidden ? '<small>Oculta</small>' : ''}</button>`;
   }).join('') + '<button type="button" class="zone-add" data-zone-action="add">+ Zona</button>' + pasteButtonHtml('zone');
 }
@@ -2452,7 +2476,7 @@ function renderZonePanel() {
     ${blocksEditHtml('zone', zone.blocks, 'top')}
     <div class="area-grid">
       ${zone.areas.map((a) => {
-        return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}${a.hidden ? ' is-hidden' : ''}" data-area="${a.id}" data-drop-area="${a.id}">
+        return `<button type="button" class="area-btn${area && a.id === area.id ? ' active' : ''}${a.hidden ? ' is-hidden' : ''}${remoteChanged(a.id) ? ' remote-changed' : ''}" data-area="${a.id}" data-drop-area="${a.id}">${teamTag('areaId', a.id)}
           <span>${escapeHtml(a.name)}</span>${a.hidden ? '<small>Oculta</small>' : ''}</button>`;
       }).join('')}
       <button type="button" class="area-add" data-area-action="add">+ Área</button>
@@ -2470,8 +2494,12 @@ function renderZonePanel() {
 
 function areaDetailHtml(zone, area) {
   const ai = zone.areas.indexOf(area);
+  const other = areaLockedBy(area.id);
   return `
     <hr class="divider">
+    ${other ? `<div class="lock-bar" role="status"><strong>${escapeHtml(other.name)}</strong> está editando esta área. Para no encimar cambios, espera a que termine.
+      <button type="button" class="btn" data-unlock="${area.id}">Editar de todos modos</button></div>` : ''}
+    <div class="area-detail${other ? ' locked' : ''}">
     <div class="area-head">
       <h3 class="area-title" contenteditable="true" spellcheck="false" data-area-title>${escapeHtml(area.name)}</h3>
       <div class="tools">
@@ -2491,7 +2519,8 @@ function areaDetailHtml(zone, area) {
       <button type="button" class="space-add" data-space-action="add">+ Espacio</button>
       <button type="button" class="title-add" data-space-action="add-title">+ Título</button>
     </div>
-    ${blocksEditHtml('area', area.blocks, 'bottom')}`;
+    ${blocksEditHtml('area', area.blocks, 'bottom')}
+    </div>`;
 }
 
 // Qué hay entre las notas de arriba y las de abajo, según dónde están.
@@ -2522,7 +2551,7 @@ function blocksEditHtml(owner, blocks, pos) {
 function spaceEl(sp) {
   if (isTitle(sp)) {
     const el = document.createElement('article');
-    el.className = 'card space title-card' + (sp.hidden ? ' is-hidden' : '');
+    el.className = 'card space title-card' + (sp.hidden ? ' is-hidden' : '') + (remoteChanged(sp.id) ? ' remote-changed' : '');
     el.dataset.cardId = sp.id;
     el.innerHTML = `
       <span class="grip" title="Arrastra para mover el título">⋮⋮</span>
@@ -2534,7 +2563,7 @@ function spaceEl(sp) {
   }
   const img = sp.imageId && images.get(sp.imageId);
   const el = document.createElement('article');
-  el.className = 'card space' + (sp.hidden ? ' is-hidden' : '');
+  el.className = 'card space' + (sp.hidden ? ' is-hidden' : '') + (remoteChanged(sp.id) ? ' remote-changed' : '');
   el.dataset.cardId = sp.id;
   el.innerHTML = `
     <div class="space-head">
@@ -2577,6 +2606,8 @@ function render() {
   $('#formatNotesBottom').innerHTML = blocksEditHtml('format', board.blocks, 'bottom');
   renderLibrary(counts);
   renderCrumbs();
+  renderTeam();
+  sendPresence();
 }
 
 /* ---------- Operaciones ---------- */
@@ -3158,7 +3189,7 @@ async function buildPlan(pubRefs = new Map()) {
   const homeImg = state.intro.banner && images.get(state.intro.banner);
   const intro = { ...state.intro, banner: homeImg ? await ref(homeImg, `Portada inicio.${expectedExt(homeImg)}`) : keepRef(state.intro.banner) };
   const logoFiles = new Set(); // los logos se publican en PNG para conservar la transparencia
-  const fmtNames = new Set(['public', '_historial', 'forms']); // nombres reservados de la carpeta
+  const fmtNames = new Set(['public', '_historial', '_equipo', 'forms']); // nombres reservados de la carpeta
   const formats = [];
   for (const f of state.formats) {
     const fname = uniq(fmtNames, SP.safeName(f.name) || 'Formato');
@@ -3570,7 +3601,9 @@ async function syncWithPublished({ quiet = false } = {}) {
   try { published = await fetchPublished(); } catch (e) { console.warn(e); if (!quiet) toast(SP.errorText(e), 7000); return; }
   if (!published || published.updatedAt === state.publishedAt) return;
   const hadChanges = state.dirty;
+  const before = state.base;
   const conflicts = await mergeFromPublished(published, { quiet });
+  markRemoteChanges(before, state.base, published.updatedBy);
   const { who, when } = publishedByText(published);
   toast(hadChanges
     ? `${who} publicó cambios a las ${when}. Se combinaron con los tuyos; recuerda publicar.${conflicts.length ? ' En lo que ambos cambiaron se conservó lo tuyo.' : ''}`
@@ -3588,9 +3621,149 @@ function startPolling() {
     if (!spReady || document.visibilityState !== 'visible' || isBusyEditing()) return;
     await syncWithPublished({ quiet: true });
   };
-  setInterval(tick, 20000);
+  setInterval(tick, 8000);
   window.addEventListener('focus', tick);
   document.addEventListener('visibilitychange', tick);
+}
+
+/* ---------- Trabajo en equipo: quién está dónde y qué cambió ----------
+   Cada administrador deja en _equipo/<su nombre>.json dónde está trabajando (formato, zona y
+   área) y si tiene cambios sin publicar. Los demás lo leen cada pocos segundos para:
+   - ver arriba dónde está cada quien y marcar con su inicial el formato, la zona y el área;
+   - bloquear el área que otra persona está editando (se puede desbloquear si hace falta);
+   - resaltar por un rato lo que la otra persona acaba de publicar. */
+const TEAM_DIR = '_equipo';
+const TEAM_FRESH_MS = 150000;   // después de esto, la otra persona ya no cuenta como presente
+let team = [];                  // otras personas presentes
+let lastPresence = { key: '', at: 0 };
+const unlocked = new Set();     // áreas que decidiste editar aunque otra persona esté ahí
+let remoteMarks = { ids: new Set(), until: 0 };
+
+function myName() {
+  const acc = SP.currentAccount();
+  return acc ? acc.name || acc.username || '' : '';
+}
+function myPresenceFile() {
+  const acc = SP.currentAccount();
+  const id = acc ? acc.username || acc.name : '';
+  return id ? `${TEAM_DIR}/${SP.safeName(id)}.json` : null;
+}
+
+async function sendPresence(force = false) {
+  if (!spReady || !state || !board) return;
+  const file = myPresenceFile();
+  if (!file) return;
+  const zone = activeZone();
+  const area = activeArea();
+  const info = {
+    name: myName(),
+    formatId: board.id, zoneId: zone ? zone.id : null, areaId: area ? area.id : null,
+    where: [board.name, zone && zone.name, area && area.name].filter(Boolean).join(' › '),
+    dirty: !!state.dirty,
+    visible: document.visibilityState === 'visible',
+  };
+  const key = JSON.stringify(info);
+  // Se escribe al cambiar de lugar o de estado, y cada minuto para seguir contando como presente.
+  if (!force && key === lastPresence.key && Date.now() - lastPresence.at < 60000) return;
+  lastPresence = { key, at: Date.now() };
+  try {
+    await SP.upload(file, new Blob([JSON.stringify({ ...info, at: new Date().toISOString() })], { type: 'application/json' }));
+  } catch (e) { console.warn('No se pudo avisar dónde estás', e); lastPresence.key = ''; }
+}
+
+async function readTeam() {
+  if (!spReady) return;
+  const mine = myPresenceFile();
+  try {
+    const files = [...(await SP.list(TEAM_DIR)).entries()].filter(([n, f]) => !f.isFolder && /\.json$/i.test(n) && `${TEAM_DIR}/${n}` !== mine);
+    const people = await Promise.all(files.map(async ([, f]) => {
+      try {
+        const r = await fetch(`${f.downloadUrl}?t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' });
+        return r.ok ? await r.json() : null;
+      } catch { return null; }
+    }));
+    const now = Date.now();
+    const next = people.filter((x) => x && x.name && x.name !== myName() && now - new Date(x.at).getTime() < TEAM_FRESH_MS && x.visible !== false);
+    if (JSON.stringify(next) !== JSON.stringify(team)) {
+      team = next;
+      if (isBusyEditing()) renderTeam(); else render();
+    }
+  } catch (e) { console.warn('No se pudo leer quién está trabajando', e); }
+}
+
+function initials(name) {
+  return String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+}
+// Marca con la inicial de quien está en ese formato, zona o área.
+function teamTag(field, id) {
+  const here = team.filter((t) => t[field] === id);
+  return here.length ? `<span class="team-tag" title="${escapeHtml(here.map((t) => t.name).join(', '))} está aquí">${escapeHtml(here.map((t) => initials(t.name)).join(' '))}</span>` : '';
+}
+function areaLockedBy(areaId) {
+  if (unlocked.has(areaId)) return null;
+  return team.find((t) => t.formatId === board.id && t.areaId === areaId) || null;
+}
+
+function renderTeam() {
+  const el = $('#team');
+  if (!el) return;
+  el.hidden = !team.length;
+  el.innerHTML = team.map((t) => `<span class="team-person" title="${t.dirty ? 'Tiene cambios sin publicar' : 'Sin cambios pendientes'}">
+    <span class="team-dot${t.dirty ? ' dirty' : ''}"></span><strong>${escapeHtml(t.name)}</strong> ${escapeHtml(t.where || '')}${t.dirty ? ' · sin publicar' : ''}</span>`).join('');
+}
+
+// Ids de lo que cambió entre dos versiones publicadas (y de sus zonas, áreas y formatos).
+function changedIds(a, b) {
+  const index = (doc) => {
+    const m = new Map();
+    for (const f of (doc && doc.formats) || []) {
+      const { zones, blocks, ...own } = f;
+      m.set(f.id, { j: JSON.stringify({ ...own, z: (zones || []).map((z) => z.id) }), path: [] });
+      for (const bl of blocks || []) m.set(bl.id, { j: JSON.stringify(bl), path: [f.id] });
+      for (const z of zones || []) {
+        m.set(z.id, { j: JSON.stringify({ n: z.name, h: z.hidden, a: (z.areas || []).map((x) => x.id) }), path: [f.id] });
+        for (const bl of z.blocks || []) m.set(bl.id, { j: JSON.stringify(bl), path: [f.id, z.id] });
+        for (const ar of z.areas || []) {
+          m.set(ar.id, { j: JSON.stringify({ n: ar.name, note: ar.note, h: ar.hidden, s: (ar.spaces || []).map((x) => x.id) }), path: [f.id, z.id] });
+          for (const bl of ar.blocks || []) m.set(bl.id, { j: JSON.stringify(bl), path: [f.id, z.id, ar.id] });
+          for (const sp of ar.spaces || []) m.set(sp.id, { j: JSON.stringify(sp), path: [f.id, z.id, ar.id] });
+        }
+      }
+    }
+    return m;
+  };
+  const A = index(a), B = index(b);
+  const out = new Set();
+  for (const id of new Set([...A.keys(), ...B.keys()])) {
+    const x = A.get(id), y = B.get(id);
+    if (x && y && x.j === y.j) continue;
+    out.add(id);
+    for (const p of (y || x).path) out.add(p);
+  }
+  return out;
+}
+
+function markRemoteChanges(before, after, who) {
+  if (!before || !after) return;
+  const ids = changedIds(before, after);
+  if (!ids.size) return;
+  remoteMarks = { ids, who, until: Date.now() + 30000 };
+  render();
+  setTimeout(() => { if (Date.now() >= remoteMarks.until) { remoteMarks = { ids: new Set(), until: 0 }; if (!isBusyEditing()) render(); } }, 30500);
+}
+const remoteChanged = (id) => Date.now() < remoteMarks.until && remoteMarks.ids.has(id);
+
+function startTeam() {
+  sendPresence(true);
+  readTeam();
+  setInterval(() => { if (document.visibilityState === 'visible') { readTeam(); sendPresence(); } }, 8000);
+  document.addEventListener('visibilitychange', () => sendPresence(true));
+  $('#zonePanel').addEventListener('click', (e) => {
+    const u = e.target.closest('[data-unlock]');
+    if (!u) return;
+    unlocked.add(u.dataset.unlock);
+    render();
+  });
 }
 
 /* ---------- Versiones anteriores ---------- */
@@ -3762,7 +3935,7 @@ async function cleanupUnusedPhotos() {
       for (const [name, it] of await SP.list(dir)) {
         const rel = dir ? `${dir}/${name}` : name;
         if (it.isFolder) {
-          if (!dir && (name === HISTORY_DIR || name === 'Forms' || name === 'public')) continue;
+          if (!dir && (name === HISTORY_DIR || name === TEAM_DIR || name === 'Forms' || name === 'public')) continue;
           dirs.push(rel);
           await walk(rel);
         } else if (dir && /\.(jpe?g|png|svg|gif|webp)$/i.test(name)) files.push(rel);
@@ -4768,6 +4941,7 @@ async function init() {
   if (spReady) {
     await syncWithPublished();
     startPolling();
+    startTeam();
   }
 }
 

@@ -65,8 +65,10 @@ Son el mismo contenido; el `.aspx` solo agrega en la primera línea la directiva
 
 - Cada persona edita en su navegador y sus cambios se comparten al presionar **Publicar**.
 - **Al publicar se combinan** tus cambios con lo que otra persona haya publicado mientras tanto; no se reemplaza su trabajo. Si los dos cambiaron exactamente lo mismo (por ejemplo, el mismo título), se conserva lo tuyo.
-- **Cada 20 segundos** el administrador revisa si alguien publicó y lo trae a tu pantalla (si estás escribiendo o con una ventana abierta, espera a que termines). El manual de lectura se actualiza solo cada minuto.
-- Arriba se indica quién publicó por última vez y si tienes *cambios sin publicar*.
+- **Cada 8 segundos** el administrador revisa si alguien publicó y lo trae a tu pantalla (si estás escribiendo o con una ventana abierta, espera a que termines). Lo que cambió la otra persona se resalta en morado unos segundos (formato, zona, área y tarjeta). El manual de lectura se actualiza solo cada minuto.
+- **Quién está dónde:** debajo de la ruta se ve a las demás personas con el administrador abierto, en qué formato, zona y área están, y si tienen cambios sin publicar (punto amarillo). Su inicial aparece en ese formato, zona y área. Se guarda en la carpeta `_equipo` (no la borres; no afecta al manual).
+- **Área ocupada:** si entras a un área donde otra persona está trabajando, se ve atenuada y bloqueada con el aviso "*X está editando esta área*", para no encimar cambios. **Editar de todos modos** la desbloquea. Si la otra persona cierra la página, el bloqueo se quita solo en unos 2 minutos.
+- Si tienes *cambios sin publicar*, se indica junto a **Publicar**; al pasar el mouse por **Publicar** se ve quién publicó por última vez.
 - **Publicar nunca borra fotos.** Para quitar de SharePoint las que ya no se usan: **Más → Limpiar fotos sin usar…** (van a la papelera de reciclaje).
 - **Más → Versiones anteriores (restaurar)…**: antes de cada publicación se guarda una copia en la carpeta `_historial` (las últimas 60).
 - Si el archivo de la página en SharePoint es más nuevo que el que tienes abierto, aparece **"Hay una versión nueva de esta página — Actualizar ahora"**, y el administrador no deja publicar hasta actualizar (así una versión vieja no puede borrar lo que no conoce).
