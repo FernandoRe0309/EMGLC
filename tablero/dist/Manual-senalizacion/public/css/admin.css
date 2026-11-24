@@ -777,9 +777,14 @@ a.btn { text-decoration: none; color: inherit; }
 }
 .zone-panel .dropzone.drop-hover { background: var(--drop); outline: 6px solid var(--drop); }
 .card.space { padding: 12px 12px 14px; border-radius: 12px; gap: 8px; cursor: grab; }
-.space-head { display: flex; align-items: flex-start; gap: 4px; }
+/* Controles (ícono, ojo, bote) en su propio renglón arriba; el título usa todo el ancho debajo. */
+.space-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+.space-head > :not(.space-title) { flex: none; }
 .space-title {
-  flex: 1;
+  order: 2;
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 700;
   font-size: 14px;
   line-height: 1.3;

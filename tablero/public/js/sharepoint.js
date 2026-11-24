@@ -9,7 +9,7 @@
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.24-4';
+const APP_VERSION = '2026.11.24-5';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
