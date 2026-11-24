@@ -784,6 +784,9 @@ a.btn { text-decoration: none; color: inherit; }
 }
 .space-title:focus { background: var(--surface-2); box-shadow: 0 0 0 2px var(--accent); }
 .space-head .icon-btn { width: 26px; height: 26px; font-size: 13px; opacity: .55; }
+.badge-pick { height: 26px; padding: 0 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; opacity: .55; }
+.card.space:hover .badge-pick, .badge-pick.on, .badge-pick:focus { opacity: 1; }
+.badge-pick.on { border-color: #e60000; color: #e60000; font-weight: 700; }
 .card.space:hover .space-head .icon-btn { opacity: 1; }
 .slot {
   position: relative;

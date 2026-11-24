@@ -8,7 +8,7 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.19-1">
+<meta name="app-version" content="2026.11.24-1">
 <style>
 /* ---------- Notas (bloques de contenido) ---------- */
 .blocks { display: grid; gap: 16px; margin: 16px 0; }
@@ -65,6 +65,12 @@
   .blk { padding: 16px; font-size: 14px; }
   .blk-retira .blk-cols { grid-template-columns: 1fr; }
 }
+
+/* Ícono en la esquina superior derecha de una tarjeta (NUEVO o X) */
+.sp-badge { position: absolute; top: 6px; right: 6px; z-index: 2; line-height: 0; pointer-events: none; }
+.sp-badge svg { display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .2)); }
+.sp-badge-nuevo svg { width: 76px; height: auto; }
+.sp-badge-quitar svg { width: 38px; height: 38px; }
 
 </style>
 <style>
@@ -854,6 +860,9 @@ a.btn { text-decoration: none; color: inherit; }
 }
 .space-title:focus { background: var(--surface-2); box-shadow: 0 0 0 2px var(--accent); }
 .space-head .icon-btn { width: 26px; height: 26px; font-size: 13px; opacity: .55; }
+.badge-pick { height: 26px; padding: 0 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; opacity: .55; }
+.card.space:hover .badge-pick, .badge-pick.on, .badge-pick:focus { opacity: 1; }
+.badge-pick.on { border-color: #e60000; color: #e60000; font-weight: 700; }
 .card.space:hover .space-head .icon-btn { opacity: 1; }
 .slot {
   position: relative;
@@ -1363,7 +1372,7 @@ a.btn { text-decoration: none; color: inherit; }
 
 // Versión de estas páginas. Cambia en cada entrega; si el archivo en SharePoint es más nuevo
 // que el que está abierto en el navegador, se avisa para recargar.
-const APP_VERSION = '2026.11.19-1';
+const APP_VERSION = '2026.11.24-1';
 
 const SP = (() => {
   const DATA_FILE = 'tablero.json';
@@ -1900,6 +1909,23 @@ function blockHtml(raw) {
   }
 }
 
+/* ---------- Íconos en la esquina de una tarjeta de señalización ---------- */
+const SPACE_BADGES = {
+  nuevo: {
+    label: 'Nuevo',
+    svg: '<svg viewBox="0 0 120 40" aria-hidden="true"><rect x="1" y="1" width="118" height="38" rx="12" fill="#e60000"/><text x="60" y="29" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="25" fill="#fff">NUEVO</text></svg>',
+  },
+  quitar: {
+    label: 'X',
+    svg: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 9 31 31M31 9 9 31" stroke="#f00" stroke-width="7.5" stroke-linecap="round"/></svg>',
+  },
+};
+const spaceBadge = (key) => (SPACE_BADGES[key] ? key : '');
+function badgeHtml(key) {
+  const b = SPACE_BADGES[key];
+  return b ? `<span class="sp-badge sp-badge-${key}" title="${b.label}">${b.svg}</span>` : '';
+}
+
 </script>
 <script>
 'use strict';
@@ -2100,7 +2126,7 @@ let state = null;          // { dirty, publishedAt, intro, formats, activeId }
 let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
-const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false, text: '' });
+const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false, text: '', badge: '' });
 const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, blocks: [], spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
 const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, blocks: [], areas });
 const newZones = () => DEFAULT_ZONES.map((z) => {
@@ -2513,10 +2539,14 @@ function spaceEl(sp) {
   el.innerHTML = `
     <div class="space-head">
       <div class="space-title" contenteditable="true" spellcheck="false" data-space-title>${escapeHtml(sp.title)}</div>
+      <select class="badge-pick${sp.badge ? ' on' : ''}" data-space-badge title="Ícono en la esquina">
+        <option value="">Ícono</option>${Object.entries(SPACE_BADGES).map(([k, b]) => `<option value="${k}" ${sp.badge === k ? 'selected' : ''}>${b.label}</option>`).join('')}
+      </select>
       <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este espacio en el manual' : 'Ocultar este espacio en el manual'}">${sp.hidden ? ICON_EYE_OFF : ICON_EYE}</button>
       <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">${ICON_TRASH}</button>
     </div>
     <div class="slot${img ? ' filled' : ''}" data-slot="${sp.id}">
+      ${badgeHtml(sp.badge)}
       ${img ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
         <button type="button" class="slot-clear" data-space-action="clear" title="Quitar foto">×</button>`
         : sp.imageId ? `<span class="missing">Falta la foto en la biblioteca:<br>${escapeHtml(sp.imageId)}</span>`
@@ -2960,7 +2990,7 @@ function formatToJson(f) {
     id: f.id, name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner || null, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
     zones: f.zones.map((z) => ({
       id: z.id, name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
-      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => (isTitle(s) ? { id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden } : { id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '' })) })),
+      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => (isTitle(s) ? { id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden } : { id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '', badge: spaceBadge(s.badge) })) })),
     })),
   };
 }
@@ -2992,6 +3022,7 @@ function formatFromJsonRaw(f) {
           if (s.kind === 'title') { sp.kind = 'title'; sp.imageId = null; }
           sp.hidden = !!s.hidden;
           sp.text = String(s.text || '');
+          sp.badge = spaceBadge(s.badge);
           return sp;
         }));
         area.note = String(a.note || '');
@@ -3162,7 +3193,7 @@ async function buildPlan(pubRefs = new Map()) {
             used.add(name.toLowerCase());
             image = await ref(img, `${folder}/${name}`);
           }
-          spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', image });
+          spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', badge: spaceBadge(s.badge), image });
         }
         areas.push({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
@@ -3326,7 +3357,7 @@ function docFromPublished(data, ref) {
       ...f,
       banner: f.banner && f.banner.path ? f.banner.path : null,
       logo: f.logo && f.logo.path ? f.logo.path : null,
-      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => (x.kind === 'title' ? { id: x.id, kind: 'title', title: x.title, hidden: !!x.hidden } : { id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', image: x.image && x.image.path ? x.image.path : null })) })) })),
+      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => (x.kind === 'title' ? { id: x.id, kind: 'title', title: x.title, hidden: !!x.hidden } : { id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', badge: spaceBadge(x.badge), image: x.image && x.image.path ? x.image.path : null })) })) })),
     } : f)),
   };
   adoptIds(raw, ref);
@@ -4340,6 +4371,12 @@ function setupBoardUI() {
   });
 
   panel.addEventListener('change', (e) => {
+    if (e.target.matches('[data-space-badge]')) {
+      const card = e.target.closest('[data-card-id]');
+      const f = card && findSpace(card.dataset.cardId);
+      if (f) { f.space.badge = spaceBadge(e.target.value); commit(); }
+      return;
+    }
     if (!e.target.matches('[data-area-zone]')) return;
     const area = activeArea();
     const from = activeZone();

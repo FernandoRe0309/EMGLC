@@ -236,7 +236,7 @@ function normalize(raw) {
           areas: (z.areas || []).filter((a) => !a.hidden).map((a) => {
             const all = (a.spaces || []).filter((sp) => !sp.hidden).map((sp) => (sp.kind === 'title'
               ? { kind: 'title', title: String(sp.title || '') }
-              : { title: String(sp.title || ''), text: String(sp.text || '').trim(), src: imgSrc(sp.image) }));
+              : { title: String(sp.title || ''), text: String(sp.text || '').trim(), badge: spaceBadge(sp.badge), src: imgSrc(sp.image) }));
             return {
               id: uniqueId(areaIds, a.name || 'area'),
               name: String(a.name || 'Área'),
@@ -430,7 +430,7 @@ function renderFormat(f, zone, area) {
     }
     const card = document.createElement('article');
     card.className = 'space';
-    card.innerHTML = `<h4>${esc(sp.title)}</h4><div class="frame">${sp.src
+    card.innerHTML = `<h4>${esc(sp.title)}</h4><div class="frame">${badgeHtml(sp.badge)}${sp.src
       ? `<button type="button" class="frame-btn" aria-label="Ver ${esc(sp.title)} en grande"><img loading="lazy" alt="${esc(sp.title)}" src="${esc(sp.src)}"></button>`
       : '<span class="pending">Imagen pendiente</span>'}</div>${sp.text ? `<p class="space-text">${esc(sp.text)}</p>` : ''}`;
     if (sp.src) {
@@ -475,7 +475,7 @@ function openChecklist(f) {
           ? `<tr class="gt"><td colspan="5">${esc(s.title)}</td></tr>`
           : `<tr>
           <td class="n">${++n}</td>
-          <td class="ph">${s.src ? `<img alt="" src="${esc(s.src)}">` : '<span>—</span>'}</td>
+          <td class="ph">${badgeHtml(s.badge)}${s.src ? `<img alt="" src="${esc(s.src)}">` : '<span>—</span>'}</td>
           <td>${esc(s.title)}${s.text ? `<div class="t">${esc(s.text)}</div>` : ''}</td><td class="c"><span class="box"></span></td><td class="c"><span class="box"></span></td></tr>`)).join(''); })()
         : '<tr><td colspan="5" class="empty">Sin señalización registrada</td></tr>'}</tbody>
       </table>`).join('')}`).join('');
@@ -491,7 +491,7 @@ table{width:100%;border-collapse:collapse;margin:6px 0 12px;break-inside:auto}
 th,td{border:1px solid #c9d1de;padding:5px 8px;text-align:left;vertical-align:middle}
 thead tr:first-child th{background:#eef3ff;color:#1e3a9a;font-size:14px}
 tr{break-inside:avoid}.n{width:26px;text-align:center}.c{width:70px;text-align:center}.ph{width:64px}
-.ph img{width:56px;height:56px;object-fit:contain;display:block}.box{display:inline-block;width:14px;height:14px;border:1.5px solid #1b2330;border-radius:2px}
+.ph img{width:56px;height:56px;object-fit:contain;display:block}.ph{position:relative}.sp-badge{position:absolute;top:2px;right:2px;line-height:0}.sp-badge svg{display:block}.sp-badge-nuevo svg{width:34px;height:auto}.sp-badge-quitar svg{width:18px;height:18px}.box{display:inline-block;width:14px;height:14px;border:1.5px solid #1b2330;border-radius:2px}
 .empty{color:#7a8596;text-align:center}.gt td{background:#fffbeb;color:#1e3a9a;font-weight:800;border-left:4px solid #ffc220}.t{margin-top:3px;font-size:11.5px;color:#5d6878;white-space:pre-line}.obs{margin-top:16px}.obs div{border-bottom:1px solid #8a94a6;height:26px}
 .actions{margin:14px 0}.actions button{padding:8px 16px;border:0;border-radius:8px;background:#1f4fd6;color:#fff;font-weight:700;cursor:pointer}
 @media print{.actions{display:none}body{margin:0}}

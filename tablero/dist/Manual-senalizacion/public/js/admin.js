@@ -196,7 +196,7 @@ let state = null;          // { dirty, publishedAt, intro, formats, activeId }
 let board = null;          // formato activo
 const ui = { query: '', onlyUnplaced: false, collapsedFolders: new Set() };
 
-const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false, text: '' });
+const newSpace = (title, imageId = null) => ({ id: uid(), title, imageId, hidden: false, text: '', badge: '' });
 const newArea = (name, spaces) => ({ id: uid(), name, note: '', hidden: false, blocks: [], spaces: spaces || (DEFAULT_SPACES[name] || []).map((t) => newSpace(t)) });
 const newZone = (name, areas = []) => ({ id: uid(), name, hidden: false, blocks: [], areas });
 const newZones = () => DEFAULT_ZONES.map((z) => {
@@ -609,10 +609,14 @@ function spaceEl(sp) {
   el.innerHTML = `
     <div class="space-head">
       <div class="space-title" contenteditable="true" spellcheck="false" data-space-title>${escapeHtml(sp.title)}</div>
+      <select class="badge-pick${sp.badge ? ' on' : ''}" data-space-badge title="Ícono en la esquina">
+        <option value="">Ícono</option>${Object.entries(SPACE_BADGES).map(([k, b]) => `<option value="${k}" ${sp.badge === k ? 'selected' : ''}>${b.label}</option>`).join('')}
+      </select>
       <button type="button" class="icon-btn eye${sp.hidden ? ' off' : ''}" data-space-action="toggle" title="${sp.hidden ? 'Mostrar este espacio en el manual' : 'Ocultar este espacio en el manual'}">${sp.hidden ? ICON_EYE_OFF : ICON_EYE}</button>
       <button type="button" class="icon-btn danger" data-space-action="delete" title="Eliminar espacio">${ICON_TRASH}</button>
     </div>
     <div class="slot${img ? ' filled' : ''}" data-slot="${sp.id}">
+      ${badgeHtml(sp.badge)}
       ${img ? `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
         <button type="button" class="slot-clear" data-space-action="clear" title="Quitar foto">×</button>`
         : sp.imageId ? `<span class="missing">Falta la foto en la biblioteca:<br>${escapeHtml(sp.imageId)}</span>`
@@ -1056,7 +1060,7 @@ function formatToJson(f) {
     id: f.id, name: f.name, subtitle: f.subtitle, color: f.color, banner: f.banner || null, logo: f.logo || null, hidden: !!f.hidden, panel: f.panel, blocks: f.blocks || [],
     zones: f.zones.map((z) => ({
       id: z.id, name: z.name, hidden: !!z.hidden, blocks: z.blocks || [],
-      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => (isTitle(s) ? { id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden } : { id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '' })) })),
+      areas: z.areas.map((a) => ({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: a.blocks || [], spaces: a.spaces.map((s) => (isTitle(s) ? { id: s.id, kind: 'title', title: s.title, hidden: !!s.hidden } : { id: s.id, title: s.title, image: s.imageId || null, hidden: !!s.hidden, text: s.text || '', badge: spaceBadge(s.badge) })) })),
     })),
   };
 }
@@ -1088,6 +1092,7 @@ function formatFromJsonRaw(f) {
           if (s.kind === 'title') { sp.kind = 'title'; sp.imageId = null; }
           sp.hidden = !!s.hidden;
           sp.text = String(s.text || '');
+          sp.badge = spaceBadge(s.badge);
           return sp;
         }));
         area.note = String(a.note || '');
@@ -1258,7 +1263,7 @@ async function buildPlan(pubRefs = new Map()) {
             used.add(name.toLowerCase());
             image = await ref(img, `${folder}/${name}`);
           }
-          spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', image });
+          spaces.push({ id: s.id, title: s.title, hidden: !!s.hidden, text: s.text || '', badge: spaceBadge(s.badge), image });
         }
         areas.push({ id: a.id, name: a.name, note: a.note || '', hidden: !!a.hidden, blocks: (a.blocks || []).map(normalizeBlock), spaces });
       }
@@ -1422,7 +1427,7 @@ function docFromPublished(data, ref) {
       ...f,
       banner: f.banner && f.banner.path ? f.banner.path : null,
       logo: f.logo && f.logo.path ? f.logo.path : null,
-      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => (x.kind === 'title' ? { id: x.id, kind: 'title', title: x.title, hidden: !!x.hidden } : { id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', image: x.image && x.image.path ? x.image.path : null })) })) })),
+      zones: f.zones.map((z) => ({ ...z, areas: (z.areas || []).map((ar) => ({ ...ar, spaces: (ar.spaces || []).map((x) => (x.kind === 'title' ? { id: x.id, kind: 'title', title: x.title, hidden: !!x.hidden } : { id: x.id, title: x.title, hidden: !!x.hidden, text: x.text || '', badge: spaceBadge(x.badge), image: x.image && x.image.path ? x.image.path : null })) })) })),
     } : f)),
   };
   adoptIds(raw, ref);
@@ -2436,6 +2441,12 @@ function setupBoardUI() {
   });
 
   panel.addEventListener('change', (e) => {
+    if (e.target.matches('[data-space-badge]')) {
+      const card = e.target.closest('[data-card-id]');
+      const f = card && findSpace(card.dataset.cardId);
+      if (f) { f.space.badge = spaceBadge(e.target.value); commit(); }
+      return;
+    }
     if (!e.target.matches('[data-area-zone]')) return;
     const area = activeArea();
     const from = activeZone();

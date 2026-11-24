@@ -160,3 +160,20 @@ function blockHtml(raw) {
       return `<div class="blk blk-info"><p>${blkEsc(b.text)}</p></div>`;
   }
 }
+
+/* ---------- Íconos en la esquina de una tarjeta de señalización ---------- */
+const SPACE_BADGES = {
+  nuevo: {
+    label: 'Nuevo',
+    svg: '<svg viewBox="0 0 120 40" aria-hidden="true"><rect x="1" y="1" width="118" height="38" rx="12" fill="#e60000"/><text x="60" y="29" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="25" fill="#fff">NUEVO</text></svg>',
+  },
+  quitar: {
+    label: 'X',
+    svg: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 9 31 31M31 9 9 31" stroke="#f00" stroke-width="7.5" stroke-linecap="round"/></svg>',
+  },
+};
+const spaceBadge = (key) => (SPACE_BADGES[key] ? key : '');
+function badgeHtml(key) {
+  const b = SPACE_BADGES[key];
+  return b ? `<span class="sp-badge sp-badge-${key}" title="${b.label}">${b.svg}</span>` : '';
+}

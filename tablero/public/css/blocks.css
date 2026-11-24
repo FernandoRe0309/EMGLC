@@ -53,3 +53,9 @@
   .blk { padding: 16px; font-size: 14px; }
   .blk-retira .blk-cols { grid-template-columns: 1fr; }
 }
+
+/* Ícono en la esquina superior derecha de una tarjeta (NUEVO o X) */
+.sp-badge { position: absolute; top: 6px; right: 6px; z-index: 2; line-height: 0; pointer-events: none; }
+.sp-badge svg { display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .2)); }
+.sp-badge-nuevo svg { width: 76px; height: auto; }
+.sp-badge-quitar svg { width: 38px; height: 38px; }
