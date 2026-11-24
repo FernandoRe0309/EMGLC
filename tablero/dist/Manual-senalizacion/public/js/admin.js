@@ -426,7 +426,7 @@ function renderLibrary(counts) {
   const list = $('#libraryList');
   if (!images.size) {
     list.innerHTML = `<div class="empty-lib"><strong>Aún no hay imágenes</strong>
-      Usa <em>Cargar carpeta</em> y elige tu carpeta de fotos, o arrastra la carpeta aquí.</div>`;
+      Usa <em>Cargar fotos</em> o arrastra la carpeta aquí.</div>`;
     return;
   }
 
@@ -1146,7 +1146,7 @@ function renderAccount() {
   const btn = $('#authBtn');
   const acc = spReady ? SP.currentAccount() : null;
   btn.textContent = acc ? (acc.name || acc.username) : 'Sin conexión';
-  btn.title = acc ? `Conectado a SharePoint como ${acc.name || acc.username}. Clic para ver la carpeta.` : 'No hay conexión con SharePoint';
+  btn.title = acc ? "" : "No hay conexión con SharePoint";
   btn.classList.toggle('signed', !!acc);
 }
 
@@ -2004,37 +2004,6 @@ async function cleanupUnusedPhotos() {
   }
 }
 
-/* ---------- Carpeta de SharePoint ---------- */
-function openConnection() {
-  const acc = spReady ? SP.currentAccount() : null;
-  $('#connFolder').textContent = (spReady && SP.folderPath()) || decodeURIComponent(location.pathname.slice(0, location.pathname.lastIndexOf('/')));
-  $('#connAccount').textContent = acc ? `${acc.name || ''}${acc.username ? ` (${acc.username})` : ''}` : 'Sin conexión';
-  $('#connResult').className = 'cfg-result';
-  $('#connResult').textContent = '';
-  $('#connSignOut').hidden = true;
-  $('#connection').showModal();
-}
-
-function setupConnection() {
-  const dlg = $('#connection');
-  const res = $('#connResult');
-  $('#connTest').addEventListener('click', async () => {
-    if (!ensureConnected()) return;
-    res.className = 'cfg-result'; res.textContent = 'Probando…';
-    try {
-      const r = await SP.resolveRoot();
-      res.className = 'cfg-result ok';
-      res.textContent = `Conexión correcta con la carpeta "${r.name}".`;
-    } catch (e) {
-      console.error(e);
-      res.className = 'cfg-result err';
-      res.textContent = SP.errorText(e);
-    }
-  });
-  $('#authBtn').addEventListener('click', openConnection);
-  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-}
-
 /* ---------- Formatos y textos de portada ---------- */
 let editingFormatId = null;
 
@@ -2858,7 +2827,6 @@ async function clearLibrary() {
 
 function handleMenu(action) {
   switch (action) {
-    case 'connection': return openConnection();
     case 'load-published': return loadPublishedAction();
     case 'history': return openHistory();
     case 'readlog': return openReadLog();
@@ -2902,13 +2870,13 @@ function setupEvents() {
     e.target.value = '';
     if (f) openJson(f);
   });
-  $('#exportHtmlBtn').addEventListener('click', () => exportCatalog().catch((err) => { console.error(err); toast('No se pudo exportar el catálogo.'); }));
   $('#saveJsonBtn').addEventListener('click', saveJson);
   $('#publishBtn').addEventListener('click', publish);
   window.addEventListener('beforeunload', (e) => { if (publishing) { e.preventDefault(); e.returnValue = ''; } });
 
   const menu = $('.menu');
   menu.addEventListener('click', (e) => {
+    if (e.target.closest('[data-menu-close], #saveJsonBtn')) { setTimeout(() => { menu.open = false; }, 0); return; }
     const b = e.target.closest('[data-action]');
     if (!b) return;
     menu.open = false;
@@ -2933,7 +2901,6 @@ function setupEvents() {
 
   setupFileDrop();
   setupViewer();
-  setupConnection();
   setupFormatUI();
   setupBoardUI();
   setupBlockEditor();

@@ -80,7 +80,7 @@ Son el mismo contenido; el `.aspx` solo agrega en la primera línea la directiva
 
 ## Uso del panel de administrador
 
-1. **Cargar carpeta** → elige la carpeta de fotos de tu computadora (o arrástrala a la página).
+1. **Cargar fotos** → elige la carpeta de fotos de tu computadora (o arrástrala a la página).
 2. Elige el **formato** (W2 / B2 / BAE), la **zona** y el **área**.
 3. Arrastra cada foto de la biblioteca **sobre el espacio** que le corresponde. Si la sueltas entre los espacios (o en **+ Espacio**), se crea un espacio nuevo con el nombre de la foto. También puedes soltarla sobre el botón de otra área.
 4. **Publicar**. Arriba se indica si hay *cambios sin publicar*.
@@ -104,9 +104,8 @@ Más cosas:
 - **Consideraciones Importantes**: tarjeta que el manual muestra al abrirse y que la tienda debe cerrar con **CONFIRMO DE LEÍDO Y ENTERADO**. La confirmación se guarda en ese navegador; si cambias el texto se vuelve a pedir. En la página principal queda un botón para volver a verla. Se edita (o se desactiva) en **Página de inicio**.
 - **Registro de lectura** (*Más → Registro de lectura*): crea en el mismo sitio la lista de SharePoint **Registro Manual Señalización**, con una fila por persona: nombre, correo, primera y última vez que abrió el manual, cuántas veces, si confirmó las Consideraciones Importantes, cuándo y si fue con el texto actual. Muestra la tabla, la descarga para Excel y da a las tiendas (grupo de visitantes del sitio) permiso de *Colaborar* solo en esa lista; cada quien solo ve y edita su propia fila. Si tu cuenta no puede cambiar permisos, la pantalla indica qué pedir a la persona dueña del sitio. Si alguien ya confirmó en otra computadora, no se le vuelve a pedir.
 - **+ Formato** agrega uno. **Página de inicio**: foto de portada de la página de inicio (opcional) y los textos de los avisos.
-- **Más → Colocar por carpeta**: coloca las fotos sin usar en el área cuyo nombre coincide con su carpeta; si el área ya tiene un espacio vacío con el mismo nombre que la foto, la pone ahí.
-- Al abrir el administrador, si no tienes cambios pendientes, se carga la última versión publicada (por ejemplo, la que publicó otra persona). **Más → Cargar lo publicado** la trae a mano.
-- **Exportar catálogo** descarga un HTML del formato actual con las fotos incrustadas. **Guardar / Abrir tablero** hace un respaldo `.json` sin fotos.
+- Al abrir el administrador, si no tienes cambios pendientes, se carga la última versión publicada (por ejemplo, la que publicó otra persona). **Más → Recargar lo publicado** la trae a mano (descarta tus cambios sin publicar).
+- **Más → Guardar / Abrir respaldo** hace un respaldo `.json` de la distribución, sin fotos. **Más → Cargar imágenes sueltas** agrega fotos sin elegir una carpeta completa.
 
 ## Organización de los archivos
 

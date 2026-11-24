@@ -8,9 +8,9 @@
 <meta name="description" content="Tablero para acomodar las imágenes del catálogo de señalización por área de tienda, arrastrando y soltando.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect x=%223%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/><rect x=%2218%22 y=%223%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%223%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%2393c5fd%22/><rect x=%2218%22 y=%2218%22 width=%2211%22 height=%2211%22 rx=%222%22 fill=%22%232563eb%22/></svg>">
 <meta name="robots" content="noindex">
-<meta name="app-version" content="2026.11.24-2">
-<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.24-2">
-<link rel="stylesheet" href="public/css/admin.css?v=2026.11.24-2">
+<meta name="app-version" content="2026.11.24-4">
+<link rel="stylesheet" href="public/css/blocks.css?v=2026.11.24-4">
+<link rel="stylesheet" href="public/css/admin.css?v=2026.11.24-4">
 </head>
 <body>
 
@@ -24,35 +24,24 @@
     <span id="publishState" class="publish-state"></span>
     <button id="publishBtn" class="btn btn-primary" type="button">Publicar</button>
     <button id="authBtn" class="btn account" type="button">Conectando…</button>
-    <label class="btn" title="Elige la carpeta Señalización completa; se conservan las subcarpetas">
-      Cargar carpeta
+    <label class="btn">
+      Cargar fotos
       <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
-    </label>
-    <label class="btn" title="Elige una o varias imágenes sueltas">
-      Cargar imágenes
-      <input id="filesInput" type="file" accept="image/*" multiple hidden>
-    </label>
-    <button id="exportHtmlBtn" class="btn" type="button" title="Descarga un catálogo HTML con las imágenes incrustadas">Exportar catálogo</button>
-    <button id="saveJsonBtn" class="btn" type="button" title="Guarda la distribución (sin imágenes) en un archivo .json">Guardar tablero</button>
-    <label class="btn" title="Abre un tablero guardado (.json)">
-      Abrir tablero
-      <input id="openJsonInput" type="file" accept="application/json,.json" hidden>
     </label>
     <details class="menu">
       <summary class="btn" aria-label="Más opciones">Más ▾</summary>
       <div class="menu-panel">
-        <button type="button" data-action="connection">Carpeta de SharePoint</button>
-        <button type="button" data-action="load-published">Cargar lo publicado (descarta cambios locales)</button>
-        <button type="button" data-action="readlog">Registro de lectura (quién abrió el manual)…</button>
-        <button type="button" data-action="history">Versiones anteriores (restaurar)…</button>
-        <button type="button" data-action="cleanup">Limpiar fotos sin usar…</button>
+        <label data-menu-close>Cargar imágenes sueltas<input id="filesInput" type="file" accept="image/*" multiple hidden></label>
         <hr>
-        <button type="button" data-action="auto-place">Colocar por carpeta (nombre del área)</button>
-        <button type="button" data-action="areas-from-folders">Crear áreas desde carpetas (en la zona actual)</button>
+        <button type="button" data-action="readlog">Registro de lectura</button>
+        <button type="button" data-action="history">Versiones anteriores</button>
+        <button type="button" data-action="load-published">Recargar lo publicado</button>
         <hr>
-        <button type="button" data-action="clear-board">Quitar todas las fotos de este formato</button>
-        <button type="button" data-action="reset-structure">Restablecer zonas y áreas de este formato</button>
-        <button type="button" data-action="clear-library" class="danger">Borrar biblioteca de imágenes</button>
+        <button type="button" id="saveJsonBtn">Guardar respaldo</button>
+        <label data-menu-close>Abrir respaldo<input id="openJsonInput" type="file" accept="application/json,.json" hidden></label>
+        <hr>
+        <button type="button" data-action="cleanup">Limpiar fotos sin usar</button>
+        <button type="button" data-action="clear-library" class="danger">Vaciar biblioteca</button>
       </div>
     </details>
   </div>
@@ -90,23 +79,6 @@
         <button id="viewerPrimary" class="btn btn-primary" type="button">Agregar</button>
         <button id="viewerRemove" class="btn danger" type="button">Quitar foto del espacio</button>
       </div>
-    </div>
-  </form>
-</dialog>
-
-<dialog id="connection" class="settings">
-  <form method="dialog" class="settings-inner">
-    <h3>Carpeta de SharePoint</h3>
-    <p class="muted">Las fotos y la distribución se guardan en la misma carpeta de SharePoint donde está este archivo.</p>
-    <div class="conn-row"><span class="muted">Carpeta</span><span id="connFolder" class="mono"></span></div>
-    <div class="conn-row"><span class="muted">Cuenta</span><span id="connAccount"></span></div>
-    <p class="muted small">Dentro de la carpeta se crean solas las subcarpetas <em>Formato/Zona/Área</em> según dónde coloques cada foto, y el archivo <em>tablero.json</em>. </p>
-    <p id="connResult" class="cfg-result" role="status"></p>
-    <div class="settings-actions">
-      <button type="button" id="connSignOut" class="btn danger">Cerrar sesión</button>
-      <span class="spacer"></span>
-      <button type="button" id="connTest" class="btn">Probar conexión</button>
-      <button value="close" class="btn btn-primary">Cerrar</button>
     </div>
   </form>
 </dialog>
@@ -269,8 +241,8 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="public/js/sharepoint.js?v=2026.11.24-2"></script>
-<script src="public/js/blocks.js?v=2026.11.24-2"></script>
-<script src="public/js/admin.js?v=2026.11.24-2"></script>
+<script src="public/js/sharepoint.js?v=2026.11.24-4"></script>
+<script src="public/js/blocks.js?v=2026.11.24-4"></script>
+<script src="public/js/admin.js?v=2026.11.24-4"></script>
 </body>
 </html>
