@@ -377,6 +377,9 @@ async function addFiles(entries) {
     });
   }
 
+  // Si vuelves a cargar una imagen que se había eliminado, deja de estar eliminada.
+  const reloaded = new Set(records.map((r) => r.id));
+  state.removedImages = (state.removedImages || []).filter((t) => !reloaded.has(t.id));
   let added = 0, updated = 0;
   for (const rec of records) {
     const prev = images.get(rec.id);
@@ -450,6 +453,7 @@ function renderLibrary(counts) {
     wrap.innerHTML = `<button type="button" class="folder-head" data-folder-toggle>
         <span class="caret">▾</span><span>${escapeHtml(folder || '(raíz)')}</span>
         <span class="count">${placed}/${imgs.length}</span></button>
+      <button type="button" class="lib-del folder-del" data-del-folder title="Eliminar las ${imgs.length} imágenes de esta carpeta">${ICON_TRASH}</button>
       <div class="folder-items"></div>`;
     const items = wrap.querySelector('.folder-items');
     for (const img of imgs) {
@@ -461,7 +465,8 @@ function renderLibrary(counts) {
       el.title = img.path;
       el.innerHTML = `<img alt="" loading="lazy" draggable="false" src="${urlFor(img)}">
         <span class="name">${escapeHtml(titleFromName(img.name))}</span>
-        ${n ? `<span class="badge" title="Colocada ${plural(n, 'vez', 'veces')}">${n}</span>` : ''}`;
+        ${n ? `<span class="badge" title="Colocada ${plural(n, 'vez', 'veces')}">${n}</span>` : ''}
+        <button type="button" class="lib-del" data-del-image title="Eliminar imagen">${ICON_TRASH}</button>`;
       items.appendChild(el);
     }
     frag.appendChild(wrap);
@@ -986,6 +991,8 @@ function openViewer(kind, id) {
   $('#viewerSection').innerHTML = areaOptions(areaId);
   $('#viewerPrimary').textContent = kind === 'card' ? 'Mover a esta área' : 'Agregar como espacio en esta área';
   $('#viewerRemove').hidden = kind !== 'card';
+  $('#viewerDelete').hidden = !img;
+  viewer.imageId = img ? img.id : null;
   $('#viewer').showModal();
 }
 
@@ -1005,6 +1012,7 @@ function setupViewer() {
     dlg.close();
   });
   $('#viewerRemove').addEventListener('click', () => { clearImage(viewer.id); dlg.close(); });
+  $('#viewerDelete').addEventListener('click', async () => { if (viewer.imageId && await deleteImages([viewer.imageId])) dlg.close(); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
@@ -1529,6 +1537,7 @@ function scheduleSync(delay = 1200) {
 
 // Combina el borrador compartido (o lo publicado) con tus cambios que aún no se guardan.
 async function mergeFromPublished(data, { quiet = false } = {}) {
+  applyRemovedImages(data.removedImages);
   await downloadPublishedImages(data, { quiet });
   const theirs = docFromPublished(data, state.base || toDoc());
   const conflicts = [];
@@ -1538,6 +1547,7 @@ async function mergeFromPublished(data, { quiet = false } = {}) {
   state.draftAt = data.updatedAt || null;
   state.draftBy = data.updatedBy || null;
   state.dirty = !same(toDoc(), theirs);
+  await purgeRemovedImages();
   saveBoard({ dirty: false });
   render();
   return conflicts;
@@ -1620,7 +1630,7 @@ async function syncDraft({ force = false, quiet = true } = {}) {
       const sent = toDoc(); // lo que se va a guardar (para saber si cambiaste algo mientras tanto)
       const plan = await buildPlan(pubRefs, serverFiles(liveData));
       await uploadPlan(plan, known, (n, t) => { if (publishing) setPublishProgress(`Subiendo fotos ${n} de ${t}…`); });
-      const data = boardData(plan, { draft: true });
+      const data = boardData(plan, { draft: true, removedImages: state.removedImages || [] });
       try {
         await SP.writeJsonFile(DRAFT_FILE, data, etag);
       } catch (e) {
@@ -1713,7 +1723,7 @@ async function publish() {
     const vpLive = versionProblem(prev);
     if (vpLive) throw new SP.SPError(0, 'version', vpLive);
     await saveHistoryCopy(prev).catch((e) => console.warn('No se pudo guardar el historial', e));
-    const { draft: _d, ...rest } = draft;
+    const { draft: _d, removedImages: removedList, ...rest } = draft;
     const acc = SP.currentAccount();
     const live = { ...rest, updatedAt: new Date().toISOString(), updatedBy: acc ? acc.name || acc.username : null, draftAt: draft.updatedAt, appVersion: SP.APP_VERSION };
     await SP.upload(SP.DATA_FILE, new Blob([JSON.stringify(live, null, 2)], { type: 'application/json' }));
@@ -1722,6 +1732,7 @@ async function publish() {
     state.publishedAt = live.updatedAt;
     state.publishedBy = live.updatedBy;
     liveDoc = docFromPublished(live, state.base || toDoc());
+    await recycleRemovedFiles(prev, live, draft, removedList).catch((e) => console.warn('No se pudieron mandar a la papelera las imágenes eliminadas', e));
     if (draft.updatedAt !== state.draftAt) scheduleSync(100); // alguien guardó justo ahora: traerlo
     publishing = false;
     saveBoard({ dirty: false });
@@ -1736,6 +1747,15 @@ async function publish() {
     btn.disabled = false;
     renderPublishState();
   }
+}
+
+// Archivos de imágenes eliminadas que ya nada usa (ni el manual ni el borrador) → papelera.
+async function recycleRemovedFiles(prevLive, live, draft, removedList) {
+  const removed = new Set((removedList || []).map((t) => t.id));
+  if (!removed.size || !prevLive) return;
+  const used = new Set([...publishedRefs(live), ...publishedRefs(draft)].map((r) => r.file));
+  const files = [...new Set(publishedRefs(prevLive).filter((r) => removed.has(r.path) && !used.has(r.file)).map((r) => r.file))];
+  for (const f of files) await SP.remove(f).catch((e) => console.warn('No se pudo borrar', f, e));
 }
 
 /* ---------- Recargar ---------- */
@@ -2913,6 +2933,73 @@ function areasFromFolders() {
   commit();
 }
 
+/* ---------- Eliminar imágenes por completo ----------
+   Quita la imagen de la biblioteca y de todos los lugares del tablero donde está (espacios,
+   portadas y logos). También se borra de la biblioteca de las demás personas (se avisa en el
+   borrador compartido) y, al publicar, su archivo se manda a la papelera de SharePoint. */
+const REMOVED_KEEP_MS = 90 * 24 * 3600 * 1000;
+
+function imageUses(ids) {
+  let n = 0;
+  if (ids.has(state.intro.banner)) n++;
+  for (const f of state.formats) {
+    if (ids.has(f.banner)) n++;
+    if (ids.has(f.logo)) n++;
+    for (const z of f.zones) for (const a of z.areas) for (const sp of a.spaces) if (ids.has(sp.imageId)) n++;
+  }
+  return n;
+}
+
+function clearImageRefs(ids) {
+  if (ids.has(state.intro.banner)) state.intro.banner = null;
+  for (const f of state.formats) {
+    if (ids.has(f.banner)) f.banner = null;
+    if (ids.has(f.logo)) f.logo = null;
+    for (const z of f.zones) for (const a of z.areas) for (const sp of a.spaces) if (ids.has(sp.imageId)) sp.imageId = null;
+  }
+}
+
+async function dropFromLibrary(ids) {
+  for (const id of ids) {
+    const img = images.get(id);
+    if (img && img.url) URL.revokeObjectURL(img.url);
+    images.delete(id);
+  }
+  await idb('images', 'readwrite', (st) => { ids.forEach((id) => st.delete(id)); }).catch(console.error);
+}
+
+async function deleteImages(idList, label) {
+  const ids = new Set(idList.filter((id) => images.has(id)));
+  if (!ids.size) return false;
+  const uses = imageUses(ids);
+  const what = label || (ids.size === 1 ? `la imagen "${titleFromName(images.get([...ids][0]).name)}"` : `${ids.size} imágenes`);
+  if (!confirm(`¿Eliminar ${what}?\n\n${uses ? `Se quitará de ${plural(uses, 'lugar', 'lugares')} del tablero (los espacios se quedan vacíos). ` : ''}Se borra de la biblioteca de todas las personas y, al publicar, también del manual y de la carpeta de SharePoint (va a la papelera de reciclaje).`)) return false;
+  const now = Date.now();
+  const marks = [...ids].map((id) => ({ id, hash: images.get(id).hash || null, at: now }));
+  state.removedImages = [...(state.removedImages || []).filter((t) => !ids.has(t.id)), ...marks];
+  clearImageRefs(ids);
+  await dropFromLibrary([...ids]);
+  commit();
+  toast(ids.size === 1 ? 'Imagen eliminada.' : `${ids.size} imágenes eliminadas.`);
+  return true;
+}
+
+// Junta las imágenes eliminadas por las demás personas y las quita de tu biblioteca.
+function applyRemovedImages(remoteList) {
+  const now = Date.now();
+  const byId = new Map();
+  for (const t of [...(state.removedImages || []), ...(remoteList || [])]) {
+    if (!t || !t.id || now - (t.at || 0) > REMOVED_KEEP_MS) continue;
+    if (!byId.has(t.id) || (byId.get(t.id).at || 0) < (t.at || 0)) byId.set(t.id, t);
+  }
+  state.removedImages = [...byId.values()].slice(-2000);
+}
+async function purgeRemovedImages() {
+  const ids = new Set((state.removedImages || []).map((t) => t.id));
+  const gone = [...images.keys()].filter((id) => ids.has(id) && !imageUses(new Set([id])));
+  if (gone.length) await dropFromLibrary(gone);
+}
+
 async function clearLibrary() {
   if (!confirm('Se borrarán todas las imágenes guardadas en este navegador. El tablero conserva la distribución. ¿Continuar?')) return;
   for (const img of images.values()) if (img.url) URL.revokeObjectURL(img.url);
@@ -2985,6 +3072,15 @@ function setupEvents() {
   $('#onlyUnplaced').addEventListener('change', (e) => { ui.onlyUnplaced = e.target.checked; renderLibrary(placementCounts()); });
 
   $('#libraryList').addEventListener('click', (e) => {
+    const di = e.target.closest('[data-del-image]');
+    if (di) { deleteImages([di.closest('.lib-item').dataset.imageId]); return; }
+    const df = e.target.closest('[data-del-folder]');
+    if (df) {
+      const folder = df.parentElement.dataset.folder;
+      const ids = [...df.parentElement.querySelectorAll('.lib-item')].map((x) => x.dataset.imageId);
+      deleteImages(ids, `las ${ids.length} imágenes de la carpeta "${folder || '(raíz)'}"`);
+      return;
+    }
     const t = e.target.closest('[data-folder-toggle]');
     if (!t) return;
     const folder = t.parentElement.dataset.folder;

@@ -1067,3 +1067,17 @@ a.btn { text-decoration: none; color: inherit; }
 
 .publish-state.saving { opacity: .8; font-weight: 500; }
 .publish-state.err { color: #ffd0d0; font-weight: 700; }
+
+/* Eliminar imágenes desde la biblioteca */
+.lib-item { position: relative; }
+.lib-del {
+  flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px;
+  display: inline-grid; place-items: center; background: none; color: var(--danger);
+  cursor: pointer; opacity: 0; transition: opacity .12s;
+}
+.lib-del svg { width: 15px; height: 15px; }
+.lib-item:hover .lib-del, .lib-item:focus-within .lib-del, .folder-head:hover + .folder-del, .folder-del:hover, .folder-del:focus-visible { opacity: 1; }
+.lib-del:hover { background: #fde8e8; }
+.folder { position: relative; }
+.folder-del { position: absolute; top: 4px; right: 44px; }
+@media (hover: none) { .lib-del { opacity: .7; } }
